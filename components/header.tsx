@@ -5,7 +5,7 @@ export default function MyHeader(props: { name: string; message: string }) {
         <>
             <Image src="/LOGO.png" alt="Logo" width={150} height={150} />
             <h6>{props.name} Page</h6>
-            <p>This is {props.message}</p>
+            <p>{props.message}</p>
         </>
     );
 }

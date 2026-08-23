@@ -23,3 +23,20 @@ body {
   align-items: center;
   text-align: center;
 }
+
+.form-input {
+  width: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+  border: 1px solid var(--secondary-text);
+  border-radius: 4px;
+  background-color: var(--card);
+  color: var(--foreground);
+  outline: none;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(15, 39, 71, 0.15);
+}

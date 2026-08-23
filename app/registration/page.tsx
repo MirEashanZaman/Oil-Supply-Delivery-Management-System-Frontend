@@ -79,12 +79,14 @@ export default function Registration() {
 
             <div style={{
                 marginTop: "20px",
+                width: "100%",
                 maxWidth: "400px",
                 backgroundColor: "#FFFFFF",
                 padding: "25px",
                 borderRadius: "8px",
                 border: "1px solid #E2E8F0",
-                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)"
+                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                textAlign: "left"
             }}>
                 <h1 style={{ marginTop: 0, color: "#1F2937", marginBottom: "20px" }}>Registration</h1>
 

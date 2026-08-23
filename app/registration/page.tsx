@@ -80,7 +80,7 @@ export default function Registration() {
             <div style={{
                 marginTop: "20px",
                 width: "100%",
-                maxWidth: "400px",
+                maxWidth: "600px",
                 backgroundColor: "#FFFFFF",
                 padding: "25px",
                 borderRadius: "8px",
@@ -105,14 +105,7 @@ export default function Registration() {
                             value={title}
                             placeholder="e.g. Mr., Ms., Dr."
                             onChange={(e) => setTitle(e.target.value)}
-                            style={{
-                                width: "100%",
-                                padding: "10px",
-                                boxSizing: "border-box",
-                                border: "1px solid #64748B",
-                                borderRadius: "4px",
-                                outlineColor: "#D99A1E"
-                            }}
+                            className="form-input"
                         />
                         {errors.title && (
                             <span style={{ color: "#DC2626", fontSize: "14px", display: "block", marginTop: "5px" }}>{errors.title}</span>
@@ -128,14 +121,7 @@ export default function Registration() {
                             type="text"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            style={{
-                                width: "100%",
-                                padding: "10px",
-                                boxSizing: "border-box",
-                                border: "1px solid #64748B",
-                                borderRadius: "4px",
-                                outlineColor: "#D99A1E"
-                            }}
+                            className="form-input"
                         />
                         {errors.username && (
                             <span style={{ color: "#DC2626", fontSize: "14px", display: "block", marginTop: "5px" }}>{errors.username}</span>
@@ -151,14 +137,7 @@ export default function Registration() {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            style={{
-                                width: "100%",
-                                padding: "10px",
-                                boxSizing: "border-box",
-                                border: "1px solid #64748B",
-                                borderRadius: "4px",
-                                outlineColor: "#D99A1E"
-                            }}
+                            className="form-input"
                         />
                         {errors.email && (
                             <span style={{ color: "#DC2626", fontSize: "14px", display: "block", marginTop: "5px" }}>{errors.email}</span>
@@ -174,14 +153,7 @@ export default function Registration() {
                             type="text"
                             value={phoneNumber}
                             onChange={(e) => setPhoneNumber(e.target.value)}
-                            style={{
-                                width: "100%",
-                                padding: "10px",
-                                boxSizing: "border-box",
-                                border: "1px solid #64748B",
-                                borderRadius: "4px",
-                                outlineColor: "#D99A1E"
-                            }}
+                            className="form-input"
                         />
                         {errors.phoneNumber && (
                             <span style={{ color: "#DC2626", fontSize: "14px", display: "block", marginTop: "5px" }}>{errors.phoneNumber}</span>
@@ -197,14 +169,7 @@ export default function Registration() {
                             type="text"
                             value={address}
                             onChange={(e) => setAddress(e.target.value)}
-                            style={{
-                                width: "100%",
-                                padding: "10px",
-                                boxSizing: "border-box",
-                                border: "1px solid #64748B",
-                                borderRadius: "4px",
-                                outlineColor: "#D99A1E"
-                            }}
+                            className="form-input"
                         />
                         {errors.address && (
                             <span style={{ color: "#DC2626", fontSize: "14px", display: "block", marginTop: "5px" }}>{errors.address}</span>
@@ -220,14 +185,7 @@ export default function Registration() {
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            style={{
-                                width: "100%",
-                                padding: "10px",
-                                boxSizing: "border-box",
-                                border: "1px solid #64748B",
-                                borderRadius: "4px",
-                                outlineColor: "#D99A1E"
-                            }}
+                            className="form-input"
                         />
                         {errors.password && (
                             <span style={{ color: "#DC2626", fontSize: "14px", display: "block", marginTop: "5px" }}>{errors.password}</span>
@@ -243,14 +201,7 @@ export default function Registration() {
                             type="password"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            style={{
-                                width: "100%",
-                                padding: "10px",
-                                boxSizing: "border-box",
-                                border: "1px solid #64748B",
-                                borderRadius: "4px",
-                                outlineColor: "#D99A1E"
-                            }}
+                            className="form-input"
                         />
                         {errors.confirmPassword && (
                             <span style={{ color: "#DC2626", fontSize: "14px", display: "block", marginTop: "5px" }}>{errors.confirmPassword}</span>

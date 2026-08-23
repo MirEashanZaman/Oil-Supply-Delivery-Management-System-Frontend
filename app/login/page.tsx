@@ -49,7 +49,17 @@ export default function Login() {
             <MyHeader name="Login" message="access your account!" />
             <MyNavigation />
 
-            <div style={{ marginTop: "20px", maxWidth: "400px" }}>
+            <div style={{
+                marginTop: "20px",
+                width: "100%",
+                maxWidth: "400px",
+                backgroundColor: "#FFFFFF",
+                padding: "25px",
+                borderRadius: "8px",
+                border: "1px solid #E2E8F0",
+                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                textAlign: "left"
+            }}>
                 <h1>Login</h1>
 
                 {successMessage && (

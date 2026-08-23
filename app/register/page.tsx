@@ -10,6 +10,9 @@ const registerSchema = z
     .object({
         username: z.string().min(3, "Username must be at least 3 characters"),
         email: z.string().min(1, "Email is required").email("Invalid email address"),
+        phoneNumber: z.string().min(1, "Phone number is required"),
+        address: z.string().min(1, "Address is required"),
+        title: z.string().min(1, "Title is required"),
         password: z.string().min(6, "Password must be at least 6 characters"),
         confirmPassword: z.string().min(1, "Please confirm your password"),
     })
@@ -21,6 +24,9 @@ const registerSchema = z
 type RegisterErrors = {
     username?: string;
     email?: string;
+    phoneNumber?: string;
+    address?: string;
+    title?: string;
     password?: string;
     confirmPassword?: string;
 };
@@ -28,6 +34,9 @@ type RegisterErrors = {
 export default function Register() {
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
+    const [phoneNumber, setPhoneNumber] = useState("");
+    const [address, setAddress] = useState("");
+    const [title, setTitle] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [errors, setErrors] = useState<RegisterErrors>({});
@@ -41,6 +50,9 @@ export default function Register() {
         const result = registerSchema.safeParse({
             username,
             email,
+            phoneNumber,
+            address,
+            title,
             password,
             confirmPassword,
         });
@@ -74,6 +86,23 @@ export default function Register() {
 
                 <form onSubmit={handleSubmit} noValidate>
                     <div style={{ marginBottom: "15px" }}>
+                        <label htmlFor="title" style={{ display: "block", marginBottom: "5px" }}>
+                            Title:
+                        </label>
+                        <input
+                            id="title"
+                            type="text"
+                            value={title}
+                            placeholder="e.g. Mr., Ms., Dr."
+                            onChange={(e) => setTitle(e.target.value)}
+                            style={{ width: "100%", padding: "8px", boxSizing: "border-box" }}
+                        />
+                        {errors.title && (
+                            <span style={{ color: "red", fontSize: "14px" }}>{errors.title}</span>
+                        )}
+                    </div>
+
+                    <div style={{ marginBottom: "15px" }}>
                         <label htmlFor="username" style={{ display: "block", marginBottom: "5px" }}>
                             Username:
                         </label>
@@ -102,6 +131,38 @@ export default function Register() {
                         />
                         {errors.email && (
                             <span style={{ color: "red", fontSize: "14px" }}>{errors.email}</span>
+                        )}
+                    </div>
+
+                    <div style={{ marginBottom: "15px" }}>
+                        <label htmlFor="phoneNumber" style={{ display: "block", marginBottom: "5px" }}>
+                            Phone Number:
+                        </label>
+                        <input
+                            id="phoneNumber"
+                            type="text"
+                            value={phoneNumber}
+                            onChange={(e) => setPhoneNumber(e.target.value)}
+                            style={{ width: "100%", padding: "8px", boxSizing: "border-box" }}
+                        />
+                        {errors.phoneNumber && (
+                            <span style={{ color: "red", fontSize: "14px" }}>{errors.phoneNumber}</span>
+                        )}
+                    </div>
+
+                    <div style={{ marginBottom: "15px" }}>
+                        <label htmlFor="address" style={{ display: "block", marginBottom: "5px" }}>
+                            Address:
+                        </label>
+                        <input
+                            id="address"
+                            type="text"
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
+                            style={{ width: "100%", padding: "8px", boxSizing: "border-box" }}
+                        />
+                        {errors.address && (
+                            <span style={{ color: "red", fontSize: "14px" }}>{errors.address}</span>
                         )}
                     </div>
 

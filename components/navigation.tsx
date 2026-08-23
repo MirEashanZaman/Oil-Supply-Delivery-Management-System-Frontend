@@ -9,7 +9,7 @@ export default function Navigation() {
             <Link href="/products/1">Product 1</Link> |{" "}
             <Link href="/products/2">Product 2</Link> |{" "}
             <Link href="/login">Login</Link> |{" "}
-            <Link href="/register">Register</Link>
+            <Link href="/registration">Registration</Link>
         </nav>
     );
 }

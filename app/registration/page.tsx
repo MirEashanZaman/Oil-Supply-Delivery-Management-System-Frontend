@@ -13,7 +13,7 @@ const registrationSchema = z
         phoneNumber: z.string().min(1, "Phone number is required"),
         address: z.string().min(1, "Address is required"),
         title: z.string().min(1, "Title is required"),
-        password: z.string().min(6, "Password must be at least 6 characters"),
+        password: z.string().min(8, "Password must be at least 8 characters"),
         confirmPassword: z.string().min(1, "Please confirm your password"),
     })
     .refine((data) => data.password === data.confirmPassword, {
@@ -77,16 +77,24 @@ export default function Registration() {
             <MyHeader name="Registration" message="create a new account!" />
             <MyNavigation />
 
-            <div style={{ marginTop: "20px", maxWidth: "400px" }}>
-                <h1>Registration</h1>
+            <div style={{
+                marginTop: "20px",
+                maxWidth: "400px",
+                backgroundColor: "#FFFFFF",
+                padding: "25px",
+                borderRadius: "8px",
+                border: "1px solid #E2E8F0",
+                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)"
+            }}>
+                <h1 style={{ marginTop: 0, color: "#1F2937", marginBottom: "20px" }}>Registration</h1>
 
                 {successMessage && (
-                    <p style={{ color: "green", fontWeight: "bold" }}>{successMessage}</p>
+                    <p style={{ color: "#16A34A", fontWeight: "bold", marginBottom: "15px" }}>{successMessage}</p>
                 )}
 
                 <form onSubmit={handleSubmit} noValidate>
                     <div style={{ marginBottom: "15px" }}>
-                        <label htmlFor="title" style={{ display: "block", marginBottom: "5px" }}>
+                        <label htmlFor="title" style={{ display: "block", marginBottom: "5px", fontWeight: "500", color: "#1F2937" }}>
                             Title:
                         </label>
                         <input
@@ -95,15 +103,22 @@ export default function Registration() {
                             value={title}
                             placeholder="e.g. Mr., Ms., Dr."
                             onChange={(e) => setTitle(e.target.value)}
-                            style={{ width: "100%", padding: "8px", boxSizing: "border-box" }}
+                            style={{
+                                width: "100%",
+                                padding: "10px",
+                                boxSizing: "border-box",
+                                border: "1px solid #64748B",
+                                borderRadius: "4px",
+                                outlineColor: "#D99A1E"
+                            }}
                         />
                         {errors.title && (
-                            <span style={{ color: "red", fontSize: "14px" }}>{errors.title}</span>
+                            <span style={{ color: "#DC2626", fontSize: "14px", display: "block", marginTop: "5px" }}>{errors.title}</span>
                         )}
                     </div>
 
                     <div style={{ marginBottom: "15px" }}>
-                        <label htmlFor="username" style={{ display: "block", marginBottom: "5px" }}>
+                        <label htmlFor="username" style={{ display: "block", marginBottom: "5px", fontWeight: "500", color: "#1F2937" }}>
                             Username:
                         </label>
                         <input
@@ -111,15 +126,22 @@ export default function Registration() {
                             type="text"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            style={{ width: "100%", padding: "8px", boxSizing: "border-box" }}
+                            style={{
+                                width: "100%",
+                                padding: "10px",
+                                boxSizing: "border-box",
+                                border: "1px solid #64748B",
+                                borderRadius: "4px",
+                                outlineColor: "#D99A1E"
+                            }}
                         />
                         {errors.username && (
-                            <span style={{ color: "red", fontSize: "14px" }}>{errors.username}</span>
+                            <span style={{ color: "#DC2626", fontSize: "14px", display: "block", marginTop: "5px" }}>{errors.username}</span>
                         )}
                     </div>
 
                     <div style={{ marginBottom: "15px" }}>
-                        <label htmlFor="email" style={{ display: "block", marginBottom: "5px" }}>
+                        <label htmlFor="email" style={{ display: "block", marginBottom: "5px", fontWeight: "500", color: "#1F2937" }}>
                             Email Address:
                         </label>
                         <input
@@ -127,15 +149,22 @@ export default function Registration() {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            style={{ width: "100%", padding: "8px", boxSizing: "border-box" }}
+                            style={{
+                                width: "100%",
+                                padding: "10px",
+                                boxSizing: "border-box",
+                                border: "1px solid #64748B",
+                                borderRadius: "4px",
+                                outlineColor: "#D99A1E"
+                            }}
                         />
                         {errors.email && (
-                            <span style={{ color: "red", fontSize: "14px" }}>{errors.email}</span>
+                            <span style={{ color: "#DC2626", fontSize: "14px", display: "block", marginTop: "5px" }}>{errors.email}</span>
                         )}
                     </div>
 
                     <div style={{ marginBottom: "15px" }}>
-                        <label htmlFor="phoneNumber" style={{ display: "block", marginBottom: "5px" }}>
+                        <label htmlFor="phoneNumber" style={{ display: "block", marginBottom: "5px", fontWeight: "500", color: "#1F2937" }}>
                             Phone Number:
                         </label>
                         <input
@@ -143,15 +172,22 @@ export default function Registration() {
                             type="text"
                             value={phoneNumber}
                             onChange={(e) => setPhoneNumber(e.target.value)}
-                            style={{ width: "100%", padding: "8px", boxSizing: "border-box" }}
+                            style={{
+                                width: "100%",
+                                padding: "10px",
+                                boxSizing: "border-box",
+                                border: "1px solid #64748B",
+                                borderRadius: "4px",
+                                outlineColor: "#D99A1E"
+                            }}
                         />
                         {errors.phoneNumber && (
-                            <span style={{ color: "red", fontSize: "14px" }}>{errors.phoneNumber}</span>
+                            <span style={{ color: "#DC2626", fontSize: "14px", display: "block", marginTop: "5px" }}>{errors.phoneNumber}</span>
                         )}
                     </div>
 
                     <div style={{ marginBottom: "15px" }}>
-                        <label htmlFor="address" style={{ display: "block", marginBottom: "5px" }}>
+                        <label htmlFor="address" style={{ display: "block", marginBottom: "5px", fontWeight: "500", color: "#1F2937" }}>
                             Address:
                         </label>
                         <input
@@ -159,15 +195,22 @@ export default function Registration() {
                             type="text"
                             value={address}
                             onChange={(e) => setAddress(e.target.value)}
-                            style={{ width: "100%", padding: "8px", boxSizing: "border-box" }}
+                            style={{
+                                width: "100%",
+                                padding: "10px",
+                                boxSizing: "border-box",
+                                border: "1px solid #64748B",
+                                borderRadius: "4px",
+                                outlineColor: "#D99A1E"
+                            }}
                         />
                         {errors.address && (
-                            <span style={{ color: "red", fontSize: "14px" }}>{errors.address}</span>
+                            <span style={{ color: "#DC2626", fontSize: "14px", display: "block", marginTop: "5px" }}>{errors.address}</span>
                         )}
                     </div>
 
                     <div style={{ marginBottom: "15px" }}>
-                        <label htmlFor="password" style={{ display: "block", marginBottom: "5px" }}>
+                        <label htmlFor="password" style={{ display: "block", marginBottom: "5px", fontWeight: "500", color: "#1F2937" }}>
                             Password:
                         </label>
                         <input
@@ -175,15 +218,22 @@ export default function Registration() {
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            style={{ width: "100%", padding: "8px", boxSizing: "border-box" }}
+                            style={{
+                                width: "100%",
+                                padding: "10px",
+                                boxSizing: "border-box",
+                                border: "1px solid #64748B",
+                                borderRadius: "4px",
+                                outlineColor: "#D99A1E"
+                            }}
                         />
                         {errors.password && (
-                            <span style={{ color: "red", fontSize: "14px" }}>{errors.password}</span>
+                            <span style={{ color: "#DC2626", fontSize: "14px", display: "block", marginTop: "5px" }}>{errors.password}</span>
                         )}
                     </div>
 
-                    <div style={{ marginBottom: "15px" }}>
-                        <label htmlFor="confirmPassword" style={{ display: "block", marginBottom: "5px" }}>
+                    <div style={{ marginBottom: "20px" }}>
+                        <label htmlFor="confirmPassword" style={{ display: "block", marginBottom: "5px", fontWeight: "500", color: "#1F2937" }}>
                             Confirm Password:
                         </label>
                         <input
@@ -191,14 +241,31 @@ export default function Registration() {
                             type="password"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            style={{ width: "100%", padding: "8px", boxSizing: "border-box" }}
+                            style={{
+                                width: "100%",
+                                padding: "10px",
+                                boxSizing: "border-box",
+                                border: "1px solid #64748B",
+                                borderRadius: "4px",
+                                outlineColor: "#D99A1E"
+                            }}
                         />
                         {errors.confirmPassword && (
-                            <span style={{ color: "red", fontSize: "14px" }}>{errors.confirmPassword}</span>
+                            <span style={{ color: "#DC2626", fontSize: "14px", display: "block", marginTop: "5px" }}>{errors.confirmPassword}</span>
                         )}
                     </div>
 
-                    <button type="submit" style={{ padding: "10px 15px", cursor: "pointer" }}>
+                    <button type="submit" style={{
+                        backgroundColor: "#0F2747",
+                        color: "#FFFFFF",
+                        border: "none",
+                        padding: "10px 20px",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        fontWeight: "600",
+                        fontSize: "15px",
+                        width: "100%"
+                    }}>
                         Registration
                     </button>
                 </form>

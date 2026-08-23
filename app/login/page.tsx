@@ -52,7 +52,7 @@ export default function Login() {
             <div style={{
                 marginTop: "20px",
                 width: "100%",
-                maxWidth: "400px",
+                maxWidth: "500px",
                 backgroundColor: "#FFFFFF",
                 padding: "25px",
                 borderRadius: "8px",
@@ -60,15 +60,15 @@ export default function Login() {
                 boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
                 textAlign: "left"
             }}>
-                <h1>Login</h1>
+                <h1 style={{ marginTop: 0, color: "#1F2937", marginBottom: "20px" }}>Login</h1>
 
                 {successMessage && (
-                    <p style={{ color: "green", fontWeight: "bold" }}>{successMessage}</p>
+                    <p style={{ color: "#16A34A", fontWeight: "bold", marginBottom: "15px" }}>{successMessage}</p>
                 )}
 
                 <form onSubmit={handleSubmit} noValidate>
                     <div style={{ marginBottom: "15px" }}>
-                        <label htmlFor="email" style={{ display: "block", marginBottom: "5px" }}>
+                        <label htmlFor="email" style={{ display: "block", marginBottom: "5px", fontWeight: "500", color: "#1F2937" }}>
                             Email Address:
                         </label>
                         <input
@@ -76,15 +76,15 @@ export default function Login() {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            style={{ width: "100%", padding: "8px", boxSizing: "border-box" }}
+                            className="form-input"
                         />
                         {errors.email && (
-                            <span style={{ color: "red", fontSize: "14px" }}>{errors.email}</span>
+                            <span style={{ color: "#DC2626", fontSize: "14px", display: "block", marginTop: "5px" }}>{errors.email}</span>
                         )}
                     </div>
 
-                    <div style={{ marginBottom: "15px" }}>
-                        <label htmlFor="password" style={{ display: "block", marginBottom: "5px" }}>
+                    <div style={{ marginBottom: "20px" }}>
+                        <label htmlFor="password" style={{ display: "block", marginBottom: "5px", fontWeight: "500", color: "#1F2937" }}>
                             Password:
                         </label>
                         <input
@@ -92,14 +92,24 @@ export default function Login() {
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            style={{ width: "100%", padding: "8px", boxSizing: "border-box" }}
+                            className="form-input"
                         />
                         {errors.password && (
-                            <span style={{ color: "red", fontSize: "14px" }}>{errors.password}</span>
+                            <span style={{ color: "#DC2626", fontSize: "14px", display: "block", marginTop: "5px" }}>{errors.password}</span>
                         )}
                     </div>
 
-                    <button type="submit" style={{ padding: "10px 15px", cursor: "pointer" }}>
+                    <button type="submit" style={{
+                        backgroundColor: "#0F2747",
+                        color: "#FFFFFF",
+                        border: "none",
+                        padding: "10px 20px",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        fontWeight: "600",
+                        fontSize: "15px",
+                        width: "100%"
+                    }}>
                         Login
                     </button>
                 </form>

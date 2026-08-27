@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { z } from "zod";
+import axios from "axios";
+import { useRouter } from "next/navigation";
 import MyNavigation from "@/components/navigation";
 import MyHeader from "@/components/header";
 
@@ -12,6 +14,7 @@ const registrationSchema = z
         phoneNumber: z.string().min(1, "Phone number is required"),
         address: z.string().min(1, "Address is required"),
         title: z.string().min(1, "Title is required"),
+        photo: z.any().refine((file) => file instanceof File, "Photo is required"),
         password: z.string().min(8, "Password must be at least 8 characters"),
         confirmPassword: z.string().min(1, "Please confirm your password"),
     })
@@ -26,22 +29,27 @@ type RegistrationErrors = {
     phoneNumber?: string;
     address?: string;
     title?: string;
+    photo?: string;
     password?: string;
     confirmPassword?: string;
+    form?: string;
 };
 
 export default function Registration() {
+    const router = useRouter();
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [phoneNumber, setPhoneNumber] = useState("");
     const [address, setAddress] = useState("");
     const [title, setTitle] = useState("");
+    const [photo, setPhoto] = useState<File | null>(null);
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [errors, setErrors] = useState<RegistrationErrors>({});
     const [successMessage, setSuccessMessage] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setErrors({});
         setSuccessMessage("");
@@ -52,6 +60,7 @@ export default function Registration() {
             phoneNumber,
             address,
             title,
+            photo,
             password,
             confirmPassword,
         });
@@ -66,8 +75,51 @@ export default function Registration() {
             return;
         }
 
-        setSuccessMessage("Registration successful!");
-        console.log("Registration data:", result.data);
+        setIsSubmitting(true);
+
+        const formData = new FormData();
+        formData.append("userName", result.data.username);
+        formData.append("email", result.data.email);
+        formData.append("phoneNumber", result.data.phoneNumber);
+        formData.append("address", result.data.address);
+        formData.append("title", result.data.title);
+        formData.append("password", result.data.password);
+        formData.append("photo", result.data.photo);
+
+        try {
+            await axios.post(
+                "http://localhost:8000/customer/auth/register",
+                formData,
+                {
+                    headers: {
+                        "Content-Type": "multipart/form-data",
+                    },
+                }
+            );
+
+            setSuccessMessage("Registration successful! Redirecting to login page...");
+            
+            setUsername("");
+            setEmail("");
+            setPhoneNumber("");
+            setAddress("");
+            setTitle("");
+            setPhoto(null);
+            setPassword("");
+            setConfirmPassword("");
+
+            setTimeout(() => {
+                router.push("/login");
+            }, 2000);
+        } catch (error: any) {
+            console.error("Registration request error:", error);
+            const apiMessage = error.response?.data?.message || "Registration failed. Please check your backend connection.";
+            setErrors({
+                form: Array.isArray(apiMessage) ? apiMessage.join(", ") : apiMessage
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -80,6 +132,10 @@ export default function Registration() {
 
                 {successMessage && (
                     <p className="text-success-green font-bold mb-4">{successMessage}</p>
+                )}
+
+                {errors.form && (
+                    <p className="text-error-red font-bold mb-4">{errors.form}</p>
                 )}
 
                 <form onSubmit={handleSubmit} noValidate>
@@ -165,6 +221,22 @@ export default function Registration() {
                     </div>
 
                     <div className="mb-4">
+                        <label htmlFor="photo" className="block mb-1 font-medium text-dark-slate">
+                            Profile Photo:
+                        </label>
+                        <input
+                            id="photo"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => setPhoto(e.target.files?.[0] || null)}
+                            className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
+                        />
+                        {errors.photo && (
+                            <span className="text-error-red text-sm block mt-1">{errors.photo}</span>
+                        )}
+                    </div>
+
+                    <div className="mb-4">
                         <label htmlFor="password" className="block mb-1 font-medium text-dark-slate">
                             Password:
                         </label>
@@ -196,8 +268,12 @@ export default function Registration() {
                         )}
                     </div>
 
-                    <button type="submit" className="bg-primary text-white border-none py-2.5 px-5 rounded cursor-pointer font-semibold text-[15px] w-full hover:bg-primary/90">
-                        Registration
+                    <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="bg-primary text-white border-none py-2.5 px-5 rounded cursor-pointer font-semibold text-[15px] w-full hover:bg-primary/90 disabled:bg-primary/50"
+                    >
+                        {isSubmitting ? "Registering..." : "Registration"}
                     </button>
                 </form>
             </div>

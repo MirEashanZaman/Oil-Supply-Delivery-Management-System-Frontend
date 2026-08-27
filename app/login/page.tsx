@@ -1,6 +1,9 @@
 "use client";
+
 import { useState } from "react";
 import { z } from "zod";
+import axios from "axios";
+import { useRouter } from "next/navigation";
 import MyNavigation from "@/components/navigation";
 import MyHeader from "@/components/header";
 
@@ -16,12 +19,14 @@ type LoginErrors = {
 };
 
 export default function Login() {
+    const router = useRouter();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [errors, setErrors] = useState<LoginErrors>({});
     const [successMessage, setSuccessMessage] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setErrors({});
         setSuccessMessage("");
@@ -38,8 +43,35 @@ export default function Login() {
             return;
         }
 
-        setSuccessMessage("Login successful!");
-        console.log("Logged in data:", result.data);
+        setIsSubmitting(true);
+
+        try {
+            const response = await axios.post(
+                "http://localhost:8000/customer/auth/signIn",
+                {
+                    email: result.data.email,
+                    password: result.data.password,
+                },
+                {
+                    withCredentials: true,
+                }
+            );
+
+            localStorage.setItem("user", JSON.stringify(response.data.user || { email: result.data.email }));
+
+            setSuccessMessage("Login successful! Redirecting to dashboard...");
+            setTimeout(() => {
+                router.push("/dashboard");
+            }, 1500);
+        } catch (error: any) {
+            console.error("Login request error:", error);
+            const apiMessage = error.response?.data?.message || "Invalid credentials or backend error.";
+            setErrors({
+                form: Array.isArray(apiMessage) ? apiMessage.join(", ") : apiMessage
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -52,6 +84,10 @@ export default function Login() {
 
                 {successMessage && (
                     <p className="text-success-green font-bold mb-4">{successMessage}</p>
+                )}
+
+                {errors.form && (
+                    <p className="text-error-red font-bold mb-4">{errors.form}</p>
                 )}
 
                 <form onSubmit={handleSubmit} noValidate>
@@ -87,8 +123,12 @@ export default function Login() {
                         )}
                     </div>
 
-                    <button type="submit" className="bg-primary text-white border-none py-2.5 px-5 rounded cursor-pointer font-semibold text-[15px] w-full hover:bg-primary/90">
-                        Login
+                    <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="bg-primary text-white border-none py-2.5 px-5 rounded cursor-pointer font-semibold text-[15px] w-full hover:bg-primary/90 disabled:bg-primary/50"
+                    >
+                        {isSubmitting ? "Logging in..." : "Login"}
                     </button>
                 </form>
             </div>

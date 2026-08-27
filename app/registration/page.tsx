@@ -41,7 +41,7 @@ export default function Registration() {
     const [email, setEmail] = useState("");
     const [phoneNumber, setPhoneNumber] = useState("");
     const [address, setAddress] = useState("");
-    const [title, setTitle] = useState("");
+    const [title, setTitle] = useState("Customer");
     const [photo, setPhoto] = useState<File | null>(null);
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -98,7 +98,7 @@ export default function Registration() {
             );
 
             setSuccessMessage("Registration successful! Redirecting to login page...");
-            
+
             setUsername("");
             setEmail("");
             setPhoneNumber("");
@@ -143,14 +143,16 @@ export default function Registration() {
                         <label htmlFor="title" className="block mb-1 font-medium text-dark-slate">
                             Title:
                         </label>
-                        <input
+                        <select
                             id="title"
-                            type="text"
                             value={title}
-                            placeholder="e.g. Mr., Ms., Dr."
                             onChange={(e) => setTitle(e.target.value)}
                             className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
-                        />
+                        >
+                            <option value="Customer">Customer</option>
+                            <option value="Supplier">Supplier</option>
+                            <option value="Dealer">Dealer</option>
+                        </select>
                         {errors.title && (
                             <span className="text-error-red text-sm block mt-1">{errors.title}</span>
                         )}

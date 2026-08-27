@@ -19,6 +19,8 @@ export default function Navigation() {
             <Link href="/login" className={linkClass}>Login</Link>
             <span className={separatorClass}>|</span>
             <Link href="/registration" className={linkClass}>Registration</Link>
+            <span className={separatorClass}>|</span>
+            <Link href="/dashboard" className={linkClass}>Dashboard</Link>
         </nav>
     );
 }

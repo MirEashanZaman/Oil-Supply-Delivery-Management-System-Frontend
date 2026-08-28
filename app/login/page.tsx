@@ -46,7 +46,6 @@ export default function Login() {
         setIsSubmitting(true);
 
         try {
-            // Store token cookie and authenticate
             const signInEmail = result.data.email;
 
             await axios.post(
@@ -60,7 +59,6 @@ export default function Login() {
                 }
             );
 
-            // Fetch all customer profiles using the cookie set by signIn
             let userData: {
                 email: string;
                 userName: string;
@@ -141,6 +139,7 @@ export default function Login() {
                             id="email"
                             type="email"
                             value={email}
+                            placeholder="Enter your name"
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
                         />
@@ -157,6 +156,7 @@ export default function Login() {
                             id="password"
                             type="password"
                             value={password}
+                            placeholder="Enter your password"
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
                         />

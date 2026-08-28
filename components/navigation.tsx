@@ -28,13 +28,13 @@ export default function Navigation() {
             <Link href="/about" className={linkClass}>About Us</Link>
             <span className={separatorClass}>|</span>
             <Link href="/contact" className={linkClass}>Contact Us</Link>
-            <span className={separatorClass}>|</span>
-            <Link href="/products/1" className={linkClass}>Product 1</Link>
-            <span className={separatorClass}>|</span>
-            <Link href="/products/2" className={linkClass}>Product 2</Link>
 
             {!isLoggedIn ? (
                 <>
+                    <span className={separatorClass}>|</span>
+                    <Link href="/products/1" className={linkClass}>Product 1</Link>
+                    <span className={separatorClass}>|</span>
+                    <Link href="/products/2" className={linkClass}>Product 2</Link>
                     <span className={separatorClass}>|</span>
                     <Link href="/login" className={linkClass}>Login</Link>
                     <span className={separatorClass}>|</span>

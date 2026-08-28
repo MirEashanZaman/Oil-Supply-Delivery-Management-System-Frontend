@@ -46,7 +46,9 @@ export default function Login() {
         setIsSubmitting(true);
 
         try {
-            const response = await axios.post(
+            const signInEmail = result.data.email;
+
+            await axios.post(
                 "http://localhost:8000/customer/auth/signIn",
                 {
                     email: result.data.email,
@@ -57,7 +59,45 @@ export default function Login() {
                 }
             );
 
-            localStorage.setItem("user", JSON.stringify(response.data.user || { email: result.data.email }));
+            let userData: {
+                email: string;
+                userName: string;
+                title: string;
+                phoneNumber?: string;
+                address?: string;
+            } = {
+                email: signInEmail,
+                userName: signInEmail.split("@")[0],
+                title: "Customer"
+            };
+
+            try {
+                const responseAll = await axios.get(
+                    "http://localhost:8000/customer/getallcustomer",
+                    {
+                        withCredentials: true,
+                    }
+                );
+                
+                if (Array.isArray(responseAll.data)) {
+                    const matchedCustomer = responseAll.data.find(
+                        (c: any) => c.email === signInEmail
+                    );
+                    if (matchedCustomer) {
+                        userData = {
+                            email: matchedCustomer.email,
+                            userName: matchedCustomer.username || matchedCustomer.userName || signInEmail.split("@")[0],
+                            phoneNumber: matchedCustomer.phoneNumber,
+                            address: matchedCustomer.address,
+                            title: matchedCustomer.title || "Customer"
+                        };
+                    }
+                }
+            } catch (fetchErr) {
+                console.warn("Failed to fetch customer profile details, falling back to local info", fetchErr);
+            }
+
+            localStorage.setItem("user", JSON.stringify(userData));
 
             setSuccessMessage("Login successful! Redirecting to dashboard...");
             setTimeout(() => {
@@ -99,6 +139,7 @@ export default function Login() {
                             id="email"
                             type="email"
                             value={email}
+                            placeholder="Enter your name"
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
                         />
@@ -115,6 +156,7 @@ export default function Login() {
                             id="password"
                             type="password"
                             value={password}
+                            placeholder="Enter your password"
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
                         />

@@ -46,7 +46,10 @@ export default function Login() {
         setIsSubmitting(true);
 
         try {
-            const response = await axios.post(
+            // Store token cookie and authenticate
+            const signInEmail = result.data.email;
+
+            await axios.post(
                 "http://localhost:8000/customer/auth/signIn",
                 {
                     email: result.data.email,
@@ -57,7 +60,46 @@ export default function Login() {
                 }
             );
 
-            localStorage.setItem("user", JSON.stringify(response.data.user || { email: result.data.email }));
+            // Fetch all customer profiles using the cookie set by signIn
+            let userData: {
+                email: string;
+                userName: string;
+                title: string;
+                phoneNumber?: string;
+                address?: string;
+            } = {
+                email: signInEmail,
+                userName: signInEmail.split("@")[0],
+                title: "Customer"
+            };
+
+            try {
+                const responseAll = await axios.get(
+                    "http://localhost:8000/customer/getallcustomer",
+                    {
+                        withCredentials: true,
+                    }
+                );
+                
+                if (Array.isArray(responseAll.data)) {
+                    const matchedCustomer = responseAll.data.find(
+                        (c: any) => c.email === signInEmail
+                    );
+                    if (matchedCustomer) {
+                        userData = {
+                            email: matchedCustomer.email,
+                            userName: matchedCustomer.username || matchedCustomer.userName || signInEmail.split("@")[0],
+                            phoneNumber: matchedCustomer.phoneNumber,
+                            address: matchedCustomer.address,
+                            title: matchedCustomer.title || "Customer"
+                        };
+                    }
+                }
+            } catch (fetchErr) {
+                console.warn("Failed to fetch customer profile details, falling back to local info", fetchErr);
+            }
+
+            localStorage.setItem("user", JSON.stringify(userData));
 
             setSuccessMessage("Login successful! Redirecting to dashboard...");
             setTimeout(() => {

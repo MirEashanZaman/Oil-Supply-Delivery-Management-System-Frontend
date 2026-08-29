@@ -166,6 +166,7 @@ export default function Registration() {
                             id="username"
                             type="text"
                             value={username}
+                            placeholder="Enter your username"
                             onChange={(e) => setUsername(e.target.value)}
                             className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
                         />
@@ -182,6 +183,7 @@ export default function Registration() {
                             id="email"
                             type="email"
                             value={email}
+                            placeholder="Enter your email"
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
                         />
@@ -198,6 +200,7 @@ export default function Registration() {
                             id="phoneNumber"
                             type="text"
                             value={phoneNumber}
+                            placeholder="Enter your phone number"
                             onChange={(e) => setPhoneNumber(e.target.value)}
                             className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
                         />
@@ -214,6 +217,7 @@ export default function Registration() {
                             id="address"
                             type="text"
                             value={address}
+                            placeholder="Enter your address"
                             onChange={(e) => setAddress(e.target.value)}
                             className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
                         />
@@ -231,7 +235,7 @@ export default function Registration() {
                             type="file"
                             accept="image/*"
                             onChange={(e) => setPhoto(e.target.files?.[0] || null)}
-                            className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
+                            className="w-full p-2 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15 file:mr-4 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90 cursor-pointer"
                         />
                         {errors.photo && (
                             <span className="text-error-red text-sm block mt-1">{errors.photo}</span>
@@ -246,6 +250,7 @@ export default function Registration() {
                             id="password"
                             type="password"
                             value={password}
+                            placeholder="Enter your password"
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
                         />
@@ -262,6 +267,7 @@ export default function Registration() {
                             id="confirmPassword"
                             type="password"
                             value={confirmPassword}
+                            placeholder="Confirm your password"
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
                         />

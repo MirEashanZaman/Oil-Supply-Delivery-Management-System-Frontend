@@ -29,6 +29,7 @@ type Order = {
     status: string;
     address?: string;
     customerName?: string;
+    customerEmail?: string;
     product?: {
         id: number;
         name: string;
@@ -122,7 +123,7 @@ export default function Dashboard() {
     const router = useRouter();
     const [user, setUser] = useState<UserData | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<"products" | "orders" | "profile" | "directory">("products");
+    const [activeTab, setActiveTab] = useState<"products" | "orders" | "inventory" | "profile" | "directory">("products");
 
     // Orders tab states
     const [orders, setOrders] = useState<Order[]>([]);
@@ -130,11 +131,14 @@ export default function Dashboard() {
     const [trackedOrderId, setTrackedOrderId] = useState<number | null>(null);
     const [deliveryDates, setDeliveryDates] = useState<{ [orderId: number]: string }>({});
 
+    // Dealer/Supplier Inventory states
+    const [dealerInventory, setDealerInventory] = useState<Product[]>([]);
+
     // Sourcing lists (Suppliers & Dealers)
     const [availableSuppliers, setAvailableSuppliers] = useState<Party[]>([]);
     const [availableDealers, setAvailableDealers] = useState<Party[]>([]);
 
-    // Interactive Checkout Modal States
+    // Customer Interactive Checkout Modal States
     const [checkoutProduct, setCheckoutProduct] = useState<Product | null>(null);
     const [sourcingChoice, setSourcingChoice] = useState<"supplier" | "dealer">("supplier");
     const [selectedPartyId, setSelectedPartyId] = useState<number | "">("");
@@ -146,6 +150,12 @@ export default function Dashboard() {
     const [cardExpiry, setCardExpiry] = useState<string>("12/28");
     const [cardCvv, setCardCvv] = useState<string>("883");
     const [isSubmittingOrder, setIsSubmittingOrder] = useState<boolean>(false);
+
+    // Dealer Wholesale Bulk Sourcing Modal States
+    const [wholesaleProduct, setWholesaleProduct] = useState<Product | null>(null);
+    const [wholesaleSupplierId, setWholesaleSupplierId] = useState<number | "">("");
+    const [wholesaleQuantity, setWholesaleQuantity] = useState<number>(50);
+    const [isSubmittingWholesale, setIsSubmittingWholesale] = useState<boolean>(false);
 
     // Profile settings tab states
     const [editUsername, setEditUsername] = useState("");
@@ -170,7 +180,7 @@ export default function Dashboard() {
         return "http://localhost:8000/customer/getallcustomer";
     };
 
-    // Load initial user details and make initial backend operations
+    // Load initial user details
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
         if (storedUser) {
@@ -188,7 +198,7 @@ export default function Dashboard() {
         fetchSourcingParties();
     }, []);
 
-    // Axios Call: Fetch available suppliers and dealers for direct sourcing selection
+    // Axios Call: Fetch available suppliers and dealers
     const fetchSourcingParties = async () => {
         try {
             const [suppliersRes, dealersRes] = await Promise.allSettled([
@@ -207,7 +217,7 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Get full user profile
+    // Axios Call: Get full profile
     const fetchFullProfile = async (email: string, title?: string) => {
         const url = getAllUsersUrl(title);
         try {
@@ -232,6 +242,9 @@ export default function Dashboard() {
                     setEditAddress(match.address || "");
 
                     fetchOrders(match.id, match.title || title);
+                    if (match.title === "Dealer" || title === "Dealer") {
+                        fetchDealerInventory(match.id);
+                    }
                 }
             }
         } catch (err) {
@@ -239,7 +252,101 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Fetch customer orders with relations
+    // Axios Call: Dealer Inventory (`GET /dealer/:id/products`)
+    const fetchDealerInventory = async (dealerId: number) => {
+        try {
+            const res = await axios.get(`http://localhost:8000/dealer/${dealerId}/products`, {
+                withCredentials: true,
+            });
+            if (Array.isArray(res.data)) {
+                setDealerInventory(res.data);
+            }
+        } catch (err) {
+            console.error("Failed to fetch dealer inventory:", err);
+        }
+    };
+
+    // Axios Call: Dealer Assign Product (`POST /dealer/:id/products`)
+    const handleAssignProduct = async (product: Product) => {
+        if (!user || !user.id) return;
+        try {
+            await axios.post(
+                `http://localhost:8000/dealer/${user.id}/products`,
+                { productIds: [product.id] },
+                { withCredentials: true }
+            );
+            alert(`Product "${product.name}" assigned to your dealer stock catalog!`);
+            fetchDealerInventory(user.id);
+        } catch (err: any) {
+            console.error("Failed to assign product:", err);
+            alert(err.response?.data?.message || "Failed to assign product.");
+        }
+    };
+
+    // Axios Call: Dealer Remove Product (`DELETE /dealer/:id/products/:productId`)
+    const handleRemoveProductFromStock = async (productId: number) => {
+        if (!user || !user.id) return;
+        const confirmRemove = window.confirm("Are you sure you want to remove this product from your inventory?");
+        if (!confirmRemove) return;
+
+        try {
+            await axios.delete(`http://localhost:8000/dealer/${user.id}/products/${productId}`, {
+                withCredentials: true,
+            });
+            alert("Product removed from inventory successfully.");
+            fetchDealerInventory(user.id);
+        } catch (err) {
+            console.error("Failed to remove product from stock:", err);
+            alert("Failed to remove product from stock.");
+        }
+    };
+
+    // Axios Call: Dealer Wholesale Bulk Sourcing from Supplier (`POST /dealer/placeorder`)
+    const handleWholesaleBulkOrder = async () => {
+        if (!user || !wholesaleProduct) return;
+        setIsSubmittingWholesale(true);
+
+        const supplierId = wholesaleSupplierId || (availableSuppliers[0]?.id || 1);
+
+        try {
+            await axios.post(
+                "http://localhost:8000/dealer/placeorder",
+                {
+                    productId: wholesaleProduct.id,
+                    supplierId: Number(supplierId),
+                    quantity: wholesaleQuantity,
+                },
+                { withCredentials: true }
+            );
+
+            // Send notification email
+            try {
+                const supplierName = availableSuppliers.find(s => s.id === Number(supplierId))?.userName || "Supplier Refinery";
+                await axios.post(
+                    "http://localhost:8000/dealer/send-email",
+                    {
+                        to: user.email,
+                        subject: `Wholesale Order Placed - ${wholesaleProduct.name}`,
+                        text: `Hi ${user.userName},\n\nYour wholesale bulk order for ${wholesaleQuantity} units of ${wholesaleProduct.name} has been placed directly with Supplier (${supplierName})!\n\nThank you!`,
+                    },
+                    { withCredentials: true }
+                );
+            } catch (mailErr) {
+                console.warn("Mail dispatch notice:", mailErr);
+            }
+
+            alert(`Wholesale bulk order for ${wholesaleQuantity} units of ${wholesaleProduct.name} placed successfully with Supplier!`);
+            setWholesaleProduct(null);
+            if (user.id) fetchOrders(user.id, user.title);
+        } catch (err: any) {
+            console.error("Wholesale ordering failed:", err);
+            alert(err.response?.data?.message || "Wholesale ordering failed.");
+        } finally {
+            setIsSubmittingWholesale(false);
+        }
+    };
+
+    // Axios Call: Fetch customer orders
     const fetchOrders = async (id: number, title?: string) => {
         const r = getRolePath(title);
         if (r === "customer") {
@@ -267,6 +374,7 @@ export default function Dashboard() {
                                     status: o.status || "pending",
                                     address: o.address || cust.address,
                                     customerName: cust.username || cust.userName || cust.email,
+                                    customerEmail: cust.email,
                                     product: o.product || { id: 1, name: "Fuel Product" },
                                     supplier: o.supplier,
                                     dealer: o.dealer,
@@ -283,7 +391,7 @@ export default function Dashboard() {
         }
     };
 
-    // Open Checkout Modal
+    // Customer Checkout Modal
     const handleOpenCheckout = (product: Product) => {
         setCheckoutProduct(product);
         setOrderQuantity(1);
@@ -294,10 +402,9 @@ export default function Dashboard() {
         }
     };
 
-    // Submit Complete Order with Direct Sourcing Choice & Integrated Payment
+    // Submit Customer Order
     const handleCompleteOrder = async () => {
         if (!user || !user.id || !checkoutProduct) return;
-
         setIsSubmittingOrder(true);
         const totalAmount = Number((checkoutProduct.numericPrice * orderQuantity).toFixed(2));
 
@@ -314,7 +421,6 @@ export default function Dashboard() {
             },
         };
 
-        // Option A: Direct from Supplier vs Option B: Via Dealer
         if (sourcingChoice === "supplier") {
             orderPayload.supplier = selectedPartyId ? { id: Number(selectedPartyId) } : { id: 1 };
         } else {
@@ -322,14 +428,12 @@ export default function Dashboard() {
         }
 
         try {
-            // 1. Submit Order to Backend
             await axios.post(
                 `http://localhost:8000/customer/${user.id}/orders`,
                 orderPayload,
                 { withCredentials: true }
             );
 
-            // 2. Dispatch Automated Email Confirmation
             try {
                 const partnerName = sourcingChoice === "supplier" 
                     ? (availableSuppliers.find(s => s.id === Number(selectedPartyId))?.userName || "Direct Refinery Supplier")
@@ -339,8 +443,8 @@ export default function Dashboard() {
                     "http://localhost:8000/customer/send-email",
                     {
                         to: user.email,
-                        subject: `Order Confirmed - ${checkoutProduct.name} (Invoice #${Date.now().toString().slice(-6)})`,
-                        text: `Dear ${user.userName},\n\nYour order has been placed successfully!\n\nProduct: ${checkoutProduct.name}\nQuantity: ${orderQuantity}\nSourced From: ${sourcingChoice.toUpperCase()} (${partnerName})\nTotal Paid: $${totalAmount}\nPayment Method: ${cardType} ending in ${cardNumber.slice(-4)}\nDelivery Address: ${deliveryAddress}\nStatus: Pending Delivery\n\nThank you for choosing Oil Supply & Delivery Management System.`,
+                        subject: `Order Confirmed - ${checkoutProduct.name}`,
+                        text: `Dear ${user.userName},\n\nYour order has been placed successfully!\n\nProduct: ${checkoutProduct.name}\nQuantity: ${orderQuantity}\nSourced From: ${sourcingChoice.toUpperCase()} (${partnerName})\nTotal Paid: $${totalAmount}\nDelivery Address: ${deliveryAddress}\n\nThank you!`,
                     },
                     { withCredentials: true }
                 );
@@ -348,101 +452,56 @@ export default function Dashboard() {
                 console.warn("Mail dispatch error:", mailErr);
             }
 
-            alert(`Order placed successfully!\nTotal: $${totalAmount}\nPayment Verified: ${cardType}\nEmail receipt sent to ${user.email}`);
+            alert(`Order placed successfully!\nTotal: $${totalAmount}\nEmail receipt sent to ${user.email}`);
             setCheckoutProduct(null);
             fetchOrders(user.id, user.title);
             setActiveTab("orders");
         } catch (err: any) {
             console.error("Order submission failed:", err);
-            alert(err.response?.data?.message || "Order placement failed. Please try again.");
+            alert(err.response?.data?.message || "Order placement failed.");
         } finally {
             setIsSubmittingOrder(false);
         }
     };
 
-    // Axios Call: Save profile details (PATCH)
-    const handleSaveProfile = async () => {
-        if (!user || !user.id) return;
-        const r = getRolePath(user.title);
-        setProfileStatus("");
-        try {
-            await axios.patch(
-                `http://localhost:8000/${r}/${user.id}`,
-                {
-                    userName: editUsername,
-                    phoneNumber: editPhone,
-                    address: editAddress,
-                },
-                { withCredentials: true }
-            );
-            setProfileStatus("Profile details updated successfully!");
-            fetchFullProfile(user.email, user.title);
-        } catch (err) {
-            console.error("Failed to update profile:", err);
-            setProfileStatus("Failed to update profile settings.");
-        }
-    };
-
-    // Axios Call: Check username in database
-    const handleCheckUsername = async () => {
-        if (!editUsername) return;
-        const r = getRolePath(user?.title);
-        setDbLookupStatus("");
-        try {
-            const res = await axios.get(`http://localhost:8000/${r}/${editUsername}`, {
-                withCredentials: true,
-            });
-            if (res.data) {
-                setDbLookupStatus(`Username '${editUsername}' exists in database! Category: ${res.data.title || "User"}`);
-            } else {
-                setDbLookupStatus(`Username '${editUsername}' is available!`);
-            }
-        } catch (err) {
-            setDbLookupStatus(`Username '${editUsername}' search completed.`);
-        }
-    };
-
-    // Axios Call: Delete Customer account
-    const handleDeleteAccount = async () => {
-        if (!user) return;
-        const confirmDelete = window.confirm("Are you sure you want to delete your customer account? All your order and payment history will be permanently deleted.");
-        if (!confirmDelete) return;
-
-        const r = getRolePath(user.title);
-        try {
-            let url = `http://localhost:8000/customer/${user.userName}`;
-            if (r === "supplier" || r === "dealer") {
-                url = `http://localhost:8000/${r}/${user.id}`;
-            }
-            await axios.delete(url, { withCredentials: true });
-            alert("Your account has been deleted.");
-            handleLogout();
-        } catch (err) {
-            console.error("Account deletion failed:", err);
-            alert("Failed to delete account. Please try again.");
-        }
-    };
-
-    // Axios Call: Confirm order (Supplier / Dealer)
-    const handleConfirmOrder = async (orderId: number) => {
+    // Axios Call: Confirm or Reject Order (`PUT /dealer/confirmorder/:id`)
+    const handleConfirmOrRejectOrder = async (orderId: number, status: "confirmed" | "rejected", customerEmail?: string) => {
         if (!user) return;
         const r = getRolePath(user.title);
         try {
             await axios.put(
                 `http://localhost:8000/${r}/confirmorder/${orderId}`,
-                { status: "confirmed" },
+                { status: status },
                 { withCredentials: true }
             );
-            alert("Order confirmed successfully!");
+
+            // Send notification email to customer
+            if (customerEmail) {
+                try {
+                    await axios.post(
+                        `http://localhost:8000/${r}/send-email`,
+                        {
+                            to: customerEmail,
+                            subject: `Order #${orderId} Update: ${status.toUpperCase()}`,
+                            text: `Dear Customer,\n\nYour order #${orderId} has been marked as '${status}' by the ${user.title || "Dealer"}.\n\nThank you for choosing us!`,
+                        },
+                        { withCredentials: true }
+                    );
+                } catch (mailErr) {
+                    console.warn("Mail send error:", mailErr);
+                }
+            }
+
+            alert(`Order #${orderId} marked as ${status.toUpperCase()} successfully!`);
             fetchOrders(user.id || 1, user.title);
         } catch (err) {
-            console.error("Failed to confirm order:", err);
-            alert("Failed to confirm order.");
+            console.error(`Failed to ${status} order:`, err);
+            alert(`Failed to update order status.`);
         }
     };
 
-    // Axios Call: Schedule delivery
-    const handleScheduleDelivery = async (orderId: number) => {
+    // Axios Call: Schedule & Link Delivery (`POST /dealer/scheduledelivery`)
+    const handleScheduleDelivery = async (orderId: number, customerEmail?: string) => {
         if (!user) return;
         const r = getRolePath(user.title);
         const date = deliveryDates[orderId];
@@ -457,7 +516,25 @@ export default function Dashboard() {
                 { orderId, deliveryDate: date },
                 { withCredentials: true }
             );
-            alert(`Delivery scheduled successfully for ${date}!`);
+
+            // Send notification email to customer
+            if (customerEmail) {
+                try {
+                    await axios.post(
+                        `http://localhost:8000/${r}/send-email`,
+                        {
+                            to: customerEmail,
+                            subject: `Delivery Scheduled for Order #${orderId}`,
+                            text: `Dear Customer,\n\nYour order #${orderId} has been scheduled for delivery on ${date}.\n\nHandled by: ${user.userName || user.title}\nStatus: Scheduled\n\nThank you!`,
+                        },
+                        { withCredentials: true }
+                    );
+                } catch (mailErr) {
+                    console.warn("Mail send notice:", mailErr);
+                }
+            }
+
+            alert(`Delivery successfully scheduled for ${date}! Email update sent to customer.`);
             fetchOrders(user.id || 1, user.title);
         } catch (err) {
             console.error("Failed to schedule delivery:", err);
@@ -483,16 +560,17 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Track order status in real time
+    // Axios Call: Track wholesale/logistics order status (`GET /dealer/trackorder/:id`)
     const handleTrackOrder = async (orderId: number) => {
         setTrackedOrderId(orderId);
         setTrackedOrderStatus("Connecting to real-time delivery tracker...");
+        const r = getRolePath(user?.title);
         try {
-            const res = await axios.get(`http://localhost:8000/customer/trackorder/${orderId}`, {
+            const res = await axios.get(`http://localhost:8000/${r}/trackorder/${orderId}`, {
                 withCredentials: true,
             });
             if (res.data) {
-                setTrackedOrderStatus(res.data.status || "In Transit / Scheduled");
+                setTrackedOrderStatus(res.data.status || res.data.message || "In Transit / Scheduled");
             }
         } catch (err) {
             console.error("Tracking failed:", err);
@@ -500,7 +578,51 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Search users in directory
+    // Axios Call: Profile Updates (PATCH)
+    const handleSaveProfile = async () => {
+        if (!user || !user.id) return;
+        const r = getRolePath(user.title);
+        setProfileStatus("");
+        try {
+            await axios.patch(
+                `http://localhost:8000/${r}/${user.id}`,
+                {
+                    userName: editUsername,
+                    phoneNumber: editPhone,
+                    address: editAddress,
+                },
+                { withCredentials: true }
+            );
+            setProfileStatus("Profile details updated successfully!");
+            fetchFullProfile(user.email, user.title);
+        } catch (err) {
+            console.error("Failed to update profile:", err);
+            setProfileStatus("Failed to update profile settings.");
+        }
+    };
+
+    // Axios Call: Delete Account
+    const handleDeleteAccount = async () => {
+        if (!user) return;
+        const confirmDelete = window.confirm(`Are you sure you want to delete your ${user.title} account? This will cascade-delete linked orders and deliveries.`);
+        if (!confirmDelete) return;
+
+        const r = getRolePath(user.title);
+        try {
+            let url = `http://localhost:8000/customer/${user.userName}`;
+            if (r === "supplier" || r === "dealer") {
+                url = `http://localhost:8000/${r}/${user.id}`;
+            }
+            await axios.delete(url, { withCredentials: true });
+            alert("Your account has been deleted.");
+            handleLogout();
+        } catch (err) {
+            console.error("Account deletion failed:", err);
+            alert("Failed to delete account. Please try again.");
+        }
+    };
+
+    // Axios Call: Search users
     const handleSearchUsers = async () => {
         if (!searchQuery) {
             setSearchResults([]);
@@ -535,7 +657,7 @@ export default function Dashboard() {
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-soft-gray text-dark-slate">
-                <p className="font-semibold text-lg animate-pulse">Loading Customer Dashboard...</p>
+                <p className="font-semibold text-lg animate-pulse">Loading System Dashboard...</p>
             </div>
         );
     }
@@ -560,13 +682,14 @@ export default function Dashboard() {
     }
 
     const isCustomer = getRolePath(user.title) === "customer";
+    const isDealer = getRolePath(user.title) === "dealer";
 
     return (
         <>
             <MyHeader name="Dashboard" message="manage orders, catalog & deliveries!" />
             <MyNavigation />
 
-            {/* Top User Summary & Header */}
+            {/* Profile Overview Bar */}
             <div className="w-full max-w-[1200px] bg-card-white border border-[#E2E8F0] shadow-sm rounded-lg p-5 mb-6 flex flex-col md:flex-row items-center justify-between text-left gap-4">
                 <div className="flex items-center gap-4">
                     {user.photoUrl ? (
@@ -603,6 +726,21 @@ export default function Dashboard() {
                     >
                         Products Catalog
                     </button>
+
+                    {isDealer && (
+                        <button
+                            onClick={() => {
+                                setActiveTab("inventory");
+                                if (user.id) fetchDealerInventory(user.id);
+                            }}
+                            className={`px-4 py-2 rounded text-sm font-semibold transition-colors cursor-pointer ${
+                                activeTab === "inventory" ? "bg-primary text-white" : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9]"
+                            }`}
+                        >
+                            Stock Inventory
+                        </button>
+                    )}
+
                     <button
                         onClick={() => {
                             setActiveTab("orders");
@@ -612,7 +750,7 @@ export default function Dashboard() {
                             activeTab === "orders" ? "bg-primary text-white" : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9]"
                         }`}
                     >
-                        {isCustomer ? "My Orders & Tracking" : "Manage Deliveries / Orders"}
+                        {isCustomer ? "My Orders & Tracking" : "Fulfill Customer Orders"}
                     </button>
                     <button
                         onClick={() => {
@@ -645,13 +783,20 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* TAB 1: PRODUCT CATALOG */}
+            {/* TAB 1: PRODUCT CATALOG & BULK SOURCING */}
             {activeTab === "products" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <div className="flex justify-between items-center mb-6">
                         <div>
-                            <h1 className="text-2xl font-extrabold text-dark-slate">Oil Products Catalog</h1>
-                            <p className="text-sm text-secondary-gray">Select an oil grade to buy directly from a Supplier or via a Dealer.</p>
+                            <h1 className="text-2xl font-extrabold text-dark-slate">
+                                {isDealer ? "Oil Products & Wholesale Sourcing" : "Oil Products Catalog"}
+                            </h1>
+                            <p className="text-sm text-secondary-gray">
+                                {isDealer
+                                    ? "Assign products to your stock catalog or order bulk wholesale supplies directly from Refinery Suppliers."
+                                    : "Browse available oil grades and place retail orders with direct supplier or dealer sourcing."
+                                }
+                            </p>
                         </div>
                     </div>
 
@@ -677,14 +822,36 @@ export default function Dashboard() {
                                     <p className="text-sm text-secondary-gray mb-4">{product.description}</p>
                                 </div>
 
-                                <div className="p-5 border-t border-[#F1F5F9] bg-[#FAFBFD] flex items-center justify-between">
+                                <div className="p-5 border-t border-[#F1F5F9] bg-[#FAFBFD] flex items-center justify-between gap-2">
                                     <span className="text-base font-extrabold text-primary">{product.price}</span>
-                                    <button
-                                        onClick={() => handleOpenCheckout(product)}
-                                        className="bg-primary text-white py-2 px-5 rounded text-sm font-semibold hover:bg-primary/95 transition-colors cursor-pointer shadow-sm"
-                                    >
-                                        Order & Checkout
-                                    </button>
+                                    
+                                    {isDealer ? (
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handleAssignProduct(product)}
+                                                className="bg-emerald-600 text-white py-1.5 px-3 rounded text-xs font-semibold hover:bg-emerald-700 transition-colors cursor-pointer"
+                                            >
+                                                + Assign Stock
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setWholesaleProduct(product);
+                                                    setWholesaleQuantity(50);
+                                                    if (availableSuppliers.length > 0) setWholesaleSupplierId(availableSuppliers[0].id);
+                                                }}
+                                                className="bg-primary text-white py-1.5 px-3 rounded text-xs font-semibold hover:bg-primary/95 transition-colors cursor-pointer"
+                                            >
+                                                Bulk Source
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => handleOpenCheckout(product)}
+                                            className="bg-primary text-white py-2 px-5 rounded text-sm font-semibold hover:bg-primary/95 transition-colors cursor-pointer shadow-sm"
+                                        >
+                                            Order & Checkout
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -692,28 +859,76 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB 2: MY ORDERS & REAL-TIME TRACKING */}
+            {/* TAB: DEALER STOCK INVENTORY */}
+            {isDealer && activeTab === "inventory" && (
+                <div className="w-full max-w-[1200px] text-left animate-fadeIn">
+                    <div className="flex justify-between items-center mb-6">
+                        <div>
+                            <h1 className="text-2xl font-extrabold text-dark-slate">My Stock Inventory</h1>
+                            <p className="text-sm text-secondary-gray">Manage products actively linked to your Dealer stock catalog.</p>
+                        </div>
+                    </div>
+
+                    {dealerInventory.length === 0 ? (
+                        <div className="bg-card-white p-8 rounded-lg border border-[#E2E8F0] text-center shadow-sm">
+                            <p className="text-secondary-gray mb-4">You have not assigned any products to your inventory catalog yet.</p>
+                            <button
+                                onClick={() => setActiveTab("products")}
+                                className="bg-primary text-white px-5 py-2 rounded text-sm font-semibold cursor-pointer"
+                            >
+                                Browse Catalog to Assign Products
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {dealerInventory.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className="bg-card-white rounded-lg border border-[#E2E8F0] shadow-sm flex flex-col justify-between overflow-hidden"
+                                >
+                                    <div className="h-2 bg-emerald-600 w-full" />
+                                    <div className="p-5 flex-grow">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                                Active Stock Item
+                                            </span>
+                                        </div>
+                                        <h3 className="text-lg font-bold text-dark-slate mb-2">{item.name}</h3>
+                                        <p className="text-sm text-secondary-gray">{item.description || "Petroleum Grade Oil Product"}</p>
+                                    </div>
+
+                                    <div className="p-4 border-t border-[#F1F5F9] bg-[#FAFBFD] flex items-center justify-between">
+                                        <span className="text-xs text-secondary-gray">Product ID: #{item.id}</span>
+                                        <button
+                                            onClick={() => handleRemoveProductFromStock(item.id)}
+                                            className="bg-error-red text-white py-1.5 px-3 rounded text-xs font-semibold hover:bg-error-red/90 transition-colors cursor-pointer"
+                                        >
+                                            Remove from Stock
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* TAB 2: MY ORDERS & FULFILLMENT */}
             {activeTab === "orders" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <h1 className="text-2xl font-extrabold text-dark-slate mb-2">
-                        {isCustomer ? "My Order History & Live Tracking" : "Customer Orders Management"}
+                        {isCustomer ? "My Order History & Live Tracking" : "Fulfill Customer Orders & Logistics"}
                     </h1>
                     <p className="text-sm text-secondary-gray mb-6">
                         {isCustomer 
-                            ? "View all your past orders, delivery channel selections, payment invoices, and real-time status updates."
-                            : "Manage all customer orders in the system, confirm pending requests, and assign delivery schedules."
+                            ? "View past orders, delivery channel selections, payment invoices, and real-time status updates."
+                            : "Confirm or reject retail customer orders, schedule deliveries, and dispatch email updates to buyers."
                         }
                     </p>
 
                     {orders.length === 0 ? (
                         <div className="bg-card-white p-8 rounded-lg border border-[#E2E8F0] text-center shadow-sm">
-                            <p className="text-secondary-gray mb-4">No order logs found in your account.</p>
-                            <button
-                                onClick={() => setActiveTab("products")}
-                                className="bg-primary text-white px-5 py-2 rounded text-sm font-semibold cursor-pointer"
-                            >
-                                Browse Products to Order
-                            </button>
+                            <p className="text-secondary-gray mb-4">No order logs found.</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 gap-4">
@@ -727,7 +942,13 @@ export default function Dashboard() {
                                             <h3 className="text-base font-bold text-dark-slate">
                                                 Order #{item.id}
                                             </h3>
-                                            <span className="text-xs px-2 py-0.5 rounded font-bold bg-blue-50 text-primary border border-blue-100">
+                                            <span className={`text-xs px-2 py-0.5 rounded font-bold ${
+                                                item.status === "confirmed" 
+                                                    ? "bg-green-100 text-success-green border border-green-200" 
+                                                    : item.status === "rejected"
+                                                    ? "bg-red-100 text-error-red border border-red-200"
+                                                    : "bg-blue-50 text-primary border border-blue-100"
+                                            }`}>
                                                 {item.status ? item.status.toUpperCase() : "PENDING"}
                                             </span>
                                         </div>
@@ -736,15 +957,9 @@ export default function Dashboard() {
                                             Product: <span className="font-semibold text-primary">{item.product?.name || "Petroleum Fuel"}</span> (Qty: {item.quantity})
                                         </p>
 
-                                        <p className="text-xs text-secondary-gray">
-                                            Sourcing Channel: <strong className="text-dark-slate">
-                                                {item.supplier ? `Direct from Supplier (${item.supplier.userName || "Refinery"})` : item.dealer ? `Via Dealer (${item.dealer.userName || "Authorized Dealer"})` : "Standard Sourcing"}
-                                            </strong>
-                                        </p>
-
-                                        {item.payment && (
+                                        {!isCustomer && item.customerName && (
                                             <p className="text-xs text-secondary-gray">
-                                                Paid: <strong className="text-success-green">${item.payment.amount || (82.5 * item.quantity).toFixed(2)}</strong> via {item.payment.cardType || "Card"} (Verified Transaction)
+                                                Buyer: <strong className="text-dark-slate">{item.customerName}</strong> ({item.customerEmail || "Customer"})
                                             </p>
                                         )}
 
@@ -755,7 +970,7 @@ export default function Dashboard() {
 
                                     {trackedOrderId === item.id && trackedOrderStatus && (
                                         <div className="bg-blue-50 border border-blue-200 text-primary px-4 py-2 rounded text-xs">
-                                            <span className="font-bold block mb-0.5">Live Delivery Status:</span>
+                                            <span className="font-bold block mb-0.5">Tracking Status:</span>
                                             {trackedOrderStatus}
                                         </div>
                                     )}
@@ -779,10 +994,17 @@ export default function Dashboard() {
                                         ) : (
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <button
-                                                    onClick={() => handleConfirmOrder(item.id)}
-                                                    className="bg-green-600 text-white text-xs font-semibold px-4 py-2 rounded hover:bg-green-700 transition-colors cursor-pointer"
+                                                    onClick={() => handleConfirmOrRejectOrder(item.id, "confirmed", item.customerEmail)}
+                                                    className="bg-green-600 text-white text-xs font-semibold px-3 py-2 rounded hover:bg-green-700 transition-colors cursor-pointer"
                                                 >
-                                                    Confirm Order
+                                                    Confirm (PUT)
+                                                </button>
+
+                                                <button
+                                                    onClick={() => handleConfirmOrRejectOrder(item.id, "rejected", item.customerEmail)}
+                                                    className="bg-red-600 text-white text-xs font-semibold px-3 py-2 rounded hover:bg-red-700 transition-colors cursor-pointer"
+                                                >
+                                                    Reject (PUT)
                                                 </button>
                                                 
                                                 <div className="flex items-center border border-secondary-gray rounded overflow-hidden">
@@ -796,12 +1018,19 @@ export default function Dashboard() {
                                                         className="p-1 text-xs outline-none bg-card-white text-dark-slate border-r border-secondary-gray"
                                                     />
                                                     <button
-                                                        onClick={() => handleScheduleDelivery(item.id)}
+                                                        onClick={() => handleScheduleDelivery(item.id, item.customerEmail)}
                                                         className="bg-teal-600 text-white text-xs font-semibold px-3 py-2 hover:bg-teal-700 transition-colors cursor-pointer"
                                                     >
-                                                        Set Delivery Date
+                                                        Schedule (POST)
                                                     </button>
                                                 </div>
+
+                                                <button
+                                                    onClick={() => handleTrackOrder(item.id)}
+                                                    className="bg-primary text-white text-xs font-semibold px-3 py-2 rounded hover:bg-primary/90 transition-colors cursor-pointer"
+                                                >
+                                                    Track (GET)
+                                                </button>
                                             </div>
                                         )}
                                     </div>
@@ -827,21 +1056,13 @@ export default function Dashboard() {
 
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-semibold text-dark-slate mb-1">Username</label>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={editUsername}
-                                        onChange={(e) => setEditUsername(e.target.value)}
-                                        className="flex-grow p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none"
-                                    />
-                                    <button
-                                        onClick={handleCheckUsername}
-                                        className="bg-secondary text-white px-4 py-2 rounded font-semibold text-sm hover:bg-secondary/90 transition-colors cursor-pointer"
-                                    >
-                                        Check DB
-                                    </button>
-                                </div>
+                                <label className="block text-sm font-semibold text-dark-slate mb-1">Username / Business Name</label>
+                                <input
+                                    type="text"
+                                    value={editUsername}
+                                    onChange={(e) => setEditUsername(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none"
+                                />
                             </div>
 
                             <div>
@@ -865,7 +1086,7 @@ export default function Dashboard() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-dark-slate mb-1">Default Delivery Address</label>
+                                <label className="block text-sm font-semibold text-dark-slate mb-1">Business Hub / Delivery Address</label>
                                 <input
                                     type="text"
                                     value={editAddress}
@@ -879,20 +1100,20 @@ export default function Dashboard() {
                                     onClick={handleSaveProfile}
                                     className="w-full bg-primary text-white py-2.5 rounded font-semibold text-sm hover:bg-primary/95 transition-colors cursor-pointer"
                                 >
-                                    Save Profile Updates
+                                    Save Profile Updates (PATCH)
                                 </button>
                             </div>
 
                             <div className="border-t border-[#F1F5F9] mt-6 pt-6">
-                                <h3 className="text-error-red text-base font-bold mb-1">Delete Customer Account</h3>
+                                <h3 className="text-error-red text-base font-bold mb-1">Delete {user.title || "Dealer"} Account</h3>
                                 <p className="text-xs text-secondary-gray mb-4">
-                                    Deleting your account will cascade-delete all your active orders, payment records, and delivery requests.
+                                    Deleting your account will cascade-delete all linked product inventories, orders, and delivery schedules.
                                 </p>
                                 <button
                                     onClick={handleDeleteAccount}
                                     className="bg-error-red text-white px-5 py-2 rounded text-xs font-bold hover:bg-error-red/90 transition-colors cursor-pointer"
                                 >
-                                    Permanently Delete Account
+                                    Permanently Delete Account (DELETE)
                                 </button>
                             </div>
                         </div>
@@ -955,7 +1176,83 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* INTERACTIVE CHECKOUT & DIRECT SOURCING MODAL */}
+            {/* DEALER WHOLESALE BULK SOURCING MODAL */}
+            {wholesaleProduct && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[550px] text-left p-6 md:p-8">
+                        <div className="flex justify-between items-center border-b border-gray-100 pb-3 mb-5">
+                            <div>
+                                <h2 className="text-xl font-extrabold text-dark-slate">Wholesale Bulk Sourcing</h2>
+                                <p className="text-xs text-secondary-gray">Buy bulk petroleum products directly from Refinery Suppliers.</p>
+                            </div>
+                            <button
+                                onClick={() => setWholesaleProduct(null)}
+                                className="text-gray-400 hover:text-dark-slate text-2xl font-bold p-1 cursor-pointer"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div className="bg-[#FAFBFD] p-4 rounded-lg border border-[#E2E8F0] mb-5">
+                            <h3 className="text-base font-bold text-dark-slate">{wholesaleProduct.name}</h3>
+                            <p className="text-xs text-secondary-gray">{wholesaleProduct.category} | {wholesaleProduct.price}</p>
+                        </div>
+
+                        <div className="space-y-4 mb-6">
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">Select Refinery Supplier:</label>
+                                <select
+                                    value={wholesaleSupplierId}
+                                    onChange={(e) => setWholesaleSupplierId(Number(e.target.value))}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none"
+                                >
+                                    {availableSuppliers.length > 0 ? (
+                                        availableSuppliers.map((s) => (
+                                            <option key={s.id} value={s.id}>
+                                                {s.userName || s.username || `Supplier Refinery #${s.id}`} ({s.email || "Verified"})
+                                            </option>
+                                        ))
+                                    ) : (
+                                        <option value="1">Central National Petroleum Refinery (Default)</option>
+                                    )}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">Bulk Quantity (Units / Barrels):</label>
+                                <input
+                                    type="number"
+                                    min="10"
+                                    max="10000"
+                                    value={wholesaleQuantity}
+                                    onChange={(e) => setWholesaleQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none font-bold"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setWholesaleProduct(null)}
+                                className="w-1/3 py-2.5 rounded-lg border border-secondary-gray text-dark-slate font-semibold text-sm hover:bg-gray-50 transition-colors cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                disabled={isSubmittingWholesale}
+                                onClick={handleWholesaleBulkOrder}
+                                className="w-2/3 py-2.5 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/95 transition-colors cursor-pointer shadow-md disabled:bg-primary/50"
+                            >
+                                {isSubmittingWholesale ? "Placing Wholesale Order..." : `Confirm Wholesale Order (${wholesaleQuantity} units)`}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* CUSTOMER CHECKOUT MODAL */}
             {checkoutProduct && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
                     <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[650px] max-h-[90vh] overflow-y-auto text-left p-6 md:p-8">
@@ -972,7 +1269,6 @@ export default function Dashboard() {
                             </button>
                         </div>
 
-                        {/* 1. Item Breakdown */}
                         <div className="bg-[#FAFBFD] p-4 rounded-lg border border-[#E2E8F0] mb-6">
                             <div className="flex justify-between items-center">
                                 <div>
@@ -1000,7 +1296,6 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        {/* 2. Direct Sourcing Choice (Supplier vs. Dealer) */}
                         <div className="mb-6">
                             <label className="block text-sm font-bold text-dark-slate mb-2">
                                 Choose Sourcing Channel:
@@ -1039,7 +1334,6 @@ export default function Dashboard() {
                                 </button>
                             </div>
 
-                            {/* Dropdown for selecting specific partner */}
                             <div>
                                 <label className="block text-xs font-semibold text-secondary-gray mb-1">
                                     Select {sourcingChoice === "supplier" ? "Supplier Refinery" : "Authorized Dealer"}:
@@ -1074,7 +1368,6 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        {/* 3. Delivery Destination */}
                         <div className="mb-6">
                             <label className="block text-sm font-bold text-dark-slate mb-1">Delivery Destination Address</label>
                             <input
@@ -1086,7 +1379,6 @@ export default function Dashboard() {
                             />
                         </div>
 
-                        {/* 4. Integrated Payment Submission */}
                         <div className="border-t border-gray-100 pt-5 mb-6">
                             <h4 className="text-sm font-bold text-dark-slate mb-3">Payment Information</h4>
                             <div className="space-y-3">
@@ -1152,7 +1444,6 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        {/* 5. Checkout Actions */}
                         <div className="flex gap-3 pt-2">
                             <button
                                 type="button"

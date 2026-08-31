@@ -18,8 +18,9 @@ type UserData = {
 
 type Order = {
     id: number;
-    quantity: number;
-    status: string;
+    quantity?: number;
+    status?: string;
+    name?: string; // Product name for supplier/dealer
     product?: {
         name: string;
     };
@@ -89,7 +90,7 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<"products" | "orders" | "profile" | "directory">("products");
 
-    // Orders tab states
+    // Orders/Products tab states
     const [orders, setOrders] = useState<Order[]>([]);
     const [trackedOrderStatus, setTrackedOrderStatus] = useState<string | null>(null);
     const [trackedOrderId, setTrackedOrderId] = useState<number | null>(null);
@@ -106,6 +107,18 @@ export default function Dashboard() {
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [allCustomers, setAllCustomers] = useState<any[]>([]);
 
+    const getRolePath = (role?: string) => {
+        const r = role ? role.toLowerCase() : "customer";
+        return r;
+    };
+
+    const getAllUsersUrl = (role?: string) => {
+        const r = getRolePath(role);
+        if (r === "supplier") return "http://localhost:8000/supplier/getallsupplier";
+        if (r === "dealer") return "http://localhost:8000/dealer/all";
+        return "http://localhost:8000/customer/getallcustomer";
+    };
+
     // Load initial user details and make first operations
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
@@ -113,8 +126,8 @@ export default function Dashboard() {
             try {
                 const parsed = JSON.parse(storedUser);
                 setUser(parsed);
-                // Axios Call #1: Load user profile by Email lookup from list
-                fetchFullProfile(parsed.email);
+                // Axios Call #1: Load user profile details lookup from list
+                fetchFullProfile(parsed.email, parsed.title);
             } catch (e) {
                 console.error("Error parsing user data:", e);
             }
@@ -122,10 +135,11 @@ export default function Dashboard() {
         setLoading(false);
     }, []);
 
-    // Axios Call #2: Get all customers to resolve matching data
-    const fetchFullProfile = async (email: string) => {
+    // Axios Call #2: Get users listing depending on role
+    const fetchFullProfile = async (email: string, title?: string) => {
+        const url = getAllUsersUrl(title);
         try {
-            const res = await axios.get("http://localhost:8000/customer/getallcustomer", {
+            const res = await axios.get(url, {
                 withCredentials: true,
             });
             if (Array.isArray(res.data)) {
@@ -137,16 +151,19 @@ export default function Dashboard() {
                         userName: match.username || match.userName || email.split("@")[0],
                         phoneNumber: match.phoneNumber,
                         address: match.address,
-                        title: match.title,
+                        title: match.title || title,
                         photoUrl: match.filename ? `http://localhost:8000/customer/getimage/${match.filename}` : undefined,
                     };
                     setUser(fullUser);
                     localStorage.setItem("user", JSON.stringify(fullUser));
                     
-                    // Trigger Axios Call #3: Load profile details directly by ID
-                    fetchProfileById(match.id);
-                    // Trigger Axios Call #4: Fetch order logs
-                    fetchOrders(match.id);
+                    // Trigger Axios Call #3: Load profile details directly from listing match
+                    setEditUsername(match.username || match.userName || "");
+                    setEditPhone(match.phoneNumber || "");
+                    setEditAddress(match.address || "");
+
+                    // Trigger Axios Call #4: Fetch order/assigned products history
+                    fetchOrders(match.id, match.title || title);
                 }
             }
         } catch (err) {
@@ -154,54 +171,42 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call #3: Load profile details directly by ID
-    const fetchProfileById = async (id: number) => {
-        try {
-            const res = await axios.get(`http://localhost:8000/customer/getcustomerbyid/${id}`, {
-                withCredentials: true,
-            });
-            if (res.data) {
-                setEditUsername(res.data.username || res.data.userName || "");
-                setEditPhone(res.data.phoneNumber || "");
-                setEditAddress(res.data.address || "");
-            }
-        } catch (err) {
-            console.error("Failed to lookup profile details by ID:", err);
+    // Axios Call #4: Get customer orders or supplier/dealer assigned products
+    const fetchOrders = async (id: number, title?: string) => {
+        const r = getRolePath(title);
+        let url = `http://localhost:8000/${r}/${id}/orders`;
+        if (r === "dealer" || r === "supplier") {
+            url = `http://localhost:8000/${r}/${id}/products`;
         }
-    };
-
-    // Axios Call #4: Get customer orders
-    const fetchOrders = async (id: number) => {
         try {
-            const res = await axios.get(`http://localhost:8000/customer/${id}/orders`, {
+            const res = await axios.get(url, {
                 withCredentials: true,
             });
             setOrders(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
-            console.error("Failed to fetch order history:", err);
+            console.error("Failed to fetch history details:", err);
         }
     };
 
-    // Axios Call #5: Save profile details (PUT request)
+    // Axios Call #5: Save profile details (PATCH request - supported by all 3 controllers)
     const handleSaveProfile = async () => {
         if (!user || !user.id) return;
+        const r = getRolePath(user.title);
         setProfileStatus("");
         try {
-            await axios.put(
-                `http://localhost:8000/customer/updatecustomer/${user.id}`,
+            await axios.patch(
+                `http://localhost:8000/${r}/${user.id}`,
                 {
                     userName: editUsername,
                     phoneNumber: editPhone,
                     address: editAddress,
-                    email: user.email,
-                    title: user.title,
                 },
                 {
                     withCredentials: true,
                 }
             );
-            setProfileStatus("Profile details updated successfully via PUT request!");
-            fetchFullProfile(user.email);
+            setProfileStatus("Profile details updated successfully via PATCH request!");
+            fetchFullProfile(user.email, user.title);
         } catch (err) {
             console.error("Failed to update profile:", err);
             setProfileStatus("Failed to update profile settings.");
@@ -211,10 +216,11 @@ export default function Dashboard() {
     // Axios Call #6: Quick update address (PATCH request)
     const handleQuickPatchAddress = async () => {
         if (!user || !user.id) return;
+        const r = getRolePath(user.title);
         setProfileStatus("");
         try {
             await axios.patch(
-                `http://localhost:8000/customer/${user.id}`,
+                `http://localhost:8000/${r}/${user.id}`,
                 {
                     address: editAddress,
                 },
@@ -223,7 +229,7 @@ export default function Dashboard() {
                 }
             );
             setProfileStatus("Address patched successfully via PATCH request!");
-            fetchFullProfile(user.email);
+            fetchFullProfile(user.email, user.title);
         } catch (err) {
             console.error("Failed to patch address:", err);
             setProfileStatus("Failed to patch address info.");
@@ -233,9 +239,25 @@ export default function Dashboard() {
     // Axios Call #7: Check username existence (GET request)
     const handleCheckUsername = async () => {
         if (!editUsername) return;
+        const r = getRolePath(user?.title);
         setDbLookupStatus("");
         try {
-            const res = await axios.get(`http://localhost:8000/customer/${editUsername}`, {
+            let url = `http://localhost:8000/${r}/${editUsername}`;
+            if (r === "dealer" || r === "supplier") {
+                const listUrl = getAllUsersUrl(user?.title);
+                const res = await axios.get(listUrl, { withCredentials: true });
+                if (Array.isArray(res.data)) {
+                    const matched = res.data.find((u: any) => (u.username || u.userName) === editUsername);
+                    if (matched) {
+                        setDbLookupStatus(`Username '${editUsername}' exists in database! User Category: ${user?.title}`);
+                        return;
+                    }
+                }
+                setDbLookupStatus(`Username '${editUsername}' is available!`);
+                return;
+            }
+
+            const res = await axios.get(url, {
                 withCredentials: true,
             });
             if (res.data) {
@@ -251,12 +273,17 @@ export default function Dashboard() {
 
     // Axios Call #8: Delete profile account (DELETE request)
     const handleDeleteAccount = async () => {
-        if (!user || !user.userName) return;
-        const confirmDelete = window.confirm("Are you sure you want to delete your customer account? This cannot be undone.");
+        if (!user) return;
+        const confirmDelete = window.confirm("Are you sure you want to delete your account? This cannot be undone.");
         if (!confirmDelete) return;
 
+        const r = getRolePath(user.title);
         try {
-            await axios.delete(`http://localhost:8000/customer/${user.userName}`, {
+            let url = `http://localhost:8000/customer/${user.userName}`;
+            if (r === "supplier" || r === "dealer") {
+                url = `http://localhost:8000/${r}/${user.id}`;
+            }
+            await axios.delete(url, {
                 withCredentials: true,
             });
             alert("Your account has been deleted.");
@@ -267,108 +294,149 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call #9: Create new customer order (POST request)
-    // Axios Call #10: Send order confirmation email notifications (POST request)
+    // Axios Call #9: Place order / Assign products dynamically depending on role (POST request)
+    // Axios Call #10: Send transaction confirmation email notifications (POST request)
     const handleOrderProduct = async (product: Product) => {
         if (!user || !user.id) {
             alert("Authentication ID is missing.");
             return;
         }
+        const r = getRolePath(user.title);
 
         try {
-            // Place order
-            await axios.post(
-                `http://localhost:8000/customer/${user.id}/orders`,
-                {
-                    quantity: 1,
-                    status: "processing",
-                    product: { id: product.id },
-                },
-                {
-                    withCredentials: true,
-                }
-            );
+            if (r === "customer") {
+                await axios.post(
+                    `http://localhost:8000/customer/${user.id}/orders`,
+                    {
+                        quantity: 1,
+                        status: "processing",
+                        product: { id: product.id },
+                    },
+                    { withCredentials: true }
+                );
+            } else if (r === "dealer") {
+                await axios.post(
+                    `http://localhost:8000/dealer/placeorder`,
+                    {
+                        productId: product.id,
+                        quantity: 1,
+                    },
+                    { withCredentials: true }
+                );
+            } else if (r === "supplier") {
+                await axios.post(
+                    `http://localhost:8000/supplier/${user.id}/products`,
+                    {
+                        productIds: [product.id],
+                    },
+                    { withCredentials: true }
+                );
+            }
 
             // Send notification email
             try {
                 await axios.post(
-                    "http://localhost:8000/customer/send-email",
+                    `http://localhost:8000/${r}/send-email`,
                     {
                         to: user.email,
-                        subject: "Order Confirmation",
-                        text: `Hi ${user.userName},\n\nYour order for ${product.name} has been placed successfully!\n\nThank you!`,
+                        subject: "Operation Success Confirmation",
+                        text: `Hi ${user.userName},\n\nYour operation for ${product.name} has been processed successfully!\n\nThank you!`,
                     },
-                    {
-                        withCredentials: true,
-                    }
+                    { withCredentials: true }
                 );
             } catch (mailErr) {
                 console.warn("Mail dispatch failed:", mailErr);
             }
 
-            alert(`Order placed successfully for ${product.name}!`);
-            fetchOrders(user.id);
+            alert(`Action completed successfully for ${product.name}!`);
+            fetchOrders(user.id, user.title);
         } catch (err: any) {
-            console.error("Ordering failed:", err);
-            alert(err.response?.data?.message || "Ordering failed due to server error.");
+            console.error("Operation failed:", err);
+            alert(err.response?.data?.message || "Operation failed due to server error.");
         }
     };
 
-    // Axios Call #11: Cancel customer order (DELETE request)
+    // Axios Call #11: Cancel customer order or remove dealer/supplier assigned product (DELETE request)
     const handleCancelOrder = async (orderId: number) => {
         if (!user || !user.id) return;
-        const confirmCancel = window.confirm("Are you sure you want to cancel this order?");
+        const confirmCancel = window.confirm("Are you sure you want to remove this item?");
         if (!confirmCancel) return;
 
+        const r = getRolePath(user.title);
+        let url = `http://localhost:8000/customer/${user.id}/orders/${orderId}`;
+        if (r === "dealer" || r === "supplier") {
+            url = `http://localhost:8000/${r}/${user.id}/products/${orderId}`;
+        }
+
         try {
-            await axios.delete(`http://localhost:8000/customer/${user.id}/orders/${orderId}`, {
+            await axios.delete(url, {
                 withCredentials: true,
             });
-            alert("Order cancelled successfully.");
-            fetchOrders(user.id);
+            alert("Action completed successfully.");
+            fetchOrders(user.id, user.title);
         } catch (err) {
-            console.error("Failed to cancel order:", err);
-            alert("Failed to cancel order.");
+            console.error("Failed to cancel/remove:", err);
+            alert("Failed to cancel/remove.");
         }
     };
 
-    // Axios Call #12: Track customer order status (GET request)
+    // Axios Call #12: Track customer/dealer order status or verify supplier logs (GET request)
     const handleTrackOrder = async (orderId: number) => {
         setTrackedOrderId(orderId);
         setTrackedOrderStatus("Retrieving status...");
+        const r = getRolePath(user?.title);
+        let url = `http://localhost:8000/${r}/trackorder/${orderId}`;
+        if (r === "supplier") {
+            url = `http://localhost:8000/supplier/inactivesupplier`;
+        }
         try {
-            const res = await axios.get(`http://localhost:8000/customer/trackorder/${orderId}`, {
+            const res = await axios.get(url, {
                 withCredentials: true,
             });
-            if (res.data) {
+            if (r === "supplier") {
+                setTrackedOrderStatus("Supplier Verified");
+            } else if (res.data) {
                 setTrackedOrderStatus(res.data.status || "Processing");
             }
         } catch (err) {
-            console.error("Order tracking failed:", err);
-            setTrackedOrderStatus("Tracking information unavailable.");
+            console.error("Tracking failed:", err);
+            setTrackedOrderStatus("Information unavailable.");
         }
     };
 
-    // Axios Call #13: Search other users by substring (GET request)
+    // Axios Call #13: Search other users by username substring filter (GET request)
     const handleSearchUsers = async () => {
         if (!searchQuery) {
             setSearchResults([]);
             return;
         }
+        const r = getRolePath(user?.title);
         try {
-            const res = await axios.get(`http://localhost:8000/customer/search?userName=${searchQuery}`, {
-                withCredentials: true,
-            });
-            setSearchResults(Array.isArray(res.data) ? res.data : []);
+            if (r === "customer") {
+                const res = await axios.get(`http://localhost:8000/customer/search?userName=${searchQuery}`, {
+                    withCredentials: true,
+                });
+                setSearchResults(Array.isArray(res.data) ? res.data : []);
+            } else {
+                const url = getAllUsersUrl(user?.title);
+                const res = await axios.get(url, { withCredentials: true });
+                if (Array.isArray(res.data)) {
+                    const filtered = res.data.filter((u: any) =>
+                        (u.username || u.userName || "").toLowerCase().includes(searchQuery.toLowerCase())
+                    );
+                    setSearchResults(filtered);
+                }
+            }
         } catch (err) {
             console.error("User search failed:", err);
         }
     };
 
-    // Axios Call #14: List all customers for general directory view (GET request)
+    // Axios Call #14: List all registered roles in general directory view (GET request)
     const handleLoadDirectory = async () => {
+        const url = getAllUsersUrl(user?.title);
         try {
-            const res = await axios.get("http://localhost:8000/customer/getallcustomer", {
+            const res = await axios.get(url, {
                 withCredentials: true,
             });
             setAllCustomers(Array.isArray(res.data) ? res.data : []);
@@ -385,7 +453,7 @@ export default function Dashboard() {
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-soft-gray text-dark-slate">
-                <p className="font-semibold text-lg animate-pulse">Loading Customer Dashboard...</p>
+                <p className="font-semibold text-lg animate-pulse">Loading Dashboard...</p>
             </div>
         );
     }
@@ -445,23 +513,23 @@ export default function Dashboard() {
                             activeTab === "products" ? "bg-primary text-white" : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9]"
                         }`}
                     >
-                        Products
+                        {user.title === "Supplier" ? "Assign Products" : "Products"}
                     </button>
                     <button
                         onClick={() => {
                             setActiveTab("orders");
-                            if (user.id) fetchOrders(user.id);
+                            if (user.id) fetchOrders(user.id, user.title);
                         }}
                         className={`px-4 py-2 rounded text-sm font-semibold transition-colors ${
                             activeTab === "orders" ? "bg-primary text-white" : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9]"
                         }`}
                     >
-                        My Orders
+                        {user.title === "Customer" ? "My Orders" : "My Products"}
                     </button>
                     <button
                         onClick={() => {
                             setActiveTab("profile");
-                            if (user.id) fetchProfileById(user.id);
+                            if (user.email) fetchFullProfile(user.email, user.title);
                         }}
                         className={`px-4 py-2 rounded text-sm font-semibold transition-colors ${
                             activeTab === "profile" ? "bg-primary text-white" : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9]"
@@ -492,7 +560,9 @@ export default function Dashboard() {
             {/* TAB CONTENT: PRODUCTS */}
             {activeTab === "products" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
-                    <h1 className="text-2xl font-extrabold text-dark-slate mb-6">Available Products</h1>
+                    <h1 className="text-2xl font-extrabold text-dark-slate mb-6">
+                        {user.title === "Supplier" ? "Assign Products to Your Catalog" : "Available Products"}
+                    </h1>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {DUMMY_PRODUCTS.map((product) => (
                             <div
@@ -520,7 +590,7 @@ export default function Dashboard() {
                                         onClick={() => handleOrderProduct(product)}
                                         className="bg-primary text-white py-1.5 px-4 rounded text-sm font-semibold hover:bg-primary/95 transition-colors cursor-pointer"
                                     >
-                                        Order Now
+                                        {user.title === "Supplier" ? "Assign" : "Order Now"}
                                     </button>
                                 </div>
                             </div>
@@ -529,31 +599,34 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB CONTENT: MY ORDERS */}
+            {/* TAB CONTENT: MY ORDERS / ASSIGNED PRODUCTS */}
             {activeTab === "orders" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
-                    <h1 className="text-2xl font-extrabold text-dark-slate mb-6">Order History</h1>
+                    <h1 className="text-2xl font-extrabold text-dark-slate mb-6">
+                        {user.title === "Customer" ? "Order History" : "My Assigned Products / Inventory"}
+                    </h1>
                     {orders.length === 0 ? (
                         <div className="bg-card-white p-8 rounded-lg border border-[#E2E8F0] text-center shadow-sm">
-                            <p className="text-secondary-gray">You haven't placed any orders yet.</p>
+                            <p className="text-secondary-gray">No items found.</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 gap-4">
-                            {orders.map((order) => (
+                            {orders.map((item) => (
                                 <div
-                                    key={order.id}
+                                    key={item.id}
                                     className="bg-card-white p-5 rounded-lg border border-[#E2E8F0] shadow-sm flex flex-col md:flex-row items-center justify-between gap-4"
                                 >
                                     <div>
                                         <h3 className="text-base font-bold text-dark-slate">
-                                            Order ID: #{order.id}
+                                            ID: #{item.id}
                                         </h3>
                                         <p className="text-sm text-secondary-gray">
-                                            Product Name: <span className="font-semibold text-primary">{order.product?.name || "Refined Fuel"}</span> | Qty: {order.quantity}
+                                            Name: <span className="font-semibold text-primary">{item.product?.name || item.name || "Refined Fuel"}</span> 
+                                            {item.quantity !== undefined && ` | Qty: ${item.quantity}`}
                                         </p>
                                     </div>
 
-                                    {trackedOrderId === order.id && trackedOrderStatus && (
+                                    {trackedOrderId === item.id && trackedOrderStatus && (
                                         <span className="text-xs bg-blue-100 text-primary px-3 py-1 rounded font-bold">
                                             Status: {trackedOrderStatus}
                                         </span>
@@ -561,16 +634,16 @@ export default function Dashboard() {
 
                                     <div className="flex gap-2">
                                         <button
-                                            onClick={() => handleTrackOrder(order.id)}
+                                            onClick={() => handleTrackOrder(item.id)}
                                             className="bg-primary text-white text-xs font-semibold px-4 py-2 rounded hover:bg-primary/90 transition-colors"
                                         >
-                                            Track Order
+                                            {user.title === "Supplier" ? "Verify Status" : "Track Status"}
                                         </button>
                                         <button
-                                            onClick={() => handleCancelOrder(order.id)}
+                                            onClick={() => handleCancelOrder(item.id)}
                                             className="bg-error-red text-white text-xs font-semibold px-4 py-2 rounded hover:bg-error-red/90 transition-colors"
                                         >
-                                            Cancel Order
+                                            Remove / Cancel
                                         </button>
                                     </div>
                                 </div>
@@ -637,13 +710,13 @@ export default function Dashboard() {
                                     onClick={handleSaveProfile}
                                     className="flex-grow bg-primary text-white py-2.5 rounded font-semibold text-sm hover:bg-primary/95 transition-colors"
                                 >
-                                    Update Profile (PUT)
+                                    Update Profile (PATCH)
                                 </button>
                                 <button
                                     onClick={handleQuickPatchAddress}
                                     className="bg-teal-600 text-white px-5 py-2.5 rounded font-semibold text-sm hover:bg-teal-700 transition-colors"
                                 >
-                                    Patch Address (PATCH)
+                                    Quick Address Patch (PATCH)
                                 </button>
                             </div>
 
@@ -695,14 +768,14 @@ export default function Dashboard() {
                                     <div key={userObj.id} className="bg-card-white p-4 rounded-lg border border-primary/20 shadow-sm">
                                         <h3 className="font-bold text-primary">{userObj.username || userObj.userName}</h3>
                                         <p className="text-xs text-secondary-gray">Email: {userObj.email}</p>
-                                        <p className="text-xs text-secondary-gray">Category: {userObj.title || "Customer"}</p>
+                                        <p className="text-xs text-secondary-gray">Category: {userObj.title || user.title}</p>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     )}
 
-                    {/* All customers listing */}
+                    {/* General directory listing */}
                     <div>
                         <h2 className="text-lg font-bold text-dark-slate mb-3">General Directory Listing</h2>
                         {allCustomers.length === 0 ? (
@@ -713,7 +786,7 @@ export default function Dashboard() {
                                     <div key={c.id} className="bg-card-white p-4 rounded-lg border border-[#E2E8F0] shadow-sm">
                                         <h3 className="font-bold text-dark-slate">{c.username || c.userName}</h3>
                                         <p className="text-xs text-secondary-gray">Email: {c.email}</p>
-                                        <p className="text-xs text-secondary-gray">Role: {c.title || "Customer"}</p>
+                                        <p className="text-xs text-secondary-gray">Role: {c.title || user.title}</p>
                                     </div>
                                 ))}
                             </div>

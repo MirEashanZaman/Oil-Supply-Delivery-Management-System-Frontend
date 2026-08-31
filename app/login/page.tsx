@@ -22,6 +22,7 @@ export default function Login() {
     const router = useRouter();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [role, setRole] = useState("Customer");
     const [errors, setErrors] = useState<LoginErrors>({});
     const [successMessage, setSuccessMessage] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,9 +48,10 @@ export default function Login() {
 
         try {
             const signInEmail = result.data.email;
+            const rolePath = role.toLowerCase();
 
             await axios.post(
-                "http://localhost:8000/customer/auth/signIn",
+                `http://localhost:8000/${rolePath}/auth/signIn`,
                 {
                     email: result.data.email,
                     password: result.data.password,
@@ -68,33 +70,40 @@ export default function Login() {
             } = {
                 email: signInEmail,
                 userName: signInEmail.split("@")[0],
-                title: "Customer"
+                title: role
             };
 
             try {
+                let fetchUrl = `http://localhost:8000/${rolePath}/getallcustomer`;
+                if (rolePath === "supplier") {
+                    fetchUrl = `http://localhost:8000/supplier/getallsupplier`;
+                } else if (rolePath === "dealer") {
+                    fetchUrl = `http://localhost:8000/dealer/all`;
+                }
+
                 const responseAll = await axios.get(
-                    "http://localhost:8000/customer/getallcustomer",
+                    fetchUrl,
                     {
                         withCredentials: true,
                     }
                 );
 
                 if (Array.isArray(responseAll.data)) {
-                    const matchedCustomer = responseAll.data.find(
+                    const matchedUser = responseAll.data.find(
                         (c: any) => c.email === signInEmail
                     );
-                    if (matchedCustomer) {
+                    if (matchedUser) {
                         userData = {
-                            email: matchedCustomer.email,
-                            userName: matchedCustomer.username || matchedCustomer.userName || signInEmail.split("@")[0],
-                            phoneNumber: matchedCustomer.phoneNumber,
-                            address: matchedCustomer.address,
-                            title: matchedCustomer.title || "Customer"
+                            email: matchedUser.email,
+                            userName: matchedUser.username || matchedUser.userName || signInEmail.split("@")[0],
+                            phoneNumber: matchedUser.phoneNumber,
+                            address: matchedUser.address,
+                            title: matchedUser.title || role
                         };
                     }
                 }
             } catch (fetchErr) {
-                console.warn("Failed to fetch customer profile details, falling back to local info", fetchErr);
+                console.warn("Failed to fetch user profile details, falling back to local info", fetchErr);
             }
 
             localStorage.setItem("user", JSON.stringify(userData));
@@ -131,6 +140,22 @@ export default function Login() {
                 )}
 
                 <form onSubmit={handleSubmit} noValidate>
+                    <div className="mb-4">
+                        <label htmlFor="role" className="block mb-1 font-medium text-dark-slate">
+                            Login Category / Role:
+                        </label>
+                        <select
+                            id="role"
+                            value={role}
+                            onChange={(e) => setRole(e.target.value)}
+                            className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
+                        >
+                            <option value="Customer">Customer</option>
+                            <option value="Supplier">Supplier</option>
+                            <option value="Dealer">Dealer</option>
+                        </select>
+                    </div>
+
                     <div className="mb-4">
                         <label htmlFor="email" className="block mb-1 font-medium text-dark-slate">
                             Email Address:

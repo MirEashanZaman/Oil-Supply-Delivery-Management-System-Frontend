@@ -13,6 +13,7 @@ type UserData = {
     phoneNumber?: string;
     address?: string;
     title?: string;
+    status?: string;
     photoUrl?: string;
 };
 
@@ -64,6 +65,7 @@ type Party = {
     userName?: string;
     email?: string;
     title?: string;
+    status?: string;
 };
 
 const DUMMY_PRODUCTS: Product[] = [
@@ -132,7 +134,8 @@ export default function Dashboard() {
     const [deliveryDates, setDeliveryDates] = useState<{ [orderId: number]: string }>({});
 
     // Dealer/Supplier Inventory states
-    const [dealerInventory, setDealerInventory] = useState<Product[]>([]);
+    const [customInventory, setCustomInventory] = useState<Product[]>([]);
+    const [supplierOperationalStatus, setSupplierOperationalStatus] = useState<string>("active");
 
     // Sourcing lists (Suppliers & Dealers)
     const [availableSuppliers, setAvailableSuppliers] = useState<Party[]>([]);
@@ -189,6 +192,7 @@ export default function Dashboard() {
                 setUser(parsed);
                 setDeliveryAddress(parsed.address || "Dhaka, Bangladesh");
                 setCardHolder(parsed.userName || parsed.email.split("@")[0]);
+                if (parsed.status) setSupplierOperationalStatus(parsed.status);
                 fetchFullProfile(parsed.email, parsed.title);
             } catch (e) {
                 console.error("Error parsing user data:", e);
@@ -232,9 +236,11 @@ export default function Dashboard() {
                         phoneNumber: match.phoneNumber,
                         address: match.address,
                         title: match.title || title,
+                        status: match.status || "active",
                         photoUrl: match.filename ? `http://localhost:8000/customer/getimage/${match.filename}` : undefined,
                     };
                     setUser(fullUser);
+                    if (match.status) setSupplierOperationalStatus(match.status);
                     localStorage.setItem("user", JSON.stringify(fullUser));
                     
                     setEditUsername(match.username || match.userName || "");
@@ -242,8 +248,8 @@ export default function Dashboard() {
                     setEditAddress(match.address || "");
 
                     fetchOrders(match.id, match.title || title);
-                    if (match.title === "Dealer" || title === "Dealer") {
-                        fetchDealerInventory(match.id);
+                    if (match.title === "Dealer" || title === "Dealer" || match.title === "Supplier" || title === "Supplier") {
+                        fetchCustomInventory(match.id, match.title || title);
                     }
                 }
             }
@@ -252,56 +258,79 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Dealer Inventory (`GET /dealer/:id/products`)
-    const fetchDealerInventory = async (dealerId: number) => {
+    // Axios Call: Get Inventory / Supply Portfolio (`GET /:role/:id/products`)
+    const fetchCustomInventory = async (partyId: number, title?: string) => {
+        const r = getRolePath(title);
         try {
-            const res = await axios.get(`http://localhost:8000/dealer/${dealerId}/products`, {
+            const res = await axios.get(`http://localhost:8000/${r}/${partyId}/products`, {
                 withCredentials: true,
             });
             if (Array.isArray(res.data)) {
-                setDealerInventory(res.data);
+                setCustomInventory(res.data);
             }
         } catch (err) {
-            console.error("Failed to fetch dealer inventory:", err);
+            console.error("Failed to fetch inventory:", err);
         }
     };
 
-    // Axios Call: Dealer Assign Product (`POST /dealer/:id/products`)
+    // Axios Call: Assign Product to Stock / Portfolio (`POST /:role/:id/products`)
     const handleAssignProduct = async (product: Product) => {
         if (!user || !user.id) return;
+        const r = getRolePath(user.title);
         try {
             await axios.post(
-                `http://localhost:8000/dealer/${user.id}/products`,
+                `http://localhost:8000/${r}/${user.id}/products`,
                 { productIds: [product.id] },
                 { withCredentials: true }
             );
-            alert(`Product "${product.name}" assigned to your dealer stock catalog!`);
-            fetchDealerInventory(user.id);
+            alert(`Product "${product.name}" added to your ${user.title === "Supplier" ? "Supply Portfolio" : "Stock Inventory"}!`);
+            fetchCustomInventory(user.id, user.title);
         } catch (err: any) {
             console.error("Failed to assign product:", err);
             alert(err.response?.data?.message || "Failed to assign product.");
         }
     };
 
-    // Axios Call: Dealer Remove Product (`DELETE /dealer/:id/products/:productId`)
+    // Axios Call: Remove Product from Stock / Portfolio (`DELETE /:role/:id/products/:productId`)
     const handleRemoveProductFromStock = async (productId: number) => {
         if (!user || !user.id) return;
-        const confirmRemove = window.confirm("Are you sure you want to remove this product from your inventory?");
+        const confirmRemove = window.confirm(`Are you sure you want to remove this product from your ${user.title === "Supplier" ? "portfolio" : "inventory"}?`);
         if (!confirmRemove) return;
 
+        const r = getRolePath(user.title);
         try {
-            await axios.delete(`http://localhost:8000/dealer/${user.id}/products/${productId}`, {
+            await axios.delete(`http://localhost:8000/${r}/${user.id}/products/${productId}`, {
                 withCredentials: true,
             });
-            alert("Product removed from inventory successfully.");
-            fetchDealerInventory(user.id);
+            alert("Product removed successfully.");
+            fetchCustomInventory(user.id, user.title);
         } catch (err) {
-            console.error("Failed to remove product from stock:", err);
-            alert("Failed to remove product from stock.");
+            console.error("Failed to remove product:", err);
+            alert("Failed to remove product.");
         }
     };
 
-    // Axios Call: Dealer Wholesale Bulk Sourcing from Supplier (`POST /dealer/placeorder`)
+    // Axios Call: Supplier Status Toggle (`PUT /supplier/updatesupplier/:id/:status`)
+    const handleToggleSupplierStatus = async () => {
+        if (!user || !user.id) return;
+        const newStatus = supplierOperationalStatus === "active" ? "inactive" : "active";
+        try {
+            await axios.put(
+                `http://localhost:8000/supplier/updatesupplier/${user.id}/${newStatus}`,
+                {},
+                { withCredentials: true }
+            );
+            setSupplierOperationalStatus(newStatus);
+            setUser({ ...user, status: newStatus });
+            alert(`Supplier operational status updated to: ${newStatus.toUpperCase()}`);
+            fetchFullProfile(user.email, user.title);
+        } catch (err) {
+            console.error("Failed to update status:", err);
+            alert("Failed to update operational status.");
+        }
+    };
+
+    // Axios Call: Dealer Wholesale Bulk Sourcing (`POST /dealer/placeorder`)
     const handleWholesaleBulkOrder = async () => {
         if (!user || !wholesaleProduct) return;
         setIsSubmittingWholesale(true);
@@ -319,7 +348,6 @@ export default function Dashboard() {
                 { withCredentials: true }
             );
 
-            // Send notification email
             try {
                 const supplierName = availableSuppliers.find(s => s.id === Number(supplierId))?.userName || "Supplier Refinery";
                 await axios.post(
@@ -335,7 +363,7 @@ export default function Dashboard() {
                 console.warn("Mail dispatch notice:", mailErr);
             }
 
-            alert(`Wholesale bulk order for ${wholesaleQuantity} units of ${wholesaleProduct.name} placed successfully with Supplier!`);
+            alert(`Wholesale bulk order for ${wholesaleQuantity} units of ${wholesaleProduct.name} placed successfully!`);
             setWholesaleProduct(null);
             if (user.id) fetchOrders(user.id, user.title);
         } catch (err: any) {
@@ -464,7 +492,7 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Confirm or Reject Order (`PUT /dealer/confirmorder/:id`)
+    // Axios Call: Confirm or Reject Order (`PUT /:role/confirmorder/:id`)
     const handleConfirmOrRejectOrder = async (orderId: number, status: "confirmed" | "rejected", customerEmail?: string) => {
         if (!user) return;
         const r = getRolePath(user.title);
@@ -475,7 +503,6 @@ export default function Dashboard() {
                 { withCredentials: true }
             );
 
-            // Send notification email to customer
             if (customerEmail) {
                 try {
                     await axios.post(
@@ -483,7 +510,7 @@ export default function Dashboard() {
                         {
                             to: customerEmail,
                             subject: `Order #${orderId} Update: ${status.toUpperCase()}`,
-                            text: `Dear Customer,\n\nYour order #${orderId} has been marked as '${status}' by the ${user.title || "Dealer"}.\n\nThank you for choosing us!`,
+                            text: `Dear Partner / Customer,\n\nYour order #${orderId} has been marked as '${status}' by the ${user.title}.\n\nThank you!`,
                         },
                         { withCredentials: true }
                     );
@@ -500,7 +527,7 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Schedule & Link Delivery (`POST /dealer/scheduledelivery`)
+    // Axios Call: Schedule & Link Delivery (`POST /:role/scheduledelivery`)
     const handleScheduleDelivery = async (orderId: number, customerEmail?: string) => {
         if (!user) return;
         const r = getRolePath(user.title);
@@ -517,7 +544,6 @@ export default function Dashboard() {
                 { withCredentials: true }
             );
 
-            // Send notification email to customer
             if (customerEmail) {
                 try {
                     await axios.post(
@@ -525,7 +551,7 @@ export default function Dashboard() {
                         {
                             to: customerEmail,
                             subject: `Delivery Scheduled for Order #${orderId}`,
-                            text: `Dear Customer,\n\nYour order #${orderId} has been scheduled for delivery on ${date}.\n\nHandled by: ${user.userName || user.title}\nStatus: Scheduled\n\nThank you!`,
+                            text: `Dear Customer,\n\nYour order #${orderId} has been scheduled for delivery on ${date}.\n\nManaged by: ${user.userName || user.title}\nStatus: Scheduled\n\nThank you!`,
                         },
                         { withCredentials: true }
                     );
@@ -534,7 +560,7 @@ export default function Dashboard() {
                 }
             }
 
-            alert(`Delivery successfully scheduled for ${date}! Email update sent to customer.`);
+            alert(`Delivery successfully scheduled for ${date}! Email update dispatched.`);
             fetchOrders(user.id || 1, user.title);
         } catch (err) {
             console.error("Failed to schedule delivery:", err);
@@ -560,7 +586,7 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Track wholesale/logistics order status (`GET /dealer/trackorder/:id`)
+    // Axios Call: Track order status
     const handleTrackOrder = async (orderId: number) => {
         setTrackedOrderId(orderId);
         setTrackedOrderStatus("Connecting to real-time delivery tracker...");
@@ -574,7 +600,7 @@ export default function Dashboard() {
             }
         } catch (err) {
             console.error("Tracking failed:", err);
-            setTrackedOrderStatus("Pending Carrier Dispatch");
+            setTrackedOrderStatus("In Transit / Carrier Processing");
         }
     };
 
@@ -604,7 +630,7 @@ export default function Dashboard() {
     // Axios Call: Delete Account
     const handleDeleteAccount = async () => {
         if (!user) return;
-        const confirmDelete = window.confirm(`Are you sure you want to delete your ${user.title} account? This will cascade-delete linked orders and deliveries.`);
+        const confirmDelete = window.confirm(`Are you sure you want to delete your ${user.title} account? This will cascade-delete linked records.`);
         if (!confirmDelete) return;
 
         const r = getRolePath(user.title);
@@ -683,6 +709,7 @@ export default function Dashboard() {
 
     const isCustomer = getRolePath(user.title) === "customer";
     const isDealer = getRolePath(user.title) === "dealer";
+    const isSupplier = getRolePath(user.title) === "supplier";
 
     return (
         <>
@@ -707,9 +734,20 @@ export default function Dashboard() {
                         </div>
                     )}
                     <div>
-                        <h2 className="text-xl font-bold text-dark-slate">
-                            Welcome back, {user.userName || user.email}!
-                        </h2>
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-xl font-bold text-dark-slate">
+                                Welcome back, {user.userName || user.email}!
+                            </h2>
+                            {isSupplier && (
+                                <span className={`text-xs px-2 py-0.5 rounded font-bold uppercase ${
+                                    supplierOperationalStatus === "active" 
+                                        ? "bg-green-100 text-success-green border border-green-200" 
+                                        : "bg-red-100 text-error-red border border-red-200"
+                                }`}>
+                                    Status: {supplierOperationalStatus}
+                                </span>
+                            )}
+                        </div>
                         <p className="text-sm text-secondary-gray">
                             Role: <strong className="text-primary">{user.title || "Customer"}</strong> | Email: {user.email} | Address: {user.address || "Not set"}
                         </p>
@@ -727,17 +765,17 @@ export default function Dashboard() {
                         Products Catalog
                     </button>
 
-                    {isDealer && (
+                    {(isDealer || isSupplier) && (
                         <button
                             onClick={() => {
                                 setActiveTab("inventory");
-                                if (user.id) fetchDealerInventory(user.id);
+                                if (user.id) fetchCustomInventory(user.id, user.title);
                             }}
                             className={`px-4 py-2 rounded text-sm font-semibold transition-colors cursor-pointer ${
                                 activeTab === "inventory" ? "bg-primary text-white" : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9]"
                             }`}
                         >
-                            Stock Inventory
+                            {isSupplier ? "Supply Portfolio" : "Stock Inventory"}
                         </button>
                     )}
 
@@ -750,7 +788,7 @@ export default function Dashboard() {
                             activeTab === "orders" ? "bg-primary text-white" : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9]"
                         }`}
                     >
-                        {isCustomer ? "My Orders & Tracking" : "Fulfill Customer Orders"}
+                        {isCustomer ? "My Orders & Tracking" : "Fulfill Orders & Logistics"}
                     </button>
                     <button
                         onClick={() => {
@@ -789,10 +827,17 @@ export default function Dashboard() {
                     <div className="flex justify-between items-center mb-6">
                         <div>
                             <h1 className="text-2xl font-extrabold text-dark-slate">
-                                {isDealer ? "Oil Products & Wholesale Sourcing" : "Oil Products Catalog"}
+                                {isSupplier 
+                                    ? "Oil Products Catalog & Supply Portfolio"
+                                    : isDealer 
+                                    ? "Oil Products & Wholesale Sourcing" 
+                                    : "Oil Products Catalog"
+                                }
                             </h1>
                             <p className="text-sm text-secondary-gray">
-                                {isDealer
+                                {isSupplier
+                                    ? "Add petroleum products to your active supply portfolio for distribution to Dealers and Customers."
+                                    : isDealer
                                     ? "Assign products to your stock catalog or order bulk wholesale supplies directly from Refinery Suppliers."
                                     : "Browse available oil grades and place retail orders with direct supplier or dealer sourcing."
                                 }
@@ -825,7 +870,14 @@ export default function Dashboard() {
                                 <div className="p-5 border-t border-[#F1F5F9] bg-[#FAFBFD] flex items-center justify-between gap-2">
                                     <span className="text-base font-extrabold text-primary">{product.price}</span>
                                     
-                                    {isDealer ? (
+                                    {isSupplier ? (
+                                        <button
+                                            onClick={() => handleAssignProduct(product)}
+                                            className="bg-primary text-white py-1.5 px-4 rounded text-xs font-semibold hover:bg-primary/95 transition-colors cursor-pointer"
+                                        >
+                                            + Add to Supply Portfolio
+                                        </button>
+                                    ) : isDealer ? (
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={() => handleAssignProduct(product)}
@@ -859,29 +911,38 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB: DEALER STOCK INVENTORY */}
-            {isDealer && activeTab === "inventory" && (
+            {/* TAB: STOCK INVENTORY / SUPPLY PORTFOLIO */}
+            {(isDealer || isSupplier) && activeTab === "inventory" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <div className="flex justify-between items-center mb-6">
                         <div>
-                            <h1 className="text-2xl font-extrabold text-dark-slate">My Stock Inventory</h1>
-                            <p className="text-sm text-secondary-gray">Manage products actively linked to your Dealer stock catalog.</p>
+                            <h1 className="text-2xl font-extrabold text-dark-slate">
+                                {isSupplier ? "My Supply Portfolio" : "My Stock Inventory"}
+                            </h1>
+                            <p className="text-sm text-secondary-gray">
+                                {isSupplier 
+                                    ? "Manage petroleum products you actively distribute to Dealers and direct Customers."
+                                    : "Manage products actively linked to your Dealer stock catalog."
+                                }
+                            </p>
                         </div>
                     </div>
 
-                    {dealerInventory.length === 0 ? (
+                    {customInventory.length === 0 ? (
                         <div className="bg-card-white p-8 rounded-lg border border-[#E2E8F0] text-center shadow-sm">
-                            <p className="text-secondary-gray mb-4">You have not assigned any products to your inventory catalog yet.</p>
+                            <p className="text-secondary-gray mb-4">
+                                You have not linked any products to your {isSupplier ? "supply portfolio" : "stock inventory"} yet.
+                            </p>
                             <button
                                 onClick={() => setActiveTab("products")}
                                 className="bg-primary text-white px-5 py-2 rounded text-sm font-semibold cursor-pointer"
                             >
-                                Browse Catalog to Assign Products
+                                Browse Catalog to Add Products
                             </button>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {dealerInventory.map((item) => (
+                            {customInventory.map((item) => (
                                 <div
                                     key={item.id}
                                     className="bg-card-white rounded-lg border border-[#E2E8F0] shadow-sm flex flex-col justify-between overflow-hidden"
@@ -890,7 +951,7 @@ export default function Dashboard() {
                                     <div className="p-5 flex-grow">
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                                                Active Stock Item
+                                                {isSupplier ? "Active Portfolio Item" : "Active Stock Item"}
                                             </span>
                                         </div>
                                         <h3 className="text-lg font-bold text-dark-slate mb-2">{item.name}</h3>
@@ -903,7 +964,7 @@ export default function Dashboard() {
                                             onClick={() => handleRemoveProductFromStock(item.id)}
                                             className="bg-error-red text-white py-1.5 px-3 rounded text-xs font-semibold hover:bg-error-red/90 transition-colors cursor-pointer"
                                         >
-                                            Remove from Stock
+                                            {isSupplier ? "Remove from Portfolio" : "Remove from Stock"}
                                         </button>
                                     </div>
                                 </div>
@@ -917,12 +978,15 @@ export default function Dashboard() {
             {activeTab === "orders" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <h1 className="text-2xl font-extrabold text-dark-slate mb-2">
-                        {isCustomer ? "My Order History & Live Tracking" : "Fulfill Customer Orders & Logistics"}
+                        {isCustomer 
+                            ? "My Order History & Live Tracking" 
+                            : "Fulfill Customer & Dealer Orders"
+                        }
                     </h1>
                     <p className="text-sm text-secondary-gray mb-6">
                         {isCustomer 
                             ? "View past orders, delivery channel selections, payment invoices, and real-time status updates."
-                            : "Confirm or reject retail customer orders, schedule deliveries, and dispatch email updates to buyers."
+                            : "Confirm or reject retail/wholesale orders, schedule deliveries, and dispatch email updates to buyers."
                         }
                     </p>
 
@@ -959,7 +1023,7 @@ export default function Dashboard() {
 
                                         {!isCustomer && item.customerName && (
                                             <p className="text-xs text-secondary-gray">
-                                                Buyer: <strong className="text-dark-slate">{item.customerName}</strong> ({item.customerEmail || "Customer"})
+                                                Buyer: <strong className="text-dark-slate">{item.customerName}</strong> ({item.customerEmail || "Buyer"})
                                             </p>
                                         )}
 
@@ -1041,10 +1105,10 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB 3: PROFILE SETTINGS */}
+            {/* TAB 3: PROFILE & OPERATIONAL STATUS SETTINGS */}
             {activeTab === "profile" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
-                    <h1 className="text-2xl font-extrabold text-dark-slate mb-6">Profile Settings & Account Management</h1>
+                    <h1 className="text-2xl font-extrabold text-dark-slate mb-6">Profile & Operational Status Settings</h1>
                     
                     <div className="bg-card-white p-6 rounded-lg border border-[#E2E8F0] shadow-sm max-w-[600px]">
                         {profileStatus && (
@@ -1055,8 +1119,31 @@ export default function Dashboard() {
                         )}
 
                         <div className="space-y-4">
+                            {/* Supplier Operational Status Switch */}
+                            {isSupplier && (
+                                <div className="bg-[#FAFBFD] p-4 rounded-lg border border-[#E2E8F0] flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-sm font-bold text-dark-slate">Supplier Operational Status</h3>
+                                        <p className="text-xs text-secondary-gray">Set your refinery account status to active or inactive.</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={handleToggleSupplierStatus}
+                                        className={`px-4 py-2 rounded font-bold text-xs cursor-pointer transition-colors ${
+                                            supplierOperationalStatus === "active"
+                                                ? "bg-green-600 text-white hover:bg-green-700"
+                                                : "bg-gray-400 text-white hover:bg-gray-500"
+                                        }`}
+                                    >
+                                        Status: {supplierOperationalStatus.toUpperCase()} (Click to Switch)
+                                    </button>
+                                </div>
+                            )}
+
                             <div>
-                                <label className="block text-sm font-semibold text-dark-slate mb-1">Username / Business Name</label>
+                                <label className="block text-sm font-semibold text-dark-slate mb-1">
+                                    {isSupplier ? "Refinery / Supplier Name" : isDealer ? "Business Name" : "Username"}
+                                </label>
                                 <input
                                     type="text"
                                     value={editUsername}
@@ -1086,7 +1173,9 @@ export default function Dashboard() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-dark-slate mb-1">Business Hub / Delivery Address</label>
+                                <label className="block text-sm font-semibold text-dark-slate mb-1">
+                                    {isSupplier ? "Refinery Location / Headquarters" : "Address"}
+                                </label>
                                 <input
                                     type="text"
                                     value={editAddress}
@@ -1105,9 +1194,9 @@ export default function Dashboard() {
                             </div>
 
                             <div className="border-t border-[#F1F5F9] mt-6 pt-6">
-                                <h3 className="text-error-red text-base font-bold mb-1">Delete {user.title || "Dealer"} Account</h3>
+                                <h3 className="text-error-red text-base font-bold mb-1">Delete {user.title || "Supplier"} Account</h3>
                                 <p className="text-xs text-secondary-gray mb-4">
-                                    Deleting your account will cascade-delete all linked product inventories, orders, and delivery schedules.
+                                    Deleting your account will cascade-delete all linked supply portfolios, wholesale records, and delivery schedules.
                                 </p>
                                 <button
                                     onClick={handleDeleteAccount}

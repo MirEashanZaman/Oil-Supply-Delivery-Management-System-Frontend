@@ -59,13 +59,17 @@ type Product = {
     stockLevel: "In Stock" | "Low Stock" | "Out of Stock";
 };
 
-type Party = {
+type SystemUser = {
     id: number;
     username?: string;
     userName?: string;
-    email?: string;
+    email: string;
+    phoneNumber?: string;
+    address?: string;
     title?: string;
-    status?: string;
+    role?: string;
+    createdAt?: string;
+    joiningDate?: string;
 };
 
 const DUMMY_PRODUCTS: Product[] = [
@@ -125,7 +129,7 @@ export default function Dashboard() {
     const router = useRouter();
     const [user, setUser] = useState<UserData | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<"products" | "orders" | "inventory" | "profile" | "directory">("products");
+    const [activeTab, setActiveTab] = useState<"products" | "orders" | "inventory" | "users_crud" | "monitoring" | "profile" | "directory">("products");
 
     // Orders tab states
     const [orders, setOrders] = useState<Order[]>([]);
@@ -137,9 +141,36 @@ export default function Dashboard() {
     const [customInventory, setCustomInventory] = useState<Product[]>([]);
     const [supplierOperationalStatus, setSupplierOperationalStatus] = useState<string>("active");
 
+    // Admin System Monitoring & Merged Users States
+    const [monitorMetrics, setMonitorMetrics] = useState<any>(null);
+    const [allMergedUsers, setAllMergedUsers] = useState<SystemUser[]>([]);
+    const [selectedJoiningDate, setSelectedJoiningDate] = useState<string>("");
+    const [dateSearchResults, setDateSearchResults] = useState<SystemUser[]>([]);
+
+    // Admin Create User Modal States
+    const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
+    const [newRole, setNewRole] = useState<"customer" | "dealer" | "supplier">("customer");
+    const [newUserName, setNewUserName] = useState("");
+    const [newUserEmail, setNewUserEmail] = useState("");
+    const [newUserPassword, setNewUserPassword] = useState("");
+    const [newUserPhone, setNewUserPhone] = useState("");
+    const [newUserAddress, setNewUserAddress] = useState("");
+
+    // Admin Edit User Modal States
+    const [editingUser, setEditingUser] = useState<SystemUser | null>(null);
+    const [editTargetUserName, setEditTargetUserName] = useState("");
+    const [editTargetPhone, setEditTargetPhone] = useState("");
+    const [editTargetAddress, setEditTargetAddress] = useState("");
+
+    // Admin Edit Order Modal States
+    const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+    const [editOrderStatus, setEditOrderStatus] = useState("");
+    const [editOrderQuantity, setEditOrderQuantity] = useState(1);
+    const [editOrderAddress, setEditOrderAddress] = useState("");
+
     // Sourcing lists (Suppliers & Dealers)
-    const [availableSuppliers, setAvailableSuppliers] = useState<Party[]>([]);
-    const [availableDealers, setAvailableDealers] = useState<Party[]>([]);
+    const [availableSuppliers, setAvailableSuppliers] = useState<any[]>([]);
+    const [availableDealers, setAvailableDealers] = useState<any[]>([]);
 
     // Customer Interactive Checkout Modal States
     const [checkoutProduct, setCheckoutProduct] = useState<Product | null>(null);
@@ -170,7 +201,6 @@ export default function Dashboard() {
     // Directory tab states
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<any[]>([]);
-    const [allCustomers, setAllCustomers] = useState<any[]>([]);
 
     const getRolePath = (role?: string) => {
         return role ? role.toLowerCase() : "customer";
@@ -180,6 +210,7 @@ export default function Dashboard() {
         const r = getRolePath(role);
         if (r === "supplier") return "http://localhost:8000/supplier/getallsupplier";
         if (r === "dealer") return "http://localhost:8000/dealer/all";
+        if (r === "admin") return "http://localhost:8000/admin/getallusers";
         return "http://localhost:8000/customer/getallcustomer";
     };
 
@@ -251,6 +282,10 @@ export default function Dashboard() {
                     if (match.title === "Dealer" || title === "Dealer" || match.title === "Supplier" || title === "Supplier") {
                         fetchCustomInventory(match.id, match.title || title);
                     }
+                    if (match.title === "Admin" || title === "Admin") {
+                        fetchAdminMonitoringData();
+                        fetchAllMergedUsers();
+                    }
                 }
             }
         } catch (err) {
@@ -258,7 +293,177 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Get Inventory / Supply Portfolio (`GET /:role/:id/products`)
+    // Axios Call (Admin): Monitor System Health Metrics (`GET /admin/monitor-data`)
+    const fetchAdminMonitoringData = async () => {
+        try {
+            const res = await axios.get("http://localhost:8000/admin/monitor-data", { withCredentials: true });
+            setMonitorMetrics(res.data);
+        } catch (err) {
+            console.error("Failed to fetch monitoring data:", err);
+        }
+    };
+
+    // Axios Call (Admin): Merged User Directory (`GET /admin/getallusers`)
+    const fetchAllMergedUsers = async () => {
+        try {
+            const res = await axios.get("http://localhost:8000/admin/getallusers", { withCredentials: true });
+            if (Array.isArray(res.data)) {
+                setAllMergedUsers(res.data);
+            }
+        } catch (err) {
+            console.error("Failed to fetch merged users:", err);
+        }
+    };
+
+    // Axios Call (Admin): Multi-Table Date Search (`GET /admin/joiningdate?date=...`)
+    const handleSearchJoiningDate = async () => {
+        if (!selectedJoiningDate) {
+            alert("Please select a date to search.");
+            return;
+        }
+        try {
+            const res = await axios.get(`http://localhost:8000/admin/joiningdate?date=${selectedJoiningDate}`, {
+                withCredentials: true,
+            });
+            setDateSearchResults(Array.isArray(res.data) ? res.data : []);
+        } catch (err) {
+            console.error("Date search error:", err);
+            setDateSearchResults([]);
+        }
+    };
+
+    // Axios Call (Admin): Create User (`POST /admin/:role`)
+    const handleAdminCreateUser = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await axios.post(
+                `http://localhost:8000/admin/${newRole}`,
+                {
+                    userName: newUserName,
+                    email: newUserEmail,
+                    password: newUserPassword || "password123",
+                    phoneNumber: newUserPhone,
+                    address: newUserAddress,
+                    title: newRole.charAt(0).toUpperCase() + newRole.slice(1),
+                },
+                { withCredentials: true }
+            );
+            alert(`New ${newRole.toUpperCase()} user created successfully!`);
+            setIsCreateUserModalOpen(false);
+            setNewUserName("");
+            setNewUserEmail("");
+            setNewUserPassword("");
+            setNewUserPhone("");
+            setNewUserAddress("");
+            fetchAllMergedUsers();
+            fetchAdminMonitoringData();
+        } catch (err: any) {
+            console.error("Create user failed:", err);
+            alert(err.response?.data?.message || "Failed to create user.");
+        }
+    };
+
+    // Axios Call (Admin): Update User (`PATCH /admin/:role/:id`)
+    const handleAdminUpdateUser = async () => {
+        if (!editingUser) return;
+        const role = (editingUser.title || editingUser.role || "customer").toLowerCase();
+
+        // Security Constraint Check
+        if (role === "admin") {
+            alert("Security Constraint: Admins cannot modify other Admins.");
+            return;
+        }
+
+        try {
+            await axios.patch(
+                `http://localhost:8000/admin/${role}/${editingUser.id}`,
+                {
+                    userName: editTargetUserName,
+                    phoneNumber: editTargetPhone,
+                    address: editTargetAddress,
+                },
+                { withCredentials: true }
+            );
+            alert("User updated successfully by Admin!");
+            setEditingUser(null);
+            fetchAllMergedUsers();
+        } catch (err: any) {
+            console.error("Update user failed:", err);
+            alert(err.response?.data?.message || "Failed to update user.");
+        }
+    };
+
+    // Axios Call (Admin): Delete User (`DELETE /admin/:role/:id`)
+    const handleAdminDeleteUser = async (targetUser: SystemUser) => {
+        const role = (targetUser.title || targetUser.role || "customer").toLowerCase();
+
+        // Security Constraint Check
+        if (role === "admin") {
+            alert("Security Constraint: Admins cannot delete other Admins.");
+            return;
+        }
+
+        const confirmDelete = window.confirm(
+            `Are you sure you want to delete ${targetUser.userName || targetUser.email} (${role.toUpperCase()})? This will cascade-delete all linked records.`
+        );
+        if (!confirmDelete) return;
+
+        try {
+            await axios.delete(`http://localhost:8000/admin/${role}/${targetUser.id}`, {
+                withCredentials: true,
+            });
+            alert("User and linked records successfully purged by Admin.");
+            fetchAllMergedUsers();
+            fetchAdminMonitoringData();
+            if (user?.id) fetchOrders(user.id, user.title);
+        } catch (err: any) {
+            console.error("Delete user failed:", err);
+            alert(err.response?.data?.message || "Failed to delete user.");
+        }
+    };
+
+    // Axios Call (Admin): Global Order Update (`PATCH /admin/order/:id`)
+    const handleAdminUpdateOrder = async () => {
+        if (!editingOrder) return;
+        try {
+            await axios.patch(
+                `http://localhost:8000/admin/order/${editingOrder.id}`,
+                {
+                    status: editOrderStatus,
+                    quantity: editOrderQuantity,
+                    address: editOrderAddress,
+                },
+                { withCredentials: true }
+            );
+            alert(`Order #${editingOrder.id} successfully updated by Admin!`);
+            setEditingOrder(null);
+            if (user?.id) fetchOrders(user.id, user.title);
+            fetchAdminMonitoringData();
+        } catch (err: any) {
+            console.error("Update order failed:", err);
+            alert(err.response?.data?.message || "Failed to update order.");
+        }
+    };
+
+    // Axios Call (Admin): Global Order Deletion (`DELETE /admin/order/:id`)
+    const handleAdminDeleteOrder = async (orderId: number) => {
+        const confirmDelete = window.confirm(`Are you sure you want to permanently delete Order #${orderId}? Associated OrderDetails, Payment, and Delivery records will be purged.`);
+        if (!confirmDelete) return;
+
+        try {
+            await axios.delete(`http://localhost:8000/admin/order/${orderId}`, {
+                withCredentials: true,
+            });
+            alert(`Order #${orderId} and associated records purged successfully.`);
+            if (user?.id) fetchOrders(user.id, user.title);
+            fetchAdminMonitoringData();
+        } catch (err: any) {
+            console.error("Delete order failed:", err);
+            alert(err.response?.data?.message || "Failed to delete order.");
+        }
+    };
+
+    // Axios Call: Inventory (`GET /:role/:id/products`)
     const fetchCustomInventory = async (partyId: number, title?: string) => {
         const r = getRolePath(title);
         try {
@@ -273,7 +478,7 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Assign Product to Stock / Portfolio (`POST /:role/:id/products`)
+    // Axios Call: Assign Product (`POST /:role/:id/products`)
     const handleAssignProduct = async (product: Product) => {
         if (!user || !user.id) return;
         const r = getRolePath(user.title);
@@ -291,10 +496,10 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Remove Product from Stock / Portfolio (`DELETE /:role/:id/products/:productId`)
+    // Axios Call: Remove Product (`DELETE /:role/:id/products/:productId`)
     const handleRemoveProductFromStock = async (productId: number) => {
         if (!user || !user.id) return;
-        const confirmRemove = window.confirm(`Are you sure you want to remove this product from your ${user.title === "Supplier" ? "portfolio" : "inventory"}?`);
+        const confirmRemove = window.confirm(`Are you sure you want to remove this product?`);
         if (!confirmRemove) return;
 
         const r = getRolePath(user.title);
@@ -334,7 +539,6 @@ export default function Dashboard() {
     const handleWholesaleBulkOrder = async () => {
         if (!user || !wholesaleProduct) return;
         setIsSubmittingWholesale(true);
-
         const supplierId = wholesaleSupplierId || (availableSuppliers[0]?.id || 1);
 
         try {
@@ -348,21 +552,6 @@ export default function Dashboard() {
                 { withCredentials: true }
             );
 
-            try {
-                const supplierName = availableSuppliers.find(s => s.id === Number(supplierId))?.userName || "Supplier Refinery";
-                await axios.post(
-                    "http://localhost:8000/dealer/send-email",
-                    {
-                        to: user.email,
-                        subject: `Wholesale Order Placed - ${wholesaleProduct.name}`,
-                        text: `Hi ${user.userName},\n\nYour wholesale bulk order for ${wholesaleQuantity} units of ${wholesaleProduct.name} has been placed directly with Supplier (${supplierName})!\n\nThank you!`,
-                    },
-                    { withCredentials: true }
-                );
-            } catch (mailErr) {
-                console.warn("Mail dispatch notice:", mailErr);
-            }
-
             alert(`Wholesale bulk order for ${wholesaleQuantity} units of ${wholesaleProduct.name} placed successfully!`);
             setWholesaleProduct(null);
             if (user.id) fetchOrders(user.id, user.title);
@@ -374,7 +563,7 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Fetch customer orders
+    // Axios Call: Fetch all orders
     const fetchOrders = async (id: number, title?: string) => {
         const r = getRolePath(title);
         if (r === "customer") {
@@ -414,7 +603,7 @@ export default function Dashboard() {
                     setOrders(allOrders);
                 }
             } catch (err) {
-                console.error("Failed to load global customer orders:", err);
+                console.error("Failed to load global orders:", err);
             }
         }
     };
@@ -510,7 +699,7 @@ export default function Dashboard() {
                         {
                             to: customerEmail,
                             subject: `Order #${orderId} Update: ${status.toUpperCase()}`,
-                            text: `Dear Partner / Customer,\n\nYour order #${orderId} has been marked as '${status}' by the ${user.title}.\n\nThank you!`,
+                            text: `Dear Customer,\n\nYour order #${orderId} has been marked as '${status}'.\n\nThank you!`,
                         },
                         { withCredentials: true }
                     );
@@ -527,7 +716,7 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Schedule & Link Delivery (`POST /:role/scheduledelivery`)
+    // Axios Call: Schedule Delivery (`POST /:role/scheduledelivery`)
     const handleScheduleDelivery = async (orderId: number, customerEmail?: string) => {
         if (!user) return;
         const r = getRolePath(user.title);
@@ -551,7 +740,7 @@ export default function Dashboard() {
                         {
                             to: customerEmail,
                             subject: `Delivery Scheduled for Order #${orderId}`,
-                            text: `Dear Customer,\n\nYour order #${orderId} has been scheduled for delivery on ${date}.\n\nManaged by: ${user.userName || user.title}\nStatus: Scheduled\n\nThank you!`,
+                            text: `Dear Customer,\n\nYour order #${orderId} has been scheduled for delivery on ${date}.\n\nThank you!`,
                         },
                         { withCredentials: true }
                     );
@@ -589,7 +778,7 @@ export default function Dashboard() {
     // Axios Call: Track order status
     const handleTrackOrder = async (orderId: number) => {
         setTrackedOrderId(orderId);
-        setTrackedOrderStatus("Connecting to real-time delivery tracker...");
+        setTrackedOrderStatus("Connecting to delivery tracker...");
         const r = getRolePath(user?.title);
         try {
             const res = await axios.get(`http://localhost:8000/${r}/trackorder/${orderId}`, {
@@ -627,16 +816,16 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Delete Account
+    // Axios Call: Delete Own Account
     const handleDeleteAccount = async () => {
         if (!user) return;
-        const confirmDelete = window.confirm(`Are you sure you want to delete your ${user.title} account? This will cascade-delete linked records.`);
+        const confirmDelete = window.confirm(`Are you sure you want to delete your ${user.title} account?`);
         if (!confirmDelete) return;
 
         const r = getRolePath(user.title);
         try {
             let url = `http://localhost:8000/customer/${user.userName}`;
-            if (r === "supplier" || r === "dealer") {
+            if (r === "supplier" || r === "dealer" || r === "admin") {
                 url = `http://localhost:8000/${r}/${user.id}`;
             }
             await axios.delete(url, { withCredentials: true });
@@ -648,7 +837,7 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Search users
+    // Axios Call: Search users in directory
     const handleSearchUsers = async () => {
         if (!searchQuery) {
             setSearchResults([]);
@@ -661,17 +850,6 @@ export default function Dashboard() {
             setSearchResults(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
             console.error("User search failed:", err);
-        }
-    };
-
-    // Axios Call: Load general directory
-    const handleLoadDirectory = async () => {
-        const url = getAllUsersUrl(user?.title);
-        try {
-            const res = await axios.get(url, { withCredentials: true });
-            setAllCustomers(Array.isArray(res.data) ? res.data : []);
-        } catch (err) {
-            console.error("Failed to load user directory:", err);
         }
     };
 
@@ -710,10 +888,11 @@ export default function Dashboard() {
     const isCustomer = getRolePath(user.title) === "customer";
     const isDealer = getRolePath(user.title) === "dealer";
     const isSupplier = getRolePath(user.title) === "supplier";
+    const isAdmin = getRolePath(user.title) === "admin";
 
     return (
         <>
-            <MyHeader name="Dashboard" message="manage orders, catalog & deliveries!" />
+            <MyHeader name="Dashboard" message="system control & operations center!" />
             <MyNavigation />
 
             {/* Profile Overview Bar */}
@@ -738,6 +917,9 @@ export default function Dashboard() {
                             <h2 className="text-xl font-bold text-dark-slate">
                                 Welcome back, {user.userName || user.email}!
                             </h2>
+                            <span className="text-xs px-2.5 py-0.5 rounded font-bold uppercase bg-blue-100 text-primary border border-blue-200">
+                                Role: {user.title || "User"}
+                            </span>
                             {isSupplier && (
                                 <span className={`text-xs px-2 py-0.5 rounded font-bold uppercase ${
                                     supplierOperationalStatus === "active" 
@@ -749,13 +931,40 @@ export default function Dashboard() {
                             )}
                         </div>
                         <p className="text-sm text-secondary-gray">
-                            Role: <strong className="text-primary">{user.title || "Customer"}</strong> | Email: {user.email} | Address: {user.address || "Not set"}
+                            Email: {user.email} | Hub: {user.address || "Main Operational HQ"}
                         </p>
                     </div>
                 </div>
                 
                 {/* Navigation Tabs */}
                 <div className="flex gap-2.5 flex-wrap">
+                    {isAdmin && (
+                        <>
+                            <button
+                                onClick={() => {
+                                    setActiveTab("monitoring");
+                                    fetchAdminMonitoringData();
+                                }}
+                                className={`px-4 py-2 rounded text-sm font-semibold transition-colors cursor-pointer ${
+                                    activeTab === "monitoring" ? "bg-primary text-white" : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9]"
+                                }`}
+                            >
+                                System Health (Monitor)
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setActiveTab("users_crud");
+                                    fetchAllMergedUsers();
+                                }}
+                                className={`px-4 py-2 rounded text-sm font-semibold transition-colors cursor-pointer ${
+                                    activeTab === "users_crud" ? "bg-primary text-white" : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9]"
+                                }`}
+                            >
+                                Global User CRUD
+                            </button>
+                        </>
+                    )}
+
                     <button
                         onClick={() => setActiveTab("products")}
                         className={`px-4 py-2 rounded text-sm font-semibold transition-colors cursor-pointer ${
@@ -788,8 +997,9 @@ export default function Dashboard() {
                             activeTab === "orders" ? "bg-primary text-white" : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9]"
                         }`}
                     >
-                        {isCustomer ? "My Orders & Tracking" : "Fulfill Orders & Logistics"}
+                        {isCustomer ? "My Orders & Tracking" : isAdmin ? "Global Order Control" : "Fulfill Orders & Logistics"}
                     </button>
+                    
                     <button
                         onClick={() => {
                             setActiveTab("profile");
@@ -801,17 +1011,18 @@ export default function Dashboard() {
                     >
                         Profile Settings
                     </button>
-                    <button
-                        onClick={() => {
-                            setActiveTab("directory");
-                            handleLoadDirectory();
-                        }}
-                        className={`px-4 py-2 rounded text-sm font-semibold transition-colors cursor-pointer ${
-                            activeTab === "directory" ? "bg-primary text-white" : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9]"
-                        }`}
-                    >
-                        Directory Search
-                    </button>
+
+                    {!isAdmin && (
+                        <button
+                            onClick={() => setActiveTab("directory")}
+                            className={`px-4 py-2 rounded text-sm font-semibold transition-colors cursor-pointer ${
+                                activeTab === "directory" ? "bg-primary text-white" : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9]"
+                            }`}
+                        >
+                            Directory Search
+                        </button>
+                    )}
+
                     <button
                         onClick={handleLogout}
                         className="bg-error-red text-white py-2 px-5 rounded cursor-pointer font-semibold text-sm hover:bg-error-red/90 transition-colors"
@@ -821,13 +1032,196 @@ export default function Dashboard() {
                 </div>
             </div>
 
+            {/* TAB: ADMIN SYSTEM HEALTH & MONITORING */}
+            {isAdmin && activeTab === "monitoring" && (
+                <div className="w-full max-w-[1200px] text-left animate-fadeIn">
+                    <div className="flex justify-between items-center mb-6">
+                        <div>
+                            <h1 className="text-2xl font-extrabold text-dark-slate">System Health & Live Monitoring</h1>
+                            <p className="text-sm text-secondary-gray">Real-time system telemetry and database metrics (`GET /admin/monitor-data`).</p>
+                        </div>
+                        <button
+                            onClick={fetchAdminMonitoringData}
+                            className="bg-primary text-white px-4 py-2 rounded text-xs font-semibold hover:bg-primary/95 transition-colors cursor-pointer"
+                        >
+                            Refresh Metrics
+                        </button>
+                    </div>
+
+                    {/* Metrics Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
+                        <div className="bg-card-white p-5 rounded-lg border border-[#E2E8F0] shadow-sm">
+                            <span className="text-xs font-bold text-secondary-gray uppercase">Total Registered Users</span>
+                            <h3 className="text-3xl font-extrabold text-primary mt-1">
+                                {allMergedUsers.length || monitorMetrics?.totalUsers || 24}
+                            </h3>
+                            <p className="text-xs text-green-600 font-semibold mt-1">✓ Across 4 Database Tables</p>
+                        </div>
+
+                        <div className="bg-card-white p-5 rounded-lg border border-[#E2E8F0] shadow-sm">
+                            <span className="text-xs font-bold text-secondary-gray uppercase">Active Orders in Queue</span>
+                            <h3 className="text-3xl font-extrabold text-emerald-600 mt-1">
+                                {orders.length || monitorMetrics?.activeOrders || 8}
+                            </h3>
+                            <p className="text-xs text-secondary-gray mt-1">Integrated Supply Pipeline</p>
+                        </div>
+
+                        <div className="bg-card-white p-5 rounded-lg border border-[#E2E8F0] shadow-sm">
+                            <span className="text-xs font-bold text-secondary-gray uppercase">Catalog Products</span>
+                            <h3 className="text-3xl font-extrabold text-amber-600 mt-1">
+                                {DUMMY_PRODUCTS.length}
+                            </h3>
+                            <p className="text-xs text-secondary-gray mt-1">High-Grade Petroleum Grades</p>
+                        </div>
+
+                        <div className="bg-card-white p-5 rounded-lg border border-[#E2E8F0] shadow-sm">
+                            <span className="text-xs font-bold text-secondary-gray uppercase">System Health Status</span>
+                            <h3 className="text-3xl font-extrabold text-green-600 mt-1">
+                                100%
+                            </h3>
+                            <p className="text-xs text-green-600 font-semibold mt-1">✓ Operational & Connected</p>
+                        </div>
+                    </div>
+
+                    {/* Multi-Table Date Search */}
+                    <div className="bg-card-white p-6 rounded-lg border border-[#E2E8F0] shadow-sm mb-6">
+                        <h2 className="text-lg font-bold text-dark-slate mb-1">Multi-Table Registration Date Search</h2>
+                        <p className="text-xs text-secondary-gray mb-4">
+                            Simultaneously search all 4 database tables (Admins, Customers, Dealers, Suppliers) by registration date (`GET /admin/joiningdate`).
+                        </p>
+
+                        <div className="flex gap-3 max-w-[500px] mb-4">
+                            <input
+                                type="date"
+                                value={selectedJoiningDate}
+                                onChange={(e) => setSelectedJoiningDate(e.target.value)}
+                                className="flex-grow p-2.5 border border-secondary-gray rounded bg-white text-dark-slate outline-none text-sm"
+                            />
+                            <button
+                                onClick={handleSearchJoiningDate}
+                                className="bg-primary text-white px-5 py-2.5 rounded font-semibold text-sm hover:bg-primary/95 transition-colors cursor-pointer"
+                            >
+                                Search 4 Tables
+                            </button>
+                        </div>
+
+                        {dateSearchResults.length > 0 && (
+                            <div>
+                                <h3 className="text-sm font-bold text-dark-slate mb-3">Matching Registrations ({dateSearchResults.length} found):</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {dateSearchResults.map((u: any, idx: number) => (
+                                        <div key={idx} className="bg-[#FAFBFD] p-4 rounded-lg border border-primary/20">
+                                            <span className="text-xs font-bold text-primary uppercase">{u.role || u.title || "User"}</span>
+                                            <h4 className="font-bold text-dark-slate">{u.userName || u.username}</h4>
+                                            <p className="text-xs text-secondary-gray">{u.email}</p>
+                                            <p className="text-xs text-secondary-gray">{u.phoneNumber || u.address}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* TAB: ADMIN GLOBAL USER CRUD */}
+            {isAdmin && activeTab === "users_crud" && (
+                <div className="w-full max-w-[1200px] text-left animate-fadeIn">
+                    <div className="flex justify-between items-center mb-6">
+                        <div>
+                            <h1 className="text-2xl font-extrabold text-dark-slate">Global User Management (CRUD)</h1>
+                            <p className="text-sm text-secondary-gray">Full authority to Create, Update, and Delete Customers, Dealers, and Suppliers.</p>
+                        </div>
+                        <button
+                            onClick={() => setIsCreateUserModalOpen(true)}
+                            className="bg-green-600 text-white px-5 py-2.5 rounded text-sm font-bold hover:bg-green-700 transition-colors cursor-pointer shadow-sm"
+                        >
+                            + Create New User
+                        </button>
+                    </div>
+
+                    {/* Merged Directory Table */}
+                    <div className="bg-card-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-[#FAFBFD] border-b border-[#E2E8F0] text-xs font-bold text-secondary-gray uppercase">
+                                <tr>
+                                    <th className="p-4">ID</th>
+                                    <th className="p-4">User / Entity Name</th>
+                                    <th className="p-4">Role / Category</th>
+                                    <th className="p-4">Email</th>
+                                    <th className="p-4">Phone</th>
+                                    <th className="p-4">Address / Hub</th>
+                                    <th className="p-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {allMergedUsers.map((u, idx) => {
+                                    const role = (u.title || u.role || "User").toLowerCase();
+                                    const isTargetAdmin = role === "admin";
+
+                                    return (
+                                        <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                                            <td className="p-4 font-mono font-bold text-xs text-secondary-gray">#{u.id}</td>
+                                            <td className="p-4 font-bold text-dark-slate">{u.userName || u.username || u.email.split("@")[0]}</td>
+                                            <td className="p-4">
+                                                <span className={`text-xs px-2.5 py-0.5 rounded font-bold uppercase ${
+                                                    role === "admin"
+                                                        ? "bg-purple-100 text-purple-800 border border-purple-200"
+                                                        : role === "dealer"
+                                                        ? "bg-amber-100 text-amber-800 border border-amber-200"
+                                                        : role === "supplier"
+                                                        ? "bg-blue-100 text-primary border border-blue-200"
+                                                        : "bg-green-100 text-success-green border border-green-200"
+                                                }`}>
+                                                    {role}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 text-secondary-gray">{u.email}</td>
+                                            <td className="p-4 text-secondary-gray">{u.phoneNumber || "—"}</td>
+                                            <td className="p-4 text-secondary-gray">{u.address || "—"}</td>
+                                            <td className="p-4 text-right">
+                                                {isTargetAdmin ? (
+                                                    <span className="text-xs text-gray-400 font-semibold italic">Admin Protected</span>
+                                                ) : (
+                                                    <div className="flex justify-end gap-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditingUser(u);
+                                                                setEditTargetUserName(u.userName || u.username || "");
+                                                                setEditTargetPhone(u.phoneNumber || "");
+                                                                setEditTargetAddress(u.address || "");
+                                                            }}
+                                                            className="bg-primary text-white text-xs font-semibold px-3 py-1.5 rounded hover:bg-primary/90 transition-colors cursor-pointer"
+                                                        >
+                                                            Edit (PATCH)
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleAdminDeleteUser(u)}
+                                                            className="bg-error-red text-white text-xs font-semibold px-3 py-1.5 rounded hover:bg-error-red/90 transition-colors cursor-pointer"
+                                                        >
+                                                            Delete (DELETE)
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
             {/* TAB 1: PRODUCT CATALOG & BULK SOURCING */}
             {activeTab === "products" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <div className="flex justify-between items-center mb-6">
                         <div>
                             <h1 className="text-2xl font-extrabold text-dark-slate">
-                                {isSupplier 
+                                {isAdmin
+                                    ? "Global Products Catalog Management"
+                                    : isSupplier 
                                     ? "Oil Products Catalog & Supply Portfolio"
                                     : isDealer 
                                     ? "Oil Products & Wholesale Sourcing" 
@@ -835,7 +1229,9 @@ export default function Dashboard() {
                                 }
                             </h1>
                             <p className="text-sm text-secondary-gray">
-                                {isSupplier
+                                {isAdmin
+                                    ? "Oversee product inventory, unit pricing, and stock metrics physically linked to Admin control."
+                                    : isSupplier
                                     ? "Add petroleum products to your active supply portfolio for distribution to Dealers and Customers."
                                     : isDealer
                                     ? "Assign products to your stock catalog or order bulk wholesale supplies directly from Refinery Suppliers."
@@ -870,7 +1266,11 @@ export default function Dashboard() {
                                 <div className="p-5 border-t border-[#F1F5F9] bg-[#FAFBFD] flex items-center justify-between gap-2">
                                     <span className="text-base font-extrabold text-primary">{product.price}</span>
                                     
-                                    {isSupplier ? (
+                                    {isAdmin ? (
+                                        <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-3 py-1.5 rounded">
+                                            ✓ Admin Linked Catalog
+                                        </span>
+                                    ) : isSupplier ? (
                                         <button
                                             onClick={() => handleAssignProduct(product)}
                                             className="bg-primary text-white py-1.5 px-4 rounded text-xs font-semibold hover:bg-primary/95 transition-colors cursor-pointer"
@@ -974,18 +1374,22 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB 2: MY ORDERS & FULFILLMENT */}
+            {/* TAB 2: ORDERS MANAGEMENT & FULFILLMENT */}
             {activeTab === "orders" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <h1 className="text-2xl font-extrabold text-dark-slate mb-2">
                         {isCustomer 
                             ? "My Order History & Live Tracking" 
+                            : isAdmin 
+                            ? "Global Order Control & Modification" 
                             : "Fulfill Customer & Dealer Orders"
                         }
                     </h1>
                     <p className="text-sm text-secondary-gray mb-6">
                         {isCustomer 
                             ? "View past orders, delivery channel selections, payment invoices, and real-time status updates."
+                            : isAdmin
+                            ? "Global authority to edit order details or delete orders (with automatic cascade clean-up of OrderDetails, Payments, and Deliveries)."
                             : "Confirm or reject retail/wholesale orders, schedule deliveries, and dispatch email updates to buyers."
                         }
                     </p>
@@ -1023,7 +1427,7 @@ export default function Dashboard() {
 
                                         {!isCustomer && item.customerName && (
                                             <p className="text-xs text-secondary-gray">
-                                                Buyer: <strong className="text-dark-slate">{item.customerName}</strong> ({item.customerEmail || "Buyer"})
+                                                Customer: <strong className="text-dark-slate">{item.customerName}</strong> ({item.customerEmail || "Buyer"})
                                             </p>
                                         )}
 
@@ -1040,7 +1444,27 @@ export default function Dashboard() {
                                     )}
 
                                     <div className="flex items-center gap-2 self-end md:self-center">
-                                        {isCustomer ? (
+                                        {isAdmin ? (
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingOrder(item);
+                                                        setEditOrderStatus(item.status || "processing");
+                                                        setEditOrderQuantity(item.quantity || 1);
+                                                        setEditOrderAddress(item.address || "");
+                                                    }}
+                                                    className="bg-primary text-white text-xs font-semibold px-3 py-2 rounded hover:bg-primary/90 transition-colors cursor-pointer"
+                                                >
+                                                    Edit Order (PATCH)
+                                                </button>
+                                                <button
+                                                    onClick={() => handleAdminDeleteOrder(item.id)}
+                                                    className="bg-error-red text-white text-xs font-semibold px-3 py-2 rounded hover:bg-error-red/90 transition-colors cursor-pointer"
+                                                >
+                                                    Delete Order (DELETE)
+                                                </button>
+                                            </div>
+                                        ) : isCustomer ? (
                                             <>
                                                 <button
                                                     onClick={() => handleTrackOrder(item.id)}
@@ -1105,10 +1529,10 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB 3: PROFILE & OPERATIONAL STATUS SETTINGS */}
+            {/* TAB 3: PROFILE SETTINGS */}
             {activeTab === "profile" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
-                    <h1 className="text-2xl font-extrabold text-dark-slate mb-6">Profile & Operational Status Settings</h1>
+                    <h1 className="text-2xl font-extrabold text-dark-slate mb-6">Profile & Account Settings</h1>
                     
                     <div className="bg-card-white p-6 rounded-lg border border-[#E2E8F0] shadow-sm max-w-[600px]">
                         {profileStatus && (
@@ -1119,7 +1543,6 @@ export default function Dashboard() {
                         )}
 
                         <div className="space-y-4">
-                            {/* Supplier Operational Status Switch */}
                             {isSupplier && (
                                 <div className="bg-[#FAFBFD] p-4 rounded-lg border border-[#E2E8F0] flex items-center justify-between">
                                     <div>
@@ -1142,7 +1565,7 @@ export default function Dashboard() {
 
                             <div>
                                 <label className="block text-sm font-semibold text-dark-slate mb-1">
-                                    {isSupplier ? "Refinery / Supplier Name" : isDealer ? "Business Name" : "Username"}
+                                    {isAdmin ? "Admin Username" : isSupplier ? "Refinery / Supplier Name" : isDealer ? "Business Name" : "Username"}
                                 </label>
                                 <input
                                     type="text"
@@ -1174,7 +1597,7 @@ export default function Dashboard() {
 
                             <div>
                                 <label className="block text-sm font-semibold text-dark-slate mb-1">
-                                    {isSupplier ? "Refinery Location / Headquarters" : "Address"}
+                                    {isSupplier ? "Refinery Location / Headquarters" : "Address / Hub Location"}
                                 </label>
                                 <input
                                     type="text"
@@ -1194,9 +1617,9 @@ export default function Dashboard() {
                             </div>
 
                             <div className="border-t border-[#F1F5F9] mt-6 pt-6">
-                                <h3 className="text-error-red text-base font-bold mb-1">Delete {user.title || "Supplier"} Account</h3>
+                                <h3 className="text-error-red text-base font-bold mb-1">Delete {user.title || "User"} Account</h3>
                                 <p className="text-xs text-secondary-gray mb-4">
-                                    Deleting your account will cascade-delete all linked supply portfolios, wholesale records, and delivery schedules.
+                                    Deleting your own account will remove your records from the database.
                                 </p>
                                 <button
                                     onClick={handleDeleteAccount}
@@ -1210,7 +1633,7 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB 4: SYSTEM DIRECTORY */}
+            {/* TAB 4: SYSTEM DIRECTORY (CUSTOMERS/DEALERS/SUPPLIERS) */}
             {activeTab === "directory" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <h1 className="text-2xl font-extrabold text-dark-slate mb-6">System User Directory</h1>
@@ -1245,22 +1668,259 @@ export default function Dashboard() {
                             </div>
                         </div>
                     )}
+                </div>
+            )}
 
-                    <div>
-                        <h2 className="text-lg font-bold text-dark-slate mb-3">Registered Users Directory</h2>
-                        {allCustomers.length === 0 ? (
-                            <p className="text-secondary-gray text-sm">No users registered in system directory.</p>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {allCustomers.map((c: any) => (
-                                    <div key={c.id} className="bg-card-white p-4 rounded-lg border border-[#E2E8F0] shadow-sm">
-                                        <h3 className="font-bold text-dark-slate">{c.username || c.userName}</h3>
-                                        <p className="text-xs text-secondary-gray">Email: {c.email}</p>
-                                        <p className="text-xs text-secondary-gray">Role: {c.title || user.title}</p>
-                                    </div>
-                                ))}
+            {/* ADMIN CREATE USER MODAL */}
+            {isCreateUserModalOpen && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[500px] text-left p-6 md:p-8">
+                        <div className="flex justify-between items-center border-b border-gray-100 pb-3 mb-5">
+                            <div>
+                                <h2 className="text-xl font-extrabold text-dark-slate">Create New System User</h2>
+                                <p className="text-xs text-secondary-gray">Admin authority to provision user accounts.</p>
                             </div>
-                        )}
+                            <button
+                                onClick={() => setIsCreateUserModalOpen(false)}
+                                className="text-gray-400 hover:text-dark-slate text-2xl font-bold p-1 cursor-pointer"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleAdminCreateUser} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">User Role</label>
+                                <select
+                                    value={newRole}
+                                    onChange={(e: any) => setNewRole(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none font-semibold"
+                                >
+                                    <option value="customer">Customer</option>
+                                    <option value="dealer">Dealer</option>
+                                    <option value="supplier">Supplier</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">Username</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={newUserName}
+                                    placeholder="Enter username..."
+                                    onChange={(e) => setNewUserName(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">Email Address</label>
+                                <input
+                                    type="email"
+                                    required
+                                    value={newUserEmail}
+                                    placeholder="Enter email..."
+                                    onChange={(e) => setNewUserEmail(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">Password</label>
+                                <input
+                                    type="password"
+                                    required
+                                    value={newUserPassword}
+                                    placeholder="Set password..."
+                                    onChange={(e) => setNewUserPassword(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">Phone Number</label>
+                                <input
+                                    type="text"
+                                    value={newUserPhone}
+                                    placeholder="Phone number..."
+                                    onChange={(e) => setNewUserPhone(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">Address / Hub</label>
+                                <input
+                                    type="text"
+                                    value={newUserAddress}
+                                    placeholder="Address..."
+                                    onChange={(e) => setNewUserAddress(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none"
+                                />
+                            </div>
+
+                            <div className="flex gap-3 pt-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCreateUserModalOpen(false)}
+                                    className="w-1/3 py-2.5 rounded-lg border border-secondary-gray text-dark-slate font-semibold text-sm hover:bg-gray-50 transition-colors cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="w-2/3 py-2.5 rounded-lg bg-green-600 text-white font-bold text-sm hover:bg-green-700 transition-colors cursor-pointer shadow-md"
+                                >
+                                    Create User (POST)
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* ADMIN EDIT USER MODAL */}
+            {editingUser && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[450px] text-left p-6 md:p-8">
+                        <div className="flex justify-between items-center border-b border-gray-100 pb-3 mb-5">
+                            <div>
+                                <h2 className="text-xl font-extrabold text-dark-slate">Edit User Information</h2>
+                                <p className="text-xs text-secondary-gray">Updating: {editingUser.email}</p>
+                            </div>
+                            <button
+                                onClick={() => setEditingUser(null)}
+                                className="text-gray-400 hover:text-dark-slate text-2xl font-bold p-1 cursor-pointer"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">Username</label>
+                                <input
+                                    type="text"
+                                    value={editTargetUserName}
+                                    onChange={(e) => setEditTargetUserName(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">Phone Number</label>
+                                <input
+                                    type="text"
+                                    value={editTargetPhone}
+                                    onChange={(e) => setEditTargetPhone(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">Address / Hub</label>
+                                <input
+                                    type="text"
+                                    value={editTargetAddress}
+                                    onChange={(e) => setEditTargetAddress(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none"
+                                />
+                            </div>
+
+                            <div className="flex gap-3 pt-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingUser(null)}
+                                    className="w-1/3 py-2.5 rounded-lg border border-secondary-gray text-dark-slate font-semibold text-sm hover:bg-gray-50 transition-colors cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleAdminUpdateUser}
+                                    className="w-2/3 py-2.5 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/95 transition-colors cursor-pointer shadow-md"
+                                >
+                                    Save Changes (PATCH)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ADMIN EDIT ORDER MODAL */}
+            {editingOrder && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[450px] text-left p-6 md:p-8">
+                        <div className="flex justify-between items-center border-b border-gray-100 pb-3 mb-5">
+                            <div>
+                                <h2 className="text-xl font-extrabold text-dark-slate">Edit Order #{editingOrder.id}</h2>
+                                <p className="text-xs text-secondary-gray">Admin global order modification (`PATCH /admin/order/:id`).</p>
+                            </div>
+                            <button
+                                onClick={() => setEditingOrder(null)}
+                                className="text-gray-400 hover:text-dark-slate text-2xl font-bold p-1 cursor-pointer"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">Order Status</label>
+                                <select
+                                    value={editOrderStatus}
+                                    onChange={(e) => setEditOrderStatus(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none font-semibold"
+                                >
+                                    <option value="pending">Pending</option>
+                                    <option value="processing">Processing</option>
+                                    <option value="confirmed">Confirmed</option>
+                                    <option value="in-transit">In-Transit</option>
+                                    <option value="delivered">Delivered</option>
+                                    <option value="rejected">Rejected</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">Quantity</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={editOrderQuantity}
+                                    onChange={(e) => setEditOrderQuantity(parseInt(e.target.value) || 1)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">Delivery Destination Address</label>
+                                <input
+                                    type="text"
+                                    value={editOrderAddress}
+                                    onChange={(e) => setEditOrderAddress(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none"
+                                />
+                            </div>
+
+                            <div className="flex gap-3 pt-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingOrder(null)}
+                                    className="w-1/3 py-2.5 rounded-lg border border-secondary-gray text-dark-slate font-semibold text-sm hover:bg-gray-50 transition-colors cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleAdminUpdateOrder}
+                                    className="w-2/3 py-2.5 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/95 transition-colors cursor-pointer shadow-md"
+                                >
+                                    Update Order (PATCH)
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

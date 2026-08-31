@@ -79,6 +79,8 @@ export default function Login() {
                     fetchUrl = `http://localhost:8000/supplier/getallsupplier`;
                 } else if (rolePath === "dealer") {
                     fetchUrl = `http://localhost:8000/dealer/all`;
+                } else if (rolePath === "admin") {
+                    fetchUrl = `http://localhost:8000/admin/getallusers`;
                 }
 
                 const responseAll = await axios.get(
@@ -153,6 +155,7 @@ export default function Login() {
                             <option value="Customer">Customer</option>
                             <option value="Supplier">Supplier</option>
                             <option value="Dealer">Dealer</option>
+                            <option value="Admin">Admin</option>
                         </select>
                     </div>
 

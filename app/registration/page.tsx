@@ -86,9 +86,11 @@ export default function Registration() {
         formData.append("password", result.data.password);
         formData.append("photo", result.data.photo);
 
+        const rolePath = result.data.title.toLowerCase();
+
         try {
             await axios.post(
-                "http://localhost:8000/customer/auth/register",
+                `http://localhost:8000/${rolePath}/auth/register`,
                 formData,
                 {
                     headers: {

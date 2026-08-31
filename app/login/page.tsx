@@ -22,7 +22,6 @@ export default function Login() {
     const router = useRouter();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [role, setRole] = useState("Customer");
     const [errors, setErrors] = useState<LoginErrors>({});
     const [successMessage, setSuccessMessage] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,18 +47,41 @@ export default function Login() {
 
         try {
             const signInEmail = result.data.email;
-            const rolePath = role.toLowerCase();
+            const roles = ["customer", "dealer", "supplier", "admin"];
+            let loginSuccess = false;
+            let matchedRole = "Customer";
+            let lastErrorMessage = "";
 
-            await axios.post(
-                `http://localhost:8000/${rolePath}/auth/signIn`,
-                {
-                    email: result.data.email,
-                    password: result.data.password,
-                },
-                {
-                    withCredentials: true,
+            // Automatically check against the 4 backend auth controllers
+            for (const r of roles) {
+                try {
+                    const response = await axios.post(
+                        `http://localhost:8000/${r}/auth/signIn`,
+                        {
+                            email: result.data.email,
+                            password: result.data.password,
+                        },
+                        {
+                            withCredentials: true,
+                        }
+                    );
+                    if (response.data) {
+                        loginSuccess = true;
+                        matchedRole = r.charAt(0).toUpperCase() + r.slice(1);
+                        break;
+                    }
+                } catch (err: any) {
+                    lastErrorMessage = err.response?.data?.message || lastErrorMessage;
                 }
-            );
+            }
+
+            if (!loginSuccess) {
+                const displayMsg = lastErrorMessage || "Invalid email or password.";
+                setErrors({
+                    form: Array.isArray(displayMsg) ? displayMsg.join(", ") : displayMsg,
+                });
+                return;
+            }
 
             let userData: {
                 email: string;
@@ -70,10 +92,12 @@ export default function Login() {
             } = {
                 email: signInEmail,
                 userName: signInEmail.split("@")[0],
-                title: role
+                title: matchedRole,
             };
 
+            // Fetch profile data based on automatically detected role
             try {
+                const rolePath = matchedRole.toLowerCase();
                 let fetchUrl = `http://localhost:8000/${rolePath}/getallcustomer`;
                 if (rolePath === "supplier") {
                     fetchUrl = `http://localhost:8000/supplier/getallsupplier`;
@@ -83,12 +107,9 @@ export default function Login() {
                     fetchUrl = `http://localhost:8000/admin/getallusers`;
                 }
 
-                const responseAll = await axios.get(
-                    fetchUrl,
-                    {
-                        withCredentials: true,
-                    }
-                );
+                const responseAll = await axios.get(fetchUrl, {
+                    withCredentials: true,
+                });
 
                 if (Array.isArray(responseAll.data)) {
                     const matchedUser = responseAll.data.find(
@@ -100,12 +121,12 @@ export default function Login() {
                             userName: matchedUser.username || matchedUser.userName || signInEmail.split("@")[0],
                             phoneNumber: matchedUser.phoneNumber,
                             address: matchedUser.address,
-                            title: matchedUser.title || role
+                            title: matchedUser.title || matchedRole,
                         };
                     }
                 }
             } catch (fetchErr) {
-                console.warn("Failed to fetch user profile details, falling back to local info", fetchErr);
+                console.warn("Failed to fetch user profile details:", fetchErr);
             }
 
             localStorage.setItem("user", JSON.stringify(userData));
@@ -113,12 +134,12 @@ export default function Login() {
             setSuccessMessage("Login successful! Redirecting to dashboard...");
             setTimeout(() => {
                 router.push("/dashboard");
-            }, 1500);
+            }, 1200);
         } catch (error: any) {
             console.error("Login request error:", error);
-            const apiMessage = error.response?.data?.message || "Invalid credentials or backend error.";
+            const apiMessage = error.response?.data?.message || "Invalid credentials or backend connection error.";
             setErrors({
-                form: Array.isArray(apiMessage) ? apiMessage.join(", ") : apiMessage
+                form: Array.isArray(apiMessage) ? apiMessage.join(", ") : apiMessage,
             });
         } finally {
             setIsSubmitting(false);
@@ -143,23 +164,6 @@ export default function Login() {
 
                 <form onSubmit={handleSubmit} noValidate>
                     <div className="mb-4">
-                        <label htmlFor="role" className="block mb-1 font-medium text-dark-slate">
-                            Login Category / Role:
-                        </label>
-                        <select
-                            id="role"
-                            value={role}
-                            onChange={(e) => setRole(e.target.value)}
-                            className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
-                        >
-                            <option value="Customer">Customer</option>
-                            <option value="Supplier">Supplier</option>
-                            <option value="Dealer">Dealer</option>
-                            <option value="Admin">Admin</option>
-                        </select>
-                    </div>
-
-                    <div className="mb-4">
                         <label htmlFor="email" className="block mb-1 font-medium text-dark-slate">
                             Email Address:
                         </label>
@@ -167,7 +171,7 @@ export default function Login() {
                             id="email"
                             type="email"
                             value={email}
-                            placeholder="Enter your name"
+                            placeholder="Enter your email"
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
                         />
@@ -196,7 +200,7 @@ export default function Login() {
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="bg-primary text-white border-none py-2.5 px-5 rounded cursor-pointer font-semibold text-[15px] w-full hover:bg-primary/90 disabled:bg-primary/50"
+                        className="w-full bg-primary text-white border-none py-3 px-4 rounded text-base font-semibold cursor-pointer transition hover:bg-primary/95 shadow-sm disabled:bg-primary/50"
                     >
                         {isSubmitting ? "Logging in..." : "Login"}
                     </button>

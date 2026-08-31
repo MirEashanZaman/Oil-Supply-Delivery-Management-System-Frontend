@@ -18,9 +18,9 @@ type UserData = {
 
 type Order = {
     id: number;
-    quantity?: number;
-    status?: string;
-    name?: string; // Product name for supplier/dealer
+    quantity: number;
+    status: string;
+    customerName?: string; // Sourced dynamically from customer relations
     product?: {
         name: string;
     };
@@ -94,6 +94,7 @@ export default function Dashboard() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [trackedOrderStatus, setTrackedOrderStatus] = useState<string | null>(null);
     const [trackedOrderId, setTrackedOrderId] = useState<number | null>(null);
+    const [deliveryDates, setDeliveryDates] = useState<{ [orderId: number]: string }>({});
 
     // Profile settings tab states
     const [editUsername, setEditUsername] = useState("");
@@ -162,7 +163,7 @@ export default function Dashboard() {
                     setEditPhone(match.phoneNumber || "");
                     setEditAddress(match.address || "");
 
-                    // Trigger Axios Call #4: Fetch order/assigned products history
+                    // Trigger Axios Call #4: Fetch order logs
                     fetchOrders(match.id, match.title || title);
                 }
             }
@@ -171,24 +172,48 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call #4: Get customer orders or supplier/dealer assigned products
+    // Axios Call #4: Fetch customer orders or load global orders for suppliers/dealers
     const fetchOrders = async (id: number, title?: string) => {
         const r = getRolePath(title);
-        let url = `http://localhost:8000/${r}/${id}/orders`;
-        if (r === "dealer" || r === "supplier") {
-            url = `http://localhost:8000/${r}/${id}/products`;
-        }
-        try {
-            const res = await axios.get(url, {
-                withCredentials: true,
-            });
-            setOrders(Array.isArray(res.data) ? res.data : []);
-        } catch (err) {
-            console.error("Failed to fetch history details:", err);
+        if (r === "customer") {
+            try {
+                const res = await axios.get(`http://localhost:8000/customer/${id}/orders`, {
+                    withCredentials: true,
+                });
+                setOrders(Array.isArray(res.data) ? res.data : []);
+            } catch (err) {
+                console.error("Failed to fetch customer orders history:", err);
+            }
+        } else {
+            // For Suppliers and Dealers: fetch all customer orders to confirm and schedule
+            try {
+                const res = await axios.get("http://localhost:8000/customer/getallcustomer", {
+                    withCredentials: true,
+                });
+                if (Array.isArray(res.data)) {
+                    const allOrders: Order[] = [];
+                    res.data.forEach((cust: any) => {
+                        if (Array.isArray(cust.orders)) {
+                            cust.orders.forEach((o: any) => {
+                                allOrders.push({
+                                    id: o.id,
+                                    quantity: o.quantity || 1,
+                                    status: o.status || "processing",
+                                    customerName: cust.username || cust.userName || cust.email,
+                                    product: o.product || { name: "Fuel Product" }
+                                });
+                            });
+                        }
+                    });
+                    setOrders(allOrders);
+                }
+            } catch (err) {
+                console.error("Failed to load global customer orders:", err);
+            }
         }
     };
 
-    // Axios Call #5: Save profile details (PATCH request - supported by all 3 controllers)
+    // Axios Call #5: Save profile details (PATCH request)
     const handleSaveProfile = async () => {
         if (!user || !user.id) return;
         const r = getRolePath(user.title);
@@ -267,7 +292,7 @@ export default function Dashboard() {
             }
         } catch (err) {
             console.error("Failed to lookup username:", err);
-            setDbLookupStatus(`Username search error or unavailable.`);
+            setDbLookupStatus("Username search error or unavailable.");
         }
     };
 
@@ -294,7 +319,7 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call #9: Place order / Assign products dynamically depending on role (POST request)
+    // Axios Call #9: Place customer order or assign product (POST request)
     // Axios Call #10: Send transaction confirmation email notifications (POST request)
     const handleOrderProduct = async (product: Product) => {
         if (!user || !user.id) {
@@ -356,7 +381,58 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call #11: Cancel customer order or remove dealer/supplier assigned product (DELETE request)
+    // Axios Call #11: Confirm customer order (PUT request - Dealer / Supplier roles)
+    const handleConfirmOrder = async (orderId: number) => {
+        if (!user || !user.id) return;
+        const r = getRolePath(user.title);
+        try {
+            await axios.put(
+                `http://localhost:8000/${r}/confirmorder/${orderId}`,
+                {
+                    status: "confirmed",
+                },
+                {
+                    withCredentials: true,
+                }
+            );
+            alert("Order confirmed successfully!");
+            fetchOrders(user.id, user.title);
+        } catch (err) {
+            console.error("Failed to confirm order:", err);
+            alert("Failed to confirm order.");
+        }
+    };
+
+    // Axios Call #12: Schedule delivery for order (POST request - Dealer / Supplier roles)
+    const handleScheduleDelivery = async (orderId: number) => {
+        if (!user || !user.id) return;
+        const r = getRolePath(user.title);
+        const date = deliveryDates[orderId];
+        if (!date) {
+            alert("Please choose a delivery date first.");
+            return;
+        }
+
+        try {
+            await axios.post(
+                `http://localhost:8000/${r}/scheduledelivery`,
+                {
+                    orderId: orderId,
+                    deliveryDate: date,
+                },
+                {
+                    withCredentials: true,
+                }
+            );
+            alert(`Delivery scheduled successfully for ${date}!`);
+            fetchOrders(user.id, user.title);
+        } catch (err) {
+            console.error("Failed to schedule delivery:", err);
+            alert("Failed to schedule delivery.");
+        }
+    };
+
+    // Axios Call #13: Cancel/Remove items (DELETE request)
     const handleCancelOrder = async (orderId: number) => {
         if (!user || !user.id) return;
         const confirmCancel = window.confirm("Are you sure you want to remove this item?");
@@ -380,7 +456,7 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call #12: Track customer/dealer order status or verify supplier logs (GET request)
+    // Axios Call #14: Track shipment / check status (GET request)
     const handleTrackOrder = async (orderId: number) => {
         setTrackedOrderId(orderId);
         setTrackedOrderStatus("Retrieving status...");
@@ -404,7 +480,7 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call #13: Search other users by username substring filter (GET request)
+    // Axios Call #15: Search users (GET request)
     const handleSearchUsers = async () => {
         if (!searchQuery) {
             setSearchResults([]);
@@ -432,7 +508,7 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call #14: List all registered roles in general directory view (GET request)
+    // Axios Call #16: List directory general (GET request)
     const handleLoadDirectory = async () => {
         const url = getAllUsersUrl(user?.title);
         try {
@@ -476,6 +552,8 @@ export default function Dashboard() {
             </>
         );
     }
+
+    const isCustomer = getRolePath(user.title) === "customer";
 
     return (
         <>
@@ -524,7 +602,7 @@ export default function Dashboard() {
                             activeTab === "orders" ? "bg-primary text-white" : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9]"
                         }`}
                     >
-                        {user.title === "Customer" ? "My Orders" : "My Products"}
+                        {isCustomer ? "My Orders" : "Manage Deliveries / Orders"}
                     </button>
                     <button
                         onClick={() => {
@@ -599,15 +677,15 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB CONTENT: MY ORDERS / ASSIGNED PRODUCTS */}
+            {/* TAB CONTENT: MY ORDERS / DELIVERIES MANAGEMENT */}
             {activeTab === "orders" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <h1 className="text-2xl font-extrabold text-dark-slate mb-6">
-                        {user.title === "Customer" ? "Order History" : "My Assigned Products / Inventory"}
+                        {isCustomer ? "Order History" : "Customer Orders Management"}
                     </h1>
                     {orders.length === 0 ? (
                         <div className="bg-card-white p-8 rounded-lg border border-[#E2E8F0] text-center shadow-sm">
-                            <p className="text-secondary-gray">No items found.</p>
+                            <p className="text-secondary-gray">No order logs found in the database.</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 gap-4">
@@ -618,12 +696,16 @@ export default function Dashboard() {
                                 >
                                     <div>
                                         <h3 className="text-base font-bold text-dark-slate">
-                                            ID: #{item.id}
+                                            Order ID: #{item.id}
                                         </h3>
                                         <p className="text-sm text-secondary-gray">
-                                            Name: <span className="font-semibold text-primary">{item.product?.name || item.name || "Refined Fuel"}</span> 
-                                            {item.quantity !== undefined && ` | Qty: ${item.quantity}`}
+                                            Product Name: <span className="font-semibold text-primary">{item.product?.name || "Refined Fuel"}</span> | Qty: {item.quantity}
                                         </p>
+                                        {!isCustomer && item.customerName && (
+                                            <p className="text-xs text-secondary-gray mt-1">
+                                                Placed by Customer: <strong className="text-dark-slate">{item.customerName}</strong>
+                                            </p>
+                                        )}
                                     </div>
 
                                     {trackedOrderId === item.id && trackedOrderStatus && (
@@ -632,19 +714,57 @@ export default function Dashboard() {
                                         </span>
                                     )}
 
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => handleTrackOrder(item.id)}
-                                            className="bg-primary text-white text-xs font-semibold px-4 py-2 rounded hover:bg-primary/90 transition-colors"
-                                        >
-                                            {user.title === "Supplier" ? "Verify Status" : "Track Status"}
-                                        </button>
-                                        <button
-                                            onClick={() => handleCancelOrder(item.id)}
-                                            className="bg-error-red text-white text-xs font-semibold px-4 py-2 rounded hover:bg-error-red/90 transition-colors"
-                                        >
-                                            Remove / Cancel
-                                        </button>
+                                    <div className="flex items-center gap-3">
+                                        {isCustomer ? (
+                                            <>
+                                                <button
+                                                    onClick={() => handleTrackOrder(item.id)}
+                                                    className="bg-primary text-white text-xs font-semibold px-4 py-2 rounded hover:bg-primary/90 transition-colors cursor-pointer"
+                                                >
+                                                    Track Status
+                                                </button>
+                                                <button
+                                                    onClick={() => handleCancelOrder(item.id)}
+                                                    className="bg-error-red text-white text-xs font-semibold px-4 py-2 rounded hover:bg-error-red/90 transition-colors cursor-pointer"
+                                                >
+                                                    Cancel Order
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <button
+                                                    onClick={() => handleConfirmOrder(item.id)}
+                                                    className="bg-green-600 text-white text-xs font-semibold px-4 py-2 rounded hover:bg-green-700 transition-colors cursor-pointer"
+                                                >
+                                                    Confirm Order (PUT)
+                                                </button>
+                                                
+                                                <div className="flex items-center border border-secondary-gray rounded overflow-hidden">
+                                                    <input
+                                                        type="date"
+                                                        value={deliveryDates[item.id] || ""}
+                                                        onChange={(e) => setDeliveryDates({
+                                                            ...deliveryDates,
+                                                            [item.id]: e.target.value
+                                                        })}
+                                                        className="p-1 text-xs outline-none bg-card-white text-dark-slate border-r border-secondary-gray"
+                                                    />
+                                                    <button
+                                                        onClick={() => handleScheduleDelivery(item.id)}
+                                                        className="bg-teal-600 text-white text-xs font-semibold px-3 py-2 hover:bg-teal-700 transition-colors cursor-pointer"
+                                                    >
+                                                        Schedule (POST)
+                                                    </button>
+                                                </div>
+                                                
+                                                <button
+                                                    onClick={() => handleTrackOrder(item.id)}
+                                                    className="bg-primary text-white text-xs font-semibold px-4 py-2 rounded hover:bg-primary/90 transition-colors cursor-pointer"
+                                                >
+                                                    Check Status (GET)
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -708,13 +828,13 @@ export default function Dashboard() {
                             <div className="flex gap-2.5 pt-4">
                                 <button
                                     onClick={handleSaveProfile}
-                                    className="flex-grow bg-primary text-white py-2.5 rounded font-semibold text-sm hover:bg-primary/95 transition-colors"
+                                    className="flex-grow bg-primary text-white py-2.5 rounded font-semibold text-sm hover:bg-primary/95 transition-colors cursor-pointer"
                                 >
                                     Update Profile (PATCH)
                                 </button>
                                 <button
                                     onClick={handleQuickPatchAddress}
-                                    className="bg-teal-600 text-white px-5 py-2.5 rounded font-semibold text-sm hover:bg-teal-700 transition-colors"
+                                    className="bg-teal-600 text-white px-5 py-2.5 rounded font-semibold text-sm hover:bg-teal-700 transition-colors cursor-pointer"
                                 >
                                     Quick Address Patch (PATCH)
                                 </button>
@@ -727,7 +847,7 @@ export default function Dashboard() {
                                 </p>
                                 <button
                                     onClick={handleDeleteAccount}
-                                    className="bg-error-red text-white px-5 py-2 rounded text-xs font-bold hover:bg-error-red/90 transition-colors"
+                                    className="bg-error-red text-white px-5 py-2 rounded text-xs font-bold hover:bg-error-red/90 transition-colors cursor-pointer"
                                 >
                                     Delete Account (DELETE)
                                 </button>
@@ -753,7 +873,7 @@ export default function Dashboard() {
                         />
                         <button
                             onClick={handleSearchUsers}
-                            className="bg-primary text-white px-5 py-2.5 rounded font-semibold text-sm hover:bg-primary/90 transition-colors"
+                            className="bg-primary text-white px-5 py-2.5 rounded font-semibold text-sm hover:bg-primary/90 transition-colors cursor-pointer"
                         >
                             Search DB (GET)
                         </button>

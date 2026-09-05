@@ -32,10 +32,6 @@ export default function Navigation() {
             {!isLoggedIn ? (
                 <>
                     <span className={separatorClass}>|</span>
-                    <Link href="/products/1" className={linkClass}>Product 1</Link>
-                    <span className={separatorClass}>|</span>
-                    <Link href="/products/2" className={linkClass}>Product 2</Link>
-                    <span className={separatorClass}>|</span>
                     <Link href="/login" className={linkClass}>Login</Link>
                     <span className={separatorClass}>|</span>
                     <Link href="/registration" className={linkClass}>Registration</Link>

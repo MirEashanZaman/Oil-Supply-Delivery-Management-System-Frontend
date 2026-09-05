@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import MyNavigation from "@/components/navigation";
@@ -147,14 +147,44 @@ export default function Dashboard() {
     const [activeTab, setActiveTab] = useState<"products" | "orders" | "inventory" | "users_crud" | "monitoring" | "profile" | "directory" | "messages">("products");
     const [products, setProducts] = useState<Product[]>([]);
     const [productsLoading, setProductsLoading] = useState(false);
+    const [productSearchQuery, setProductSearchQuery] = useState<string>("");
+    const [selectedProductCategory, setSelectedProductCategory] = useState<string>("All");
+    const [inventorySearchQuery, setInventorySearchQuery] = useState<string>("");
+
+    const productCategories = useMemo(() => {
+        const cats = Array.from(new Set(products.map((p) => p.category).filter(Boolean)));
+        return ["All", ...cats];
+    }, [products]);
+
+    const filteredProducts = useMemo(() => {
+        const query = productSearchQuery.trim().toLowerCase();
+        return products.filter((product) => {
+            const matchesQuery = !query ||
+                product.name.toLowerCase().includes(query) ||
+                (product.category && product.category.toLowerCase().includes(query)) ||
+                (product.description && product.description.toLowerCase().includes(query));
+            const matchesCategory = selectedProductCategory === "All" || product.category === selectedProductCategory;
+            return matchesQuery && matchesCategory;
+        });
+    }, [products, productSearchQuery, selectedProductCategory]);
+
+    const [customInventory, setCustomInventory] = useState<Product[]>([]);
+    const [supplierOperationalStatus, setSupplierOperationalStatus] = useState<string>("active");
+
+    const filteredInventory = useMemo(() => {
+        const query = inventorySearchQuery.trim().toLowerCase();
+        if (!query) return customInventory;
+        return customInventory.filter((item) => {
+            return item.name.toLowerCase().includes(query) ||
+                (item.category && item.category.toLowerCase().includes(query)) ||
+                (item.description && item.description.toLowerCase().includes(query));
+        });
+    }, [customInventory, inventorySearchQuery]);
 
     const [orders, setOrders] = useState<Order[]>([]);
     const [trackedOrderStatus, setTrackedOrderStatus] = useState<string | null>(null);
     const [trackedOrderId, setTrackedOrderId] = useState<number | null>(null);
     const [deliveryDates, setDeliveryDates] = useState<{ [orderId: number]: string }>({});
-
-    const [customInventory, setCustomInventory] = useState<Product[]>([]);
-    const [supplierOperationalStatus, setSupplierOperationalStatus] = useState<string>("active");
 
     const [monitorMetrics, setMonitorMetrics] = useState<any>(null);
     const [allMergedUsers, setAllMergedUsers] = useState<SystemUser[]>([]);
@@ -1773,6 +1803,75 @@ export default function Dashboard() {
                         )}
                     </div>
 
+                    <div className="bg-card-white border border-[#E2E8F0] p-4 sm:p-5 rounded-2xl mb-6 shadow-sm">
+                        <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between mb-3">
+                            <div className="relative flex-1">
+                                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-secondary-gray">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    value={productSearchQuery}
+                                    onChange={(e) => setProductSearchQuery(e.target.value)}
+                                    placeholder="Search products by product name..."
+                                    className="w-full pl-10 pr-10 py-2.5 border border-[#E2E8F0] rounded-xl text-sm bg-[#F8FAFC] text-dark-slate placeholder-secondary-gray focus:outline-none focus:border-primary focus:bg-card-white transition-all shadow-inner"
+                                />
+                                {productSearchQuery && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setProductSearchQuery("")}
+                                        className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-secondary-gray hover:text-dark-slate cursor-pointer"
+                                        title="Clear search"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="flex items-center justify-between sm:justify-end gap-3 text-xs">
+                                <span className="font-semibold text-secondary-gray whitespace-nowrap">
+                                    Showing <span className="font-bold text-dark-slate">{filteredProducts.length}</span> of <span className="font-bold text-dark-slate">{products.length}</span> products
+                                </span>
+                                {(productSearchQuery || selectedProductCategory !== "All") && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setProductSearchQuery("");
+                                            setSelectedProductCategory("All");
+                                        }}
+                                        className="text-xs text-error-red hover:underline font-bold cursor-pointer whitespace-nowrap"
+                                    >
+                                        Reset Filters
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {productCategories.length > 1 && (
+                            <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-[#F1F5F9]">
+                                <span className="text-xs font-bold text-secondary-gray mr-1">Filter by Category:</span>
+                                {productCategories.map((cat) => (
+                                    <button
+                                        key={cat}
+                                        type="button"
+                                        onClick={() => setSelectedProductCategory(cat)}
+                                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                                            selectedProductCategory === cat
+                                                ? "bg-primary text-white shadow-sm"
+                                                : "bg-[#F1F5F9] text-secondary-gray hover:bg-[#E2E8F0] hover:text-dark-slate"
+                                        }`}
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                     {productsLoading ? (
                         <div className="flex flex-col justify-center items-center py-16">
                             <span className="loading loading-spinner loading-lg text-[#0F2747] mb-3"></span>
@@ -1783,9 +1882,31 @@ export default function Dashboard() {
                             <p className="text-secondary-gray font-medium mb-1">No products currently available in the catalog.</p>
                             <p className="text-xs text-secondary-gray">New petroleum grades will appear here as soon as they are added.</p>
                         </div>
+                    ) : filteredProducts.length === 0 ? (
+                        <div className="bg-card-white p-8 rounded-2xl border border-[#E2E8F0] text-center shadow-sm max-w-xl mx-auto my-6">
+                            <div className="w-12 h-12 rounded-full bg-[#F1F5F9] flex items-center justify-center mx-auto mb-3 text-secondary-gray">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                            <h3 className="text-base font-bold text-dark-slate mb-1">No matching products found</h3>
+                            <p className="text-xs text-secondary-gray mb-4">
+                                No petroleum products match {productSearchQuery ? `"${productSearchQuery}"` : ""} {selectedProductCategory !== "All" ? `under category "${selectedProductCategory}"` : ""}.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setProductSearchQuery("");
+                                    setSelectedProductCategory("All");
+                                }}
+                                className="px-4 py-2 bg-primary hover:bg-primary/90 text-white font-bold text-xs rounded-xl cursor-pointer transition-colors shadow-sm"
+                            >
+                                Reset Search & Filters
+                            </button>
+                        </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
-                            {products.map((product) => (
+                            {filteredProducts.map((product) => (
                                 <div
                                     key={product.id}
                                     className="card bg-[#FFFFFF] w-96 max-w-full shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-shadow rounded-2xl"
@@ -1931,48 +2052,114 @@ export default function Dashboard() {
                             </div>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
-                            {customInventory.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className="card bg-[#FFFFFF] w-96 max-w-full shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-all rounded-2xl flex flex-col justify-between"
-                                >
-                                    <figure className="h-48 w-full overflow-hidden bg-[#F5F7FA] border-b border-[#E2E8F0]">
-                                        <img
-                                            src={item.image || getProductImage(item.name, item.image, item.id)}
-                                            alt={item.name}
-                                            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                                            onError={(e) => {
-                                                e.currentTarget.src = getProductImage(item.name, undefined, item.id);
-                                            }}
-                                        />
-                                    </figure>
-                                    <div className="card-body p-5 flex flex-col justify-between">
-                                        <div>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className="text-xs font-bold text-[#16A34A] bg-[#16A34A]/10 px-2.5 py-1 rounded-full border border-[#16A34A]/25">
-                                                    {isSupplier ? "Active Portfolio Item" : "Active Stock Item"}
-                                                </span>
-                                                <span className="text-xs font-semibold text-[#64748B]">Product ID: #{item.id}</span>
-                                            </div>
-                                            <h2 className="text-lg font-bold text-[#1E293B] mb-1">{item.name}</h2>
-                                            <p className="text-xs text-[#64748B] leading-relaxed line-clamp-2">{item.description || "Petroleum Grade Oil Product"}</p>
-                                        </div>
-
-                                        <div className="pt-4 mt-3 border-t border-[#F1F5F9] flex items-center justify-between">
-                                            <span className="text-xs text-[#64748B] font-medium">Linked Record #{item.id}</span>
-                                            <div className="card-actions justify-end">
-                                                <button
-                                                    onClick={() => handleRemoveProductFromStock(item.id)}
-                                                    className="btn btn-sm bg-[#DC2626] hover:bg-[#B91C1C] text-white border-none rounded-xl font-semibold px-4 cursor-pointer shadow-sm transition-colors"
-                                                >
-                                                    {isSupplier ? "Remove from Portfolio" : "Remove from Stock"}
-                                                </button>
-                                            </div>
-                                        </div>
+                        <div>
+                            <div className="bg-card-white border border-[#E2E8F0] p-4 rounded-2xl mb-6 shadow-sm flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
+                                <div className="relative flex-1">
+                                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-secondary-gray">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
                                     </div>
+                                    <input
+                                        type="text"
+                                        value={inventorySearchQuery}
+                                        onChange={(e) => setInventorySearchQuery(e.target.value)}
+                                        placeholder="Search in your portfolio / inventory by product name..."
+                                        className="w-full pl-10 pr-10 py-2.5 border border-[#E2E8F0] rounded-xl text-sm bg-[#F8FAFC] text-dark-slate placeholder-secondary-gray focus:outline-none focus:border-primary focus:bg-card-white transition-all shadow-inner"
+                                    />
+                                    {inventorySearchQuery && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setInventorySearchQuery("")}
+                                            className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-secondary-gray hover:text-dark-slate cursor-pointer"
+                                            title="Clear search"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    )}
                                 </div>
-                            ))}
+                                <div className="flex items-center justify-between sm:justify-end gap-3 text-xs">
+                                    <span className="font-semibold text-secondary-gray whitespace-nowrap">
+                                        Showing <span className="font-bold text-dark-slate">{filteredInventory.length}</span> of <span className="font-bold text-dark-slate">{customInventory.length}</span> items
+                                    </span>
+                                    {inventorySearchQuery && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setInventorySearchQuery("")}
+                                            className="text-xs text-error-red hover:underline font-bold cursor-pointer whitespace-nowrap"
+                                        >
+                                            Reset
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {filteredInventory.length === 0 ? (
+                                <div className="bg-card-white p-8 rounded-2xl border border-[#E2E8F0] text-center shadow-sm max-w-xl mx-auto my-6">
+                                    <div className="w-12 h-12 rounded-full bg-[#F1F5F9] flex items-center justify-center mx-auto mb-3 text-secondary-gray">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                    </div>
+                                    <h3 className="text-base font-bold text-dark-slate mb-1">No matching inventory items found</h3>
+                                    <p className="text-xs text-secondary-gray mb-4">
+                                        No items in your portfolio match "{inventorySearchQuery}".
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={() => setInventorySearchQuery("")}
+                                        className="px-4 py-2 bg-primary hover:bg-primary/90 text-white font-bold text-xs rounded-xl cursor-pointer transition-colors shadow-sm"
+                                    >
+                                        Reset Search
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
+                                    {filteredInventory.map((item) => (
+                                        <div
+                                            key={item.id}
+                                            className="card bg-[#FFFFFF] w-96 max-w-full shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-all rounded-2xl flex flex-col justify-between"
+                                        >
+                                            <figure className="h-48 w-full overflow-hidden bg-[#F5F7FA] border-b border-[#E2E8F0]">
+                                                <img
+                                                    src={item.image || getProductImage(item.name, item.image, item.id)}
+                                                    alt={item.name}
+                                                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                                                    onError={(e) => {
+                                                        e.currentTarget.src = getProductImage(item.name, undefined, item.id);
+                                                    }}
+                                                />
+                                            </figure>
+                                            <div className="card-body p-5 flex flex-col justify-between">
+                                                <div>
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-xs font-bold text-[#16A34A] bg-[#16A34A]/10 px-2.5 py-1 rounded-full border border-[#16A34A]/25">
+                                                            {isSupplier ? "Active Portfolio Item" : "Active Stock Item"}
+                                                        </span>
+                                                        <span className="text-xs font-semibold text-[#64748B]">Product ID: #{item.id}</span>
+                                                    </div>
+                                                    <h2 className="text-lg font-bold text-[#1E293B] mb-1">{item.name}</h2>
+                                                    <p className="text-xs text-[#64748B] leading-relaxed line-clamp-2">{item.description || "Petroleum Grade Oil Product"}</p>
+                                                </div>
+
+                                                <div className="pt-4 mt-3 border-t border-[#F1F5F9] flex items-center justify-between">
+                                                    <span className="text-xs text-[#64748B] font-medium">Linked Record #{item.id}</span>
+                                                    <div className="card-actions justify-end">
+                                                        <button
+                                                            onClick={() => handleRemoveProductFromStock(item.id)}
+                                                            className="btn btn-sm bg-[#DC2626] hover:bg-[#B91C1C] text-white border-none rounded-xl font-semibold px-4 cursor-pointer shadow-sm transition-colors"
+                                                        >
+                                                            {isSupplier ? "Remove from Portfolio" : "Remove from Stock"}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

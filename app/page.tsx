@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import axios from "axios";
 import MyHeader from "@/components/header";
 import MyNavigation from "@/components/navigation";
 
@@ -15,62 +16,18 @@ type CarouselProduct = {
     image: string;
 };
 
-const FEATURED_PRODUCTS: CarouselProduct[] = [
-    {
-        id: 1,
-        name: "Brent Crude Oil",
-        category: "Crude Fuel",
-        price: "$82.50 / Barrel",
-        description: "High-quality sweet light crude oil sourced from international marine drillings.",
-        stockLevel: "In Stock",
-        image: "/Brent Crude Oil.jpg",
-    },
-    {
-        id: 2,
-        name: "Ultra-Low Sulfur Diesel",
-        category: "Refined Diesel",
-        price: "$3.20 / Gallon",
-        description: "Clean-burning commercial diesel fuel with high thermal output properties.",
-        stockLevel: "In Stock",
-        image: "/Ultra-Low Sulfur Diesel.jpg",
-    },
-    {
-        id: 3,
-        name: "Premium Unleaded Gasoline",
-        category: "Refined Gasoline",
-        price: "$3.85 / Gallon",
-        description: "High-octane gasoline suitable for high-performance automotive engines.",
-        stockLevel: "Low Stock",
-        image: "/Premium Unleaded Gasoline.jpg",
-    },
-    {
-        id: 4,
-        name: "Aviation Turbine Fuel (Jet A-1)",
-        category: "Aviation Fuel",
-        price: "$2.95 / Litre",
-        description: "Kerosene-type jet fuel manufactured to rigorous international safety standards.",
-        stockLevel: "In Stock",
-        image: "/Aviation Turbine Fuel (Jet A-1).jpg",
-    },
-    {
-        id: 5,
-        name: "Liquefied Petroleum Gas (LPG)",
-        category: "Liquefied Gas",
-        price: "$1.80 / kg",
-        description: "Clean flammable hydrocarbon gas mixture utilized as heating and cooking fuel.",
-        stockLevel: "In Stock",
-        image: "/images.jpg",
-    },
-    {
-        id: 6,
-        name: "Heavy Marine Fuel Oil (HFO)",
-        category: "Bunker Fuel",
-        price: "$620.00 / Ton",
-        description: "Residual fuel oil blended for international ocean freight and industrial boiler usage.",
-        stockLevel: "In Stock",
-        image: "/Heavy Marine Fuel Oil (HFO).jpg",
-    },
-];
+const getProductImage = (name?: string, img?: string) => {
+    if (img && (img.startsWith("/") || img.startsWith("http"))) return img;
+    if (!name) return "/Brent Crude Oil.jpg";
+    const lower = name.toLowerCase();
+    if (lower.includes("crude") || lower.includes("brent")) return "/Brent Crude Oil.jpg";
+    if (lower.includes("diesel")) return "/Ultra-Low Sulfur Diesel.jpg";
+    if (lower.includes("gasoline") || lower.includes("petrol") || lower.includes("octane")) return "/Premium Unleaded Gasoline.jpg";
+    if (lower.includes("jet") || lower.includes("aviation") || lower.includes("turbine")) return "/Aviation Turbine Fuel (Jet A-1).jpg";
+    if (lower.includes("lpg") || lower.includes("gas") || lower.includes("cylinder")) return "/images.jpg";
+    if (lower.includes("heavy") || lower.includes("marine") || lower.includes("bunker") || lower.includes("hfo")) return "/Heavy Marine Fuel Oil (HFO).jpg";
+    return "/Brent Crude Oil.jpg";
+};
 
 const HERO_SLIDES = [
     {
@@ -101,6 +58,40 @@ export default function Home() {
     const [isAutoPlay, setIsAutoPlay] = useState(true);
     const [isMarqueeMode, setIsMarqueeMode] = useState(true);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [products, setProducts] = useState<CarouselProduct[]>([]);
+    const [loadingProducts, setLoadingProducts] = useState(true);
+
+    useEffect(() => {
+        const fetchHomeProducts = async () => {
+            const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
+            try {
+                const res = await axios.get(`${API_ENDPOINT}/product/list`, {
+                    withCredentials: true,
+                });
+                if (Array.isArray(res.data)) {
+                    const mapped: CarouselProduct[] = res.data
+                        .sort((a: any, b: any) => (a.id || 0) - (b.id || 0))
+                        .map((p: any) => ({
+                            id: p.id,
+                            name: p.name || `Product #${p.id}`,
+                            category: p.category || (p.categories?.[0]?.name) || "Petroleum Grade",
+                            price: typeof p.price === "number" ? `$${p.price.toFixed(2)}` : p.price || "$0.00",
+                            description: p.description || "Petroleum product sourced via certified refinery pipelines.",
+                            stockLevel: typeof p.quantity === "number" 
+                                ? (p.quantity <= 0 ? "Out of Stock" : p.quantity < 1000 ? "Low Stock" : "In Stock") 
+                                : p.stockLevel || "In Stock",
+                            image: getProductImage(p.name, p.image),
+                        }));
+                    setProducts(mapped);
+                }
+            } catch (err) {
+                console.warn("Could not fetch products for home carousel:", err);
+            } finally {
+                setLoadingProducts(false);
+            }
+        };
+        fetchHomeProducts();
+    }, []);
 
     // Auto-advance hero carousel from right to left every 4 seconds
     useEffect(() => {
@@ -294,12 +285,22 @@ export default function Home() {
 
                 {/* Right-to-Left DaisyUI Carousel Container */}
                 <div className="w-full bg-[#FAFBFD] border border-[#E2E8F0] rounded-2xl p-4 md:p-6 shadow-sm overflow-hidden">
-                    {isMarqueeMode ? (
+                    {loadingProducts ? (
+                        <div className="flex flex-col justify-center items-center py-16">
+                            <span className="loading loading-spinner loading-lg text-primary mb-3"></span>
+                            <p className="text-sm text-secondary-gray">Loading live petroleum catalog...</p>
+                        </div>
+                    ) : products.length === 0 ? (
+                        <div className="text-center py-12 text-secondary-gray">
+                            <p className="font-semibold text-base mb-1">No products currently available in the catalog.</p>
+                            <p className="text-xs">Certified oil products will appear here once registered.</p>
+                        </div>
+                    ) : isMarqueeMode ? (
                         /* Infinite Continuous Right-to-Left Stream */
                         <div className="carousel w-full overflow-hidden">
                             <div className="animate-carousel-rtl flex gap-6">
                                 {/* First set of products */}
-                                {FEATURED_PRODUCTS.map((product) => (
+                                {products.map((product) => (
                                     <div key={`prod-1-${product.id}`} className="carousel-item">
                                         <div className="card bg-base-100 w-80 sm:w-96 shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-all text-left">
                                             <figure className="h-48 w-full overflow-hidden bg-slate-100">
@@ -351,7 +352,7 @@ export default function Home() {
                                 ))}
 
                                 {/* Duplicate set to ensure seamless infinite looping right-to-left */}
-                                {FEATURED_PRODUCTS.map((product) => (
+                                {products.map((product) => (
                                     <div key={`prod-2-${product.id}`} className="carousel-item">
                                         <div className="card bg-base-100 w-80 sm:w-96 shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-all text-left">
                                             <figure className="h-48 w-full overflow-hidden bg-slate-100">
@@ -409,7 +410,7 @@ export default function Home() {
                             ref={scrollContainerRef}
                             className="carousel carousel-center rounded-box w-full space-x-6 p-2 overflow-x-auto scroll-smooth"
                         >
-                            {FEATURED_PRODUCTS.map((product) => (
+                            {products.map((product) => (
                                 <div key={product.id} className="carousel-item">
                                     <div className="card bg-base-100 w-80 sm:w-96 shadow-sm border border-[#E2E8F0] overflow-hidden text-left">
                                         <figure className="h-48 w-full overflow-hidden bg-slate-100">

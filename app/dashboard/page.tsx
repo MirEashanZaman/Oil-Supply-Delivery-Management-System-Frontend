@@ -72,81 +72,26 @@ type SystemUser = {
     createdAt?: string;
     joiningDate?: string;
 };
-
-const DUMMY_PRODUCTS: Product[] = [
-    {
-        id: 1,
-        name: "Brent Crude Oil",
-        category: "Crude Fuel",
-        price: "$82.50 / Barrel",
-        numericPrice: 82.50,
-        description: "High-quality sweet light crude oil sourced from international marine drillings.",
-        inStock: true,
-        stockLevel: "In Stock",
-        image: "/Brent Crude Oil.jpg",
-    },
-    {
-        id: 2,
-        name: "Ultra-Low Sulfur Diesel",
-        category: "Refined Diesel",
-        price: "$3.20 / Gallon",
-        numericPrice: 3.20,
-        description: "Clean-burning commercial diesel fuel with high thermal output properties.",
-        inStock: true,
-        stockLevel: "In Stock",
-        image: "/Ultra-Low Sulfur Diesel.jpg",
-    },
-    {
-        id: 3,
-        name: "Premium Unleaded Gasoline",
-        category: "Refined Gasoline",
-        price: "$3.85 / Gallon",
-        numericPrice: 3.85,
-        description: "High-octane gasoline suitable for high-performance automotive engines.",
-        inStock: true,
-        stockLevel: "Low Stock",
-        image: "/Premium Unleaded Gasoline.jpg",
-    },
-    {
-        id: 4,
-        name: "Aviation Turbine Fuel (Jet A-1)",
-        category: "Aviation Fuel",
-        price: "$2.95 / Litre",
-        numericPrice: 2.95,
-        description: "Kerosene-type jet fuel manufactured to rigorous international safety standards.",
-        inStock: true,
-        stockLevel: "In Stock",
-        image: "/Aviation Turbine Fuel (Jet A-1).jpg",
-    },
-    {
-        id: 5,
-        name: "Liquefied Petroleum Gas (LPG)",
-        category: "Liquefied Gas",
-        price: "$1.80 / kg",
-        numericPrice: 1.80,
-        description: "Clean flammable hydrocarbon gas mixture utilized as heating and cooking fuel.",
-        inStock: true,
-        stockLevel: "In Stock",
-        image: "/images.jpg",
-    },
-    {
-        id: 6,
-        name: "Heavy Marine Fuel Oil (HFO)",
-        category: "Bunker Fuel",
-        price: "$620.00 / Metric Ton",
-        numericPrice: 620.00,
-        description: "Residual fuel oil blended for international ocean freight and industrial boiler usage.",
-        inStock: true,
-        stockLevel: "In Stock",
-        image: "/Heavy Marine Fuel Oil (HFO).jpg",
-    },
-];
+const getProductImage = (name?: string, img?: string) => {
+    if (img && (img.startsWith("/") || img.startsWith("http"))) return img;
+    if (!name) return "/Brent Crude Oil.jpg";
+    const lower = name.toLowerCase();
+    if (lower.includes("crude") || lower.includes("brent")) return "/Brent Crude Oil.jpg";
+    if (lower.includes("diesel")) return "/Ultra-Low Sulfur Diesel.jpg";
+    if (lower.includes("gasoline") || lower.includes("petrol") || lower.includes("octane")) return "/Premium Unleaded Gasoline.jpg";
+    if (lower.includes("jet") || lower.includes("aviation") || lower.includes("turbine")) return "/Aviation Turbine Fuel (Jet A-1).jpg";
+    if (lower.includes("lpg") || lower.includes("gas") || lower.includes("cylinder")) return "/images.jpg";
+    if (lower.includes("heavy") || lower.includes("marine") || lower.includes("bunker") || lower.includes("hfo")) return "/Heavy Marine Fuel Oil (HFO).jpg";
+    return "/Brent Crude Oil.jpg";
+};
 
 export default function Dashboard() {
     const router = useRouter();
     const [user, setUser] = useState<UserData | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<"products" | "orders" | "inventory" | "users_crud" | "monitoring" | "profile" | "directory">("products");
+    const [products, setProducts] = useState<Product[]>([]);
+    const [productsLoading, setProductsLoading] = useState(false);
 
     // Orders tab states
     const [orders, setOrders] = useState<Order[]>([]);
@@ -196,10 +141,10 @@ export default function Dashboard() {
     const [orderQuantity, setOrderQuantity] = useState<number>(1);
     const [deliveryAddress, setDeliveryAddress] = useState<string>("");
     const [cardType, setCardType] = useState<string>("Visa");
-    const [cardNumber, setCardNumber] = useState<string>("4532-8812-9934-5521");
+    const [cardNumber, setCardNumber] = useState<string>("");
     const [cardHolder, setCardHolder] = useState<string>("");
-    const [cardExpiry, setCardExpiry] = useState<string>("12/28");
-    const [cardCvv, setCardCvv] = useState<string>("883");
+    const [cardExpiry, setCardExpiry] = useState<string>("");
+    const [cardCvv, setCardCvv] = useState<string>("");
     const [isSubmittingOrder, setIsSubmittingOrder] = useState<boolean>(false);
 
     // Dealer Wholesale Bulk Sourcing Modal States
@@ -248,7 +193,41 @@ export default function Dashboard() {
         }
         setLoading(false);
         fetchSourcingParties();
+        fetchCatalogProducts();
     }, []);
+
+    // Axios Call: Fetch catalog products from backend (`GET /product/list`)
+    const fetchCatalogProducts = async () => {
+        setProductsLoading(true);
+        const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
+        try {
+            const res = await axios.get(`${API_ENDPOINT}/product/list`, {
+                withCredentials: true,
+            });
+            if (Array.isArray(res.data)) {
+                const mapped: Product[] = res.data
+                    .sort((a: any, b: any) => (a.id || 0) - (b.id || 0))
+                    .map((p: any) => ({
+                        id: p.id,
+                        name: p.name || `Product #${p.id}`,
+                        category: p.category || (p.categories?.[0]?.name) || "Petroleum Grade",
+                        price: typeof p.price === "number" ? `$${p.price.toFixed(2)}` : p.price || "$0.00",
+                        numericPrice: typeof p.price === "number" ? p.price : typeof p.numericPrice === "number" ? p.numericPrice : parseFloat(String(p.price).replace(/[^0-9.]/g, "")) || 0,
+                        description: p.description || "High-grade petroleum product sourced from certified national pipelines.",
+                        inStock: typeof p.quantity === "number" ? p.quantity > 0 : p.inStock !== false,
+                        stockLevel: typeof p.quantity === "number" 
+                            ? (p.quantity <= 0 ? "Out of Stock" : p.quantity < 1000 ? "Low Stock" : "In Stock") 
+                            : p.stockLevel || "In Stock",
+                        image: getProductImage(p.name, p.image),
+                    }));
+                setProducts(mapped);
+            }
+        } catch (err) {
+            console.warn("Failed to fetch catalog products from backend:", err);
+        } finally {
+            setProductsLoading(false);
+        }
+    };
 
     // Axios Call: Fetch available suppliers and dealers
     const fetchSourcingParties = async () => {
@@ -555,9 +534,13 @@ export default function Dashboard() {
     // Axios Call: Dealer Wholesale Bulk Sourcing (`POST /dealer/placeorder`)
     const handleWholesaleBulkOrder = async () => {
         if (!user || !wholesaleProduct) return;
-        setIsSubmittingWholesale(true);
-        const supplierId = wholesaleSupplierId || (availableSuppliers[0]?.id || 1);
+        const supplierId = wholesaleSupplierId || (availableSuppliers.length > 0 ? availableSuppliers[0].id : null);
+        if (!supplierId) {
+            alert("No refinery suppliers are currently available to fulfill this wholesale order.");
+            return;
+        }
 
+        setIsSubmittingWholesale(true);
         try {
             await axios.post(
                 "http://localhost:8000/dealer/placeorder",
@@ -629,6 +612,7 @@ export default function Dashboard() {
     const handleOpenCheckout = (product: Product) => {
         setCheckoutProduct(product);
         setOrderQuantity(1);
+        if (user?.address) setDeliveryAddress(user.address);
         if (sourcingChoice === "supplier" && availableSuppliers.length > 0) {
             setSelectedPartyId(availableSuppliers[0].id);
         } else if (sourcingChoice === "dealer" && availableDealers.length > 0) {
@@ -639,16 +623,33 @@ export default function Dashboard() {
     // Submit Customer Order
     const handleCompleteOrder = async () => {
         if (!user || !user.id || !checkoutProduct) return;
+
+        if (!selectedPartyId) {
+            alert(`Please select an authorized ${sourcingChoice === "supplier" ? "refinery supplier" : "dealer"}.`);
+            return;
+        }
+
+        const destination = deliveryAddress.trim() || user.address || "";
+        if (!destination) {
+            alert("Please enter a delivery destination address.");
+            return;
+        }
+
+        if (!cardNumber.trim()) {
+            alert("Please provide a valid card number for payment processing.");
+            return;
+        }
+
         setIsSubmittingOrder(true);
         const totalAmount = Number((checkoutProduct.numericPrice * orderQuantity).toFixed(2));
 
         const orderPayload: any = {
             quantity: orderQuantity,
-            address: deliveryAddress || user.address || "Default Address",
+            address: destination,
             status: "pending",
             product: { id: checkoutProduct.id },
             payment: {
-                cardNumber: cardNumber || "4532-8812-9934-5521",
+                cardNumber: cardNumber.trim(),
                 cardType: cardType,
                 amount: totalAmount,
                 status: "completed",
@@ -656,9 +657,9 @@ export default function Dashboard() {
         };
 
         if (sourcingChoice === "supplier") {
-            orderPayload.supplier = selectedPartyId ? { id: Number(selectedPartyId) } : { id: 1 };
+            orderPayload.supplier = { id: Number(selectedPartyId) };
         } else {
-            orderPayload.dealer = selectedPartyId ? { id: Number(selectedPartyId) } : { id: 1 };
+            orderPayload.dealer = { id: Number(selectedPartyId) };
         }
 
         try {
@@ -1070,7 +1071,7 @@ export default function Dashboard() {
                         <div className="bg-card-white p-5 rounded-lg border border-[#E2E8F0] shadow-sm">
                             <span className="text-xs font-bold text-secondary-gray uppercase">Total Registered Users</span>
                             <h3 className="text-3xl font-extrabold text-primary mt-1">
-                                {allMergedUsers.length || monitorMetrics?.totalUsers || 24}
+                                {allMergedUsers.length || monitorMetrics?.totalUsers || 0}
                             </h3>
                             <p className="text-xs text-green-600 font-semibold mt-1">✓ Across 4 Database Tables</p>
                         </div>
@@ -1078,7 +1079,7 @@ export default function Dashboard() {
                         <div className="bg-card-white p-5 rounded-lg border border-[#E2E8F0] shadow-sm">
                             <span className="text-xs font-bold text-secondary-gray uppercase">Active Orders in Queue</span>
                             <h3 className="text-3xl font-extrabold text-emerald-600 mt-1">
-                                {orders.length || monitorMetrics?.activeOrders || 8}
+                                {orders.length || monitorMetrics?.activeOrders || 0}
                             </h3>
                             <p className="text-xs text-secondary-gray mt-1">Integrated Supply Pipeline</p>
                         </div>
@@ -1086,7 +1087,7 @@ export default function Dashboard() {
                         <div className="bg-card-white p-5 rounded-lg border border-[#E2E8F0] shadow-sm">
                             <span className="text-xs font-bold text-secondary-gray uppercase">Catalog Products</span>
                             <h3 className="text-3xl font-extrabold text-amber-600 mt-1">
-                                {DUMMY_PRODUCTS.length}
+                                {products.length}
                             </h3>
                             <p className="text-xs text-secondary-gray mt-1">High-Grade Petroleum Grades</p>
                         </div>
@@ -1258,85 +1259,97 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
-                        {DUMMY_PRODUCTS.map((product) => (
-                            <div
-                                key={product.id}
-                                className="card bg-base-100 w-96 max-w-full shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-shadow"
-                            >
-                                <figure className="h-48 w-full overflow-hidden bg-slate-100">
-                                    <img
-                                        src={product.image}
-                                        alt={product.name}
-                                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                                        onError={(e) => {
-                                            e.currentTarget.src = "/Brent Crude Oil.jpg";
-                                        }}
-                                    />
-                                </figure>
-                                <div className="card-body p-5 flex flex-col justify-between">
-                                    <div>
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-xs font-bold text-secondary-gray bg-[#F1F5F9] px-2.5 py-1 rounded">
-                                                {product.category}
-                                            </span>
-                                            <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
-                                                product.stockLevel === "In Stock" ? "bg-green-100 text-success-green" : "bg-amber-100 text-secondary"
-                                            }`}>
-                                                {product.stockLevel}
-                                            </span>
-                                        </div>
-                                        <h2 className="card-title text-lg font-bold text-dark-slate mb-1">{product.name}</h2>
-                                        <p className="text-sm text-secondary-gray">{product.description}</p>
-                                    </div>
-
-                                    <div className="pt-4 mt-2 border-t border-[#F1F5F9] flex items-center justify-between gap-2">
-                                        <span className="text-base font-extrabold text-primary">{product.price}</span>
-                                        <div className="card-actions justify-end">
-                                            {isAdmin ? (
-                                                <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-3 py-1.5 rounded">
-                                                    ✓ Admin Linked Catalog
+                    {productsLoading ? (
+                        <div className="flex flex-col justify-center items-center py-16">
+                            <span className="loading loading-spinner loading-lg text-primary mb-3"></span>
+                            <p className="text-sm text-secondary-gray">Loading live petroleum catalog...</p>
+                        </div>
+                    ) : products.length === 0 ? (
+                        <div className="bg-card-white p-8 rounded-lg border border-[#E2E8F0] text-center shadow-sm max-w-xl mx-auto">
+                            <p className="text-secondary-gray font-medium mb-1">No products currently available in the catalog.</p>
+                            <p className="text-xs text-secondary-gray">New petroleum grades will appear here as soon as they are added.</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
+                            {products.map((product) => (
+                                <div
+                                    key={product.id}
+                                    className="card bg-base-100 w-96 max-w-full shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-shadow"
+                                >
+                                    <figure className="h-48 w-full overflow-hidden bg-slate-100">
+                                        <img
+                                            src={product.image}
+                                            alt={product.name}
+                                            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                                            onError={(e) => {
+                                                e.currentTarget.src = "/Brent Crude Oil.jpg";
+                                            }}
+                                        />
+                                    </figure>
+                                    <div className="card-body p-5 flex flex-col justify-between">
+                                        <div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs font-bold text-secondary-gray bg-[#F1F5F9] px-2.5 py-1 rounded">
+                                                    {product.category}
                                                 </span>
-                                            ) : isSupplier ? (
-                                                <button
-                                                    onClick={() => handleAssignProduct(product)}
-                                                    className="btn btn-primary btn-sm text-white"
-                                                >
-                                                    + Add to Portfolio
-                                                </button>
-                                            ) : isDealer ? (
-                                                <div className="flex gap-2">
+                                                <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
+                                                    product.stockLevel === "In Stock" ? "bg-green-100 text-success-green" : "bg-amber-100 text-secondary"
+                                                }`}>
+                                                    {product.stockLevel}
+                                                </span>
+                                            </div>
+                                            <h2 className="card-title text-lg font-bold text-dark-slate mb-1">{product.name}</h2>
+                                            <p className="text-sm text-secondary-gray">{product.description}</p>
+                                        </div>
+
+                                        <div className="pt-4 mt-2 border-t border-[#F1F5F9] flex items-center justify-between gap-2">
+                                            <span className="text-base font-extrabold text-primary">{product.price}</span>
+                                            <div className="card-actions justify-end">
+                                                {isAdmin ? (
+                                                    <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-3 py-1.5 rounded">
+                                                        ✓ Admin Linked Catalog
+                                                    </span>
+                                                ) : isSupplier ? (
                                                     <button
                                                         onClick={() => handleAssignProduct(product)}
-                                                        className="btn btn-sm bg-emerald-600 hover:bg-emerald-700 text-white border-none"
-                                                    >
-                                                        + Assign Stock
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setWholesaleProduct(product);
-                                                            setWholesaleQuantity(50);
-                                                            if (availableSuppliers.length > 0) setWholesaleSupplierId(availableSuppliers[0].id);
-                                                        }}
                                                         className="btn btn-primary btn-sm text-white"
                                                     >
-                                                        Bulk Source
+                                                        + Add to Portfolio
                                                     </button>
-                                                </div>
-                                            ) : (
-                                                <button
-                                                    onClick={() => handleOpenCheckout(product)}
-                                                    className="btn btn-primary"
-                                                >
-                                                    Buy Now
-                                                </button>
-                                            )}
+                                                ) : isDealer ? (
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => handleAssignProduct(product)}
+                                                            className="btn btn-sm bg-emerald-600 hover:bg-emerald-700 text-white border-none"
+                                                        >
+                                                            + Assign Stock
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setWholesaleProduct(product);
+                                                                setWholesaleQuantity(50);
+                                                                if (availableSuppliers.length > 0) setWholesaleSupplierId(availableSuppliers[0].id);
+                                                            }}
+                                                            className="btn btn-primary btn-sm text-white"
+                                                        >
+                                                            Bulk Source
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleOpenCheckout(product)}
+                                                        className="btn btn-primary"
+                                                    >
+                                                        Buy Now
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -2005,7 +2018,7 @@ export default function Dashboard() {
                                             </option>
                                         ))
                                     ) : (
-                                        <option value="1">Central National Petroleum Refinery (Default)</option>
+                                        <option value="" disabled>No registered suppliers available</option>
                                     )}
                                 </select>
                             </div>
@@ -2143,7 +2156,7 @@ export default function Dashboard() {
                                                 </option>
                                             ))
                                         ) : (
-                                            <option value="1">Direct Central Petroleum Refinery (Default)</option>
+                                            <option value="" disabled>No registered suppliers available</option>
                                         )
                                     ) : (
                                         availableDealers.length > 0 ? (
@@ -2153,7 +2166,7 @@ export default function Dashboard() {
                                                 </option>
                                             ))
                                         ) : (
-                                            <option value="1">Metropolitan Authorized Oil Dealer (Default)</option>
+                                            <option value="" disabled>No authorized dealers available</option>
                                         )
                                     )}
                                 </select>

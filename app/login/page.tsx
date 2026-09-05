@@ -76,7 +76,12 @@ export default function Login() {
                         apiUserData = response.data;
                         break;
                     } else if (response.status === 401) {
-                        lastErrorMessage = response.data?.message || lastErrorMessage;
+                        // NestJS throws UnauthorizedException with { message: "Unauthorized" } on invalid credentials
+                        lastErrorMessage = "Invalid email or password. Please check your credentials or register a new account.";
+                    } else if (response.status === 400 && response.data?.message) {
+                        lastErrorMessage = Array.isArray(response.data.message)
+                            ? response.data.message.join(", ")
+                            : response.data.message;
                     }
                 } catch (err: any) {
                     console.warn(`Sign-in check for ${r} error:`, err);
@@ -86,7 +91,7 @@ export default function Login() {
             }
 
             if (!loginSuccess) {
-                const displayMsg = lastErrorMessage || "Invalid email or password.";
+                const displayMsg = lastErrorMessage || "Invalid email or password. Please verify your credentials or register a new account.";
                 setErrors({
                     form: Array.isArray(displayMsg) ? displayMsg.join(", ") : displayMsg,
                 });

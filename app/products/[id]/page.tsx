@@ -74,31 +74,31 @@ export default function ProductDetails({
     return (
         <div className="w-full flex flex-col items-center">
             <MyHeader
-                name="Product Inventory"
-                message={`Live certified petroleum specification for item #${productId}`}
+                name="Product Details"
+                message={`Product specification and ordering details for item #${productId}`}
             />
             <MyNavigation />
 
-            <div className="w-full max-w-4xl mt-8">
+            <div className="w-full max-w-4xl mt-6">
                 {/* Breadcrumbs */}
-                <div className="breadcrumbs text-xs text-slate-500 mb-4 px-1">
+                <div className="breadcrumbs text-xs text-[#64748B] mb-4 px-1">
                     <ul>
-                        <li><Link href="/" className="hover:text-primary">Home</Link></li>
-                        <li><Link href="/dashboard" className="hover:text-primary">Catalog</Link></li>
-                        <li className="font-semibold text-slate-800">Product #{productId}</li>
+                        <li><Link href="/" className="hover:text-[#0F2747]">Home</Link></li>
+                        <li><Link href="/dashboard" className="hover:text-[#0F2747]">Catalog</Link></li>
+                        <li className="font-semibold text-[#1E293B]">Product #{productId}</li>
                     </ul>
                 </div>
 
                 {loading ? (
-                    <div className="card bg-base-100 border border-base-300 shadow-md p-12 text-center">
+                    <div className="card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-12 text-center">
                         <div className="flex flex-col items-center justify-center gap-3">
-                            <span className="loading loading-spinner loading-lg text-primary"></span>
-                            <span className="text-slate-600 font-medium text-sm">Querying refinery inventory database...</span>
+                            <span className="loading loading-spinner loading-lg text-[#0F2747]"></span>
+                            <span className="text-[#64748B] font-medium text-sm">Loading product details...</span>
                         </div>
                     </div>
                 ) : product ? (
-                    <div className="card lg:card-side bg-base-100 shadow-xl border border-base-300 overflow-hidden">
-                        <figure className="lg:w-1/2 h-72 lg:h-auto bg-slate-100 relative">
+                    <div className="card lg:card-side bg-[#FFFFFF] shadow-md border border-[#E2E8F0] rounded-2xl overflow-hidden">
+                        <figure className="lg:w-1/2 h-72 lg:h-auto bg-[#F5F7FA] relative">
                             <img
                                 src={product.image || "/Brent Crude Oil.jpg"}
                                 alt={product.name}
@@ -108,8 +108,8 @@ export default function ProductDetails({
                                 }}
                             />
                             <div className="absolute top-4 left-4">
-                                <span className="badge badge-primary font-bold shadow-md text-xs">
-                                    Certified Spec
+                                <span className="badge bg-[#0F2747] text-[#F59E0B] font-bold text-xs px-3 py-1 border-none shadow-sm">
+                                    Verified Grade
                                 </span>
                             </div>
                         </figure>
@@ -117,53 +117,53 @@ export default function ProductDetails({
                         <div className="card-body p-6 sm:p-8 lg:w-1/2 justify-between">
                             <div>
                                 <div className="flex items-center gap-2 mb-2">
-                                    <span className="badge badge-ghost border-slate-300 text-slate-700 text-xs font-semibold">
-                                        {product.category || "Petroleum Grade"}
+                                    <span className="badge bg-[#F5F7FA] border border-[#CBD5E1] text-[#1E293B] text-xs font-semibold">
+                                        {product.category || "Petroleum"}
                                     </span>
-                                    <span className={`badge text-xs font-semibold ${product.stockLevel === "Out of Stock" ? "badge-error text-white" : product.stockLevel === "Low Stock" ? "badge-warning text-slate-900" : "badge-success text-white"}`}>
+                                    <span className={`badge text-xs font-semibold border-none ${product.stockLevel === "Out of Stock" ? "bg-[#DC2626] text-white" : product.stockLevel === "Low Stock" ? "bg-[#F59E0B] text-[#1E293B]" : "bg-[#16A34A] text-white"}`}>
                                         {product.stockLevel || "In Stock"}
                                     </span>
                                 </div>
 
-                                <h1 className="card-title text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                                <h1 className="card-title text-2xl sm:text-3xl font-bold text-[#1E293B] tracking-tight">
                                     {product.name}
                                 </h1>
 
-                                <p className="text-slate-600 text-xs sm:text-sm leading-relaxed mt-3">
-                                    {product.description || "Petroleum fuel product sourced via certified refinery pipelines with standardized viscosity and flash point testing."}
+                                <p className="text-[#64748B] text-xs sm:text-sm leading-relaxed mt-3">
+                                    {product.description || "High quality fuel supply delivered safely to authorized commercial and retail dealers."}
                                 </p>
 
                                 {/* Quick Spec Sheet */}
-                                <div className="mt-5 pt-4 border-t border-base-300 space-y-2 text-xs">
-                                    <div className="flex justify-between py-1 border-b border-base-200">
-                                        <span className="text-slate-500">Registry Identifier</span>
-                                        <span className="font-mono font-semibold text-slate-800">PETRO-SKU-{product.id}</span>
+                                <div className="mt-5 pt-4 border-t border-[#E2E8F0] space-y-2 text-xs">
+                                    <div className="flex justify-between py-1 border-b border-[#F1F5F9]">
+                                        <span className="text-[#64748B]">Item Code</span>
+                                        <span className="font-mono font-semibold text-[#1E293B]">OIL-{product.id}</span>
                                     </div>
-                                    <div className="flex justify-between py-1 border-b border-base-200">
-                                        <span className="text-slate-500">Handling Certification</span>
-                                        <span className="font-semibold text-slate-800">ISO 8217 / ASTM D975</span>
+                                    <div className="flex justify-between py-1 border-b border-[#F1F5F9]">
+                                        <span className="text-[#64748B]">Quality Standard</span>
+                                        <span className="font-semibold text-[#1E293B]">Standard National Refinery Grade</span>
                                     </div>
                                     <div className="flex justify-between py-1">
-                                        <span className="text-slate-500">Transit Mode</span>
-                                        <span className="font-semibold text-slate-800">Pipeline / Dedicated Tanker</span>
+                                        <span className="text-[#64748B]">Delivery Options</span>
+                                        <span className="font-semibold text-[#1E293B]">Tanker Truck / Bulk Depot Dispatch</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="mt-6 pt-4 border-t border-base-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div className="mt-6 pt-4 border-t border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div>
-                                    <span className="text-[11px] uppercase tracking-wider text-slate-400 block font-bold">Base Benchmark</span>
-                                    <span className="text-3xl font-black text-primary">
+                                    <span className="text-[11px] uppercase tracking-wider text-[#64748B] block font-bold">Standard Price</span>
+                                    <span className="text-3xl font-extrabold text-[#0F2747]">
                                         {typeof product.price === "number" ? `$${product.price.toFixed(2)}` : product.price || "$0.00"}
                                     </span>
-                                    <span className="text-xs text-slate-500 block">per metric barrel / unit</span>
+                                    <span className="text-xs text-[#64748B] block">per unit / barrel</span>
                                 </div>
 
                                 <div className="card-actions flex-nowrap gap-2">
-                                    <Link href="/dashboard" className="btn btn-primary text-white shadow-md font-semibold text-xs sm:text-sm">
-                                        Procure in Dashboard
+                                    <Link href="/dashboard" className="btn bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold border-none shadow-sm text-xs sm:text-sm rounded-xl">
+                                        Order Oil Now
                                     </Link>
-                                    <Link href="/" className="btn btn-outline border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900 text-xs sm:text-sm">
+                                    <Link href="/" className="btn btn-outline border-[#CBD5E1] text-[#1E293B] hover:bg-[#F5F7FA] text-xs sm:text-sm rounded-xl">
                                         Back
                                     </Link>
                                 </div>
@@ -171,14 +171,14 @@ export default function ProductDetails({
                         </div>
                     </div>
                 ) : (
-                    <div className="card bg-base-100 border border-base-300 p-8 text-center shadow-md">
-                        <h2 className="text-lg font-bold text-slate-900 mb-1">Product #{productId} Not Found</h2>
-                        <p className="text-slate-500 text-xs mb-4">No active refinery inventory record corresponds to this ID.</p>
+                    <div className="card bg-[#FFFFFF] border border-[#E2E8F0] p-8 text-center shadow-sm rounded-2xl">
+                        <h2 className="text-lg font-bold text-[#1E293B] mb-1">Product #{productId} Not Found</h2>
+                        <p className="text-[#64748B] text-xs mb-4">No product was found matching this identification number.</p>
                         <div className="flex justify-center gap-3">
-                            <Link href="/dashboard" className="btn btn-primary btn-sm text-white">
-                                View Full Catalog
+                            <Link href="/dashboard" className="btn bg-[#0F2747] text-white hover:bg-[#153e70] btn-sm rounded-xl">
+                                View Catalog
                             </Link>
-                            <Link href="/" className="btn btn-outline btn-sm">
+                            <Link href="/" className="btn btn-outline border-[#CBD5E1] text-[#1E293B] btn-sm rounded-xl">
                                 Back to Home
                             </Link>
                         </div>

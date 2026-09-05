@@ -1296,7 +1296,7 @@ export default function Dashboard() {
                             <h3 className="text-3xl font-extrabold text-primary mt-1">
                                 {allMergedUsers.length || monitorMetrics?.totalUsers || 0}
                             </h3>
-                            <p className="text-xs text-green-600 font-semibold mt-1">✓ Across 4 Database Tables</p>
+                            <p className="text-xs text-green-600 font-semibold mt-1">Across 4 Database Tables</p>
                         </div>
 
                         <div className="bg-card-white p-5 rounded-lg border border-[#E2E8F0] shadow-sm">
@@ -1320,7 +1320,7 @@ export default function Dashboard() {
                             <h3 className="text-3xl font-extrabold text-green-600 mt-1">
                                 100%
                             </h3>
-                            <p className="text-xs text-green-600 font-semibold mt-1">✓ Operational & Connected</p>
+                            <p className="text-xs text-green-600 font-semibold mt-1">Operational & Connected</p>
                         </div>
                     </div>
 
@@ -1417,8 +1417,8 @@ export default function Dashboard() {
                                                 </span>
                                             </td>
                                             <td className="p-4 text-secondary-gray">{u.email}</td>
-                                            <td className="p-4 text-secondary-gray">{u.phoneNumber || "—"}</td>
-                                            <td className="p-4 text-secondary-gray">{u.address || "—"}</td>
+                                            <td className="p-4 text-secondary-gray">{u.phoneNumber || "N/A"}</td>
+                                            <td className="p-4 text-secondary-gray">{u.address || "N/A"}</td>
                                             <td className="p-4 text-right">
                                                 {isTargetAdmin ? (
                                                     <span className="text-xs text-gray-400 font-semibold italic">Admin Protected</span>
@@ -1539,12 +1539,12 @@ export default function Dashboard() {
                                             <div className="card-actions justify-end">
                                                 {isAdmin ? (
                                                     <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-3 py-1.5 rounded">
-                                                        ✓ Admin Linked Catalog
+                                                        Admin Linked Catalog
                                                     </span>
                                                 ) : isSupplier ? (
                                                     customInventory.some((item) => item.id === product.id) ? (
                                                         <span className="text-xs bg-green-50 text-success-green font-bold px-3 py-1.5 rounded border border-green-200">
-                                                            ✓ In Your Portfolio
+                                                            In Your Portfolio
                                                         </span>
                                                     ) : (
                                                         <span className="text-xs bg-slate-100 text-secondary-gray font-medium px-3 py-1.5 rounded">
@@ -2193,9 +2193,12 @@ export default function Dashboard() {
                             </div>
                             <button
                                 onClick={() => setIsCreateUserModalOpen(false)}
-                                className="text-gray-400 hover:text-dark-slate text-2xl font-bold p-1 cursor-pointer"
+                                className="text-gray-400 hover:text-dark-slate p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                                aria-label="Close"
                             >
-                                ×
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
                             </button>
                         </div>
 
@@ -2302,9 +2305,12 @@ export default function Dashboard() {
                             </div>
                             <button
                                 onClick={() => setEditingUser(null)}
-                                className="text-gray-400 hover:text-dark-slate text-2xl font-bold p-1 cursor-pointer"
+                                className="text-gray-400 hover:text-dark-slate p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                                aria-label="Close"
                             >
-                                ×
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
                             </button>
                         </div>
 
@@ -2371,9 +2377,12 @@ export default function Dashboard() {
                             </div>
                             <button
                                 onClick={() => setEditingOrder(null)}
-                                className="text-gray-400 hover:text-dark-slate text-2xl font-bold p-1 cursor-pointer"
+                                className="text-gray-400 hover:text-dark-slate p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                                aria-label="Close"
                             >
-                                ×
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
                             </button>
                         </div>
 
@@ -2447,9 +2456,12 @@ export default function Dashboard() {
                             </div>
                             <button
                                 onClick={() => setWholesaleProduct(null)}
-                                className="text-gray-400 hover:text-dark-slate text-2xl font-bold p-1 cursor-pointer"
+                                className="text-gray-400 hover:text-dark-slate p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                                aria-label="Close"
                             >
-                                ×
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
                             </button>
                         </div>
 
@@ -2523,9 +2535,12 @@ export default function Dashboard() {
                             </div>
                             <button
                                 onClick={() => setCheckoutProduct(null)}
-                                className="text-gray-400 hover:text-dark-slate text-2xl font-bold p-1 cursor-pointer"
+                                className="text-gray-400 hover:text-dark-slate p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                                aria-label="Close"
                             >
-                                ×
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
                             </button>
                         </div>
 
@@ -2740,9 +2755,12 @@ export default function Dashboard() {
                             </div>
                             <button
                                 onClick={() => setIsPostProductModalOpen(false)}
-                                className="text-gray-400 hover:text-dark-slate text-2xl font-bold p-1 cursor-pointer"
+                                className="text-gray-400 hover:text-dark-slate p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                                aria-label="Close"
                             >
-                                ×
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
                             </button>
                         </div>
 

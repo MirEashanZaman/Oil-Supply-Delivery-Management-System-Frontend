@@ -65,19 +65,23 @@ export default function Home() {
         const fetchHomeProducts = async () => {
             const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
             try {
-                const res = await axios.get(`${API_ENDPOINT}/customer/products`, {
+                const res = await axios.get(`${API_ENDPOINT}/product/list`, {
                     withCredentials: true,
                 });
                 if (Array.isArray(res.data)) {
-                    const mapped: CarouselProduct[] = res.data.map((p: any) => ({
-                        id: p.id,
-                        name: p.name || `Product #${p.id}`,
-                        category: p.category || "Petroleum Grade",
-                        price: typeof p.price === "number" ? `$${p.price.toFixed(2)}` : p.price || "$0.00",
-                        description: p.description || "Petroleum product sourced via certified refinery pipelines.",
-                        stockLevel: p.stockLevel || (p.inStock === false ? "Out of Stock" : "In Stock"),
-                        image: getProductImage(p.name, p.image),
-                    }));
+                    const mapped: CarouselProduct[] = res.data
+                        .sort((a: any, b: any) => (a.id || 0) - (b.id || 0))
+                        .map((p: any) => ({
+                            id: p.id,
+                            name: p.name || `Product #${p.id}`,
+                            category: p.category || (p.categories?.[0]?.name) || "Petroleum Grade",
+                            price: typeof p.price === "number" ? `$${p.price.toFixed(2)}` : p.price || "$0.00",
+                            description: p.description || "Petroleum product sourced via certified refinery pipelines.",
+                            stockLevel: typeof p.quantity === "number" 
+                                ? (p.quantity <= 0 ? "Out of Stock" : p.quantity < 1000 ? "Low Stock" : "In Stock") 
+                                : p.stockLevel || "In Stock",
+                            image: getProductImage(p.name, p.image),
+                        }));
                     setProducts(mapped);
                 }
             } catch (err) {

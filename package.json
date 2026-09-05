@@ -20,6 +20,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
+    "daisyui": "^5.7.28",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

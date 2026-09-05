@@ -57,6 +57,7 @@ type Product = {
     description: string;
     inStock: boolean;
     stockLevel: "In Stock" | "Low Stock" | "Out of Stock";
+    image: string;
 };
 
 type SystemUser = {
@@ -82,6 +83,7 @@ const DUMMY_PRODUCTS: Product[] = [
         description: "High-quality sweet light crude oil sourced from international marine drillings.",
         inStock: true,
         stockLevel: "In Stock",
+        image: "/Brent Crude Oil.jpg",
     },
     {
         id: 2,
@@ -92,6 +94,7 @@ const DUMMY_PRODUCTS: Product[] = [
         description: "Clean-burning commercial diesel fuel with high thermal output properties.",
         inStock: true,
         stockLevel: "In Stock",
+        image: "/Ultra-Low Sulfur Diesel.jpg",
     },
     {
         id: 3,
@@ -102,6 +105,7 @@ const DUMMY_PRODUCTS: Product[] = [
         description: "High-octane gasoline suitable for high-performance automotive engines.",
         inStock: true,
         stockLevel: "Low Stock",
+        image: "/Premium Unleaded Gasoline.jpg",
     },
     {
         id: 4,
@@ -112,6 +116,7 @@ const DUMMY_PRODUCTS: Product[] = [
         description: "Kerosene-type jet fuel manufactured to rigorous international safety standards.",
         inStock: true,
         stockLevel: "In Stock",
+        image: "/Aviation Turbine Fuel (Jet A-1).jpg",
     },
     {
         id: 5,
@@ -122,6 +127,18 @@ const DUMMY_PRODUCTS: Product[] = [
         description: "Clean flammable hydrocarbon gas mixture utilized as heating and cooking fuel.",
         inStock: true,
         stockLevel: "In Stock",
+        image: "/images.jpg",
+    },
+    {
+        id: 6,
+        name: "Heavy Marine Fuel Oil (HFO)",
+        category: "Bunker Fuel",
+        price: "$620.00 / Metric Ton",
+        numericPrice: 620.00,
+        description: "Residual fuel oil blended for international ocean freight and industrial boiler usage.",
+        inStock: true,
+        stockLevel: "In Stock",
+        image: "/Heavy Marine Fuel Oil (HFO).jpg",
     },
 ];
 
@@ -1241,69 +1258,81 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
                         {DUMMY_PRODUCTS.map((product) => (
                             <div
                                 key={product.id}
-                                className="bg-card-white rounded-lg border border-[#E2E8F0] shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between overflow-hidden"
+                                className="card bg-base-100 w-96 max-w-full shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-shadow"
                             >
-                                <div className="h-2 bg-primary w-full" />
-                                <div className="p-5 flex-grow">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-xs font-bold text-secondary-gray bg-[#F1F5F9] px-2.5 py-1 rounded">
-                                            {product.category}
-                                        </span>
-                                        <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
-                                            product.stockLevel === "In Stock" ? "bg-green-100 text-success-green" : "bg-amber-100 text-secondary"
-                                        }`}>
-                                            {product.stockLevel}
-                                        </span>
-                                    </div>
-                                    <h3 className="text-lg font-bold text-dark-slate mb-2">{product.name}</h3>
-                                    <p className="text-sm text-secondary-gray mb-4">{product.description}</p>
-                                </div>
-
-                                <div className="p-5 border-t border-[#F1F5F9] bg-[#FAFBFD] flex items-center justify-between gap-2">
-                                    <span className="text-base font-extrabold text-primary">{product.price}</span>
-                                    
-                                    {isAdmin ? (
-                                        <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-3 py-1.5 rounded">
-                                            ✓ Admin Linked Catalog
-                                        </span>
-                                    ) : isSupplier ? (
-                                        <button
-                                            onClick={() => handleAssignProduct(product)}
-                                            className="bg-primary text-white py-1.5 px-4 rounded text-xs font-semibold hover:bg-primary/95 transition-colors cursor-pointer"
-                                        >
-                                            + Add to Supply Portfolio
-                                        </button>
-                                    ) : isDealer ? (
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => handleAssignProduct(product)}
-                                                className="bg-emerald-600 text-white py-1.5 px-3 rounded text-xs font-semibold hover:bg-emerald-700 transition-colors cursor-pointer"
-                                            >
-                                                + Assign Stock
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setWholesaleProduct(product);
-                                                    setWholesaleQuantity(50);
-                                                    if (availableSuppliers.length > 0) setWholesaleSupplierId(availableSuppliers[0].id);
-                                                }}
-                                                className="bg-primary text-white py-1.5 px-3 rounded text-xs font-semibold hover:bg-primary/95 transition-colors cursor-pointer"
-                                            >
-                                                Bulk Source
-                                            </button>
+                                <figure className="h-48 w-full overflow-hidden bg-slate-100">
+                                    <img
+                                        src={product.image}
+                                        alt={product.name}
+                                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                                        onError={(e) => {
+                                            e.currentTarget.src = "/Brent Crude Oil.jpg";
+                                        }}
+                                    />
+                                </figure>
+                                <div className="card-body p-5 flex flex-col justify-between">
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs font-bold text-secondary-gray bg-[#F1F5F9] px-2.5 py-1 rounded">
+                                                {product.category}
+                                            </span>
+                                            <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
+                                                product.stockLevel === "In Stock" ? "bg-green-100 text-success-green" : "bg-amber-100 text-secondary"
+                                            }`}>
+                                                {product.stockLevel}
+                                            </span>
                                         </div>
-                                    ) : (
-                                        <button
-                                            onClick={() => handleOpenCheckout(product)}
-                                            className="bg-primary text-white py-2 px-5 rounded text-sm font-semibold hover:bg-primary/95 transition-colors cursor-pointer shadow-sm"
-                                        >
-                                            Order & Checkout
-                                        </button>
-                                    )}
+                                        <h2 className="card-title text-lg font-bold text-dark-slate mb-1">{product.name}</h2>
+                                        <p className="text-sm text-secondary-gray">{product.description}</p>
+                                    </div>
+
+                                    <div className="pt-4 mt-2 border-t border-[#F1F5F9] flex items-center justify-between gap-2">
+                                        <span className="text-base font-extrabold text-primary">{product.price}</span>
+                                        <div className="card-actions justify-end">
+                                            {isAdmin ? (
+                                                <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-3 py-1.5 rounded">
+                                                    ✓ Admin Linked Catalog
+                                                </span>
+                                            ) : isSupplier ? (
+                                                <button
+                                                    onClick={() => handleAssignProduct(product)}
+                                                    className="btn btn-primary btn-sm text-white"
+                                                >
+                                                    + Add to Portfolio
+                                                </button>
+                                            ) : isDealer ? (
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => handleAssignProduct(product)}
+                                                        className="btn btn-sm bg-emerald-600 hover:bg-emerald-700 text-white border-none"
+                                                    >
+                                                        + Assign Stock
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setWholesaleProduct(product);
+                                                            setWholesaleQuantity(50);
+                                                            if (availableSuppliers.length > 0) setWholesaleSupplierId(availableSuppliers[0].id);
+                                                        }}
+                                                        className="btn btn-primary btn-sm text-white"
+                                                    >
+                                                        Bulk Source
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleOpenCheckout(product)}
+                                                    className="btn btn-primary"
+                                                >
+                                                    Buy Now
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -1341,31 +1370,45 @@ export default function Dashboard() {
                             </button>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
                             {customInventory.map((item) => (
                                 <div
                                     key={item.id}
-                                    className="bg-card-white rounded-lg border border-[#E2E8F0] shadow-sm flex flex-col justify-between overflow-hidden"
+                                    className="card bg-base-100 w-96 max-w-full shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-shadow"
                                 >
-                                    <div className="h-2 bg-emerald-600 w-full" />
-                                    <div className="p-5 flex-grow">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                                                {isSupplier ? "Active Portfolio Item" : "Active Stock Item"}
-                                            </span>
+                                    <figure className="h-48 w-full overflow-hidden bg-slate-100">
+                                        <img
+                                            src={item.image || "/Brent Crude Oil.jpg"}
+                                            alt={item.name}
+                                            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                                            onError={(e) => {
+                                                e.currentTarget.src = "/Brent Crude Oil.jpg";
+                                            }}
+                                        />
+                                    </figure>
+                                    <div className="card-body p-5 flex flex-col justify-between">
+                                        <div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200">
+                                                    {isSupplier ? "Active Portfolio Item" : "Active Stock Item"}
+                                                </span>
+                                                <span className="text-xs text-secondary-gray">Product ID: #{item.id}</span>
+                                            </div>
+                                            <h2 className="card-title text-lg font-bold text-dark-slate mb-1">{item.name}</h2>
+                                            <p className="text-sm text-secondary-gray">{item.description || "Petroleum Grade Oil Product"}</p>
                                         </div>
-                                        <h3 className="text-lg font-bold text-dark-slate mb-2">{item.name}</h3>
-                                        <p className="text-sm text-secondary-gray">{item.description || "Petroleum Grade Oil Product"}</p>
-                                    </div>
 
-                                    <div className="p-4 border-t border-[#F1F5F9] bg-[#FAFBFD] flex items-center justify-between">
-                                        <span className="text-xs text-secondary-gray">Product ID: #{item.id}</span>
-                                        <button
-                                            onClick={() => handleRemoveProductFromStock(item.id)}
-                                            className="bg-error-red text-white py-1.5 px-3 rounded text-xs font-semibold hover:bg-error-red/90 transition-colors cursor-pointer"
-                                        >
-                                            {isSupplier ? "Remove from Portfolio" : "Remove from Stock"}
-                                        </button>
+                                        <div className="pt-4 mt-2 border-t border-[#F1F5F9] flex items-center justify-between">
+                                            <span className="text-xs text-secondary-gray font-medium">Linked Record #{item.id}</span>
+                                            <div className="card-actions justify-end">
+                                                <button
+                                                    onClick={() => handleRemoveProductFromStock(item.id)}
+                                                    className="btn btn-sm bg-error-red hover:bg-error-red/90 text-white border-none"
+                                                >
+                                                    {isSupplier ? "Remove from Portfolio" : "Remove from Stock"}
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             ))}

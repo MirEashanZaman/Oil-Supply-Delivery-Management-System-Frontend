@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "daisyui";
 
 @theme {
   --color-primary: #0F2747;
@@ -10,4 +11,34 @@
   --color-error-red: #DC2626;
   --color-card-white: #FFFFFF;
   --color-secondary-gray: #64748B;
+}
+
+.btn-primary {
+  background-color: #0F2747 !important;
+  color: #FFFFFF !important;
+  border-color: #0F2747 !important;
+}
+
+.btn-primary:hover {
+  background-color: #1A3A60 !important;
+  border-color: #1A3A60 !important;
+}
+
+@keyframes marquee-rtl {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-carousel-rtl {
+  display: flex;
+  width: max-content;
+  animation: marquee-rtl 32s linear infinite;
+}
+
+.animate-carousel-rtl:hover {
+  animation-play-state: paused;
 }

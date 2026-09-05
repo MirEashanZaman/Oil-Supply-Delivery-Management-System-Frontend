@@ -1,12 +1,10 @@
 import PusherClient from "pusher-js";
 import PusherServer from "pusher";
 
-// Client-side Pusher instance for subscribing to real-time events in React components
 let clientInstance: PusherClient | null = null;
 
 export const getPusherClient = (): PusherClient => {
     if (typeof window === "undefined") {
-        // Server-side guard
         return null as unknown as PusherClient;
     }
 
@@ -23,7 +21,6 @@ export const getPusherClient = (): PusherClient => {
     return clientInstance;
 };
 
-// Server-side Pusher instance for triggering events from Next.js API route
 let serverInstance: PusherServer | null = null;
 
 export const getPusherServer = (): PusherServer | null => {
@@ -33,7 +30,7 @@ export const getPusherServer = (): PusherServer | null => {
     const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "ap1";
 
     if (!appId || !key || !secret || key === "pusher_sandbox_key") {
-        return null; // Signals sandbox/fallback mode
+        return null;
     }
 
     if (!serverInstance) {

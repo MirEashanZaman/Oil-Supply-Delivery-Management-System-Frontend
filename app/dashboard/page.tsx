@@ -31,8 +31,10 @@ type Order = {
     quantity: number;
     status: string;
     address?: string;
+    customerId?: number;
     customerName?: string;
     customerEmail?: string;
+    deliveryDate?: string;
     product?: {
         id: number;
         name: string;
@@ -57,6 +59,7 @@ type Product = {
     price: string;
     numericPrice: number;
     description: string;
+    quantity?: number;
     inStock: boolean;
     stockLevel: "In Stock" | "Low Stock" | "Out of Stock";
     image: string;
@@ -74,18 +77,68 @@ type SystemUser = {
     createdAt?: string;
     joiningDate?: string;
 };
-const getProductImage = (name?: string, img?: string) => {
-    if (img && (img.startsWith("/") || img.startsWith("http"))) return img;
-    if (!name) return "/Brent Crude Oil.jpg";
-    const lower = name.toLowerCase();
-    if (lower.includes("crude") || lower.includes("brent")) return "/Brent Crude Oil.jpg";
-    if (lower.includes("diesel")) return "/Ultra-Low Sulfur Diesel.jpg";
-    if (lower.includes("gasoline") || lower.includes("petrol") || lower.includes("octane")) return "/Premium Unleaded Gasoline.jpg";
-    if (lower.includes("jet") || lower.includes("aviation") || lower.includes("turbine")) return "/Aviation Turbine Fuel (Jet A-1).jpg";
-    if (lower.includes("lpg") || lower.includes("gas") || lower.includes("cylinder")) return "/images.jpg";
-    if (lower.includes("heavy") || lower.includes("marine") || lower.includes("bunker") || lower.includes("hfo")) return "/Heavy Marine Fuel Oil (HFO).jpg";
+const PRODUCT_IMAGE_MAP: Record<number, string> = {
+    1: "/Brent Crude Oil.jpg",
+    2: "/Ultra-Low Sulfur Diesel.jpg",
+    3: "/Premium Unleaded Gasoline.jpg",
+    4: "/Aviation Turbine Fuel (Jet A-1).jpg",
+    5: "/images.jpg",
+    6: "/Heavy Marine Fuel Oil (HFO).jpg",
+};
+
+const getProductImage = (name?: string, img?: string, id?: number | string) => {
+    if (typeof window !== "undefined" && id) {
+        try {
+            const customStored = localStorage.getItem(`product_img_${id}`);
+            if (customStored) return customStored;
+        } catch {
+        }
+    }
+    if (img && (img.startsWith("/") || img.startsWith("http")) && img !== "/Brent Crude Oil.jpg") {
+        return img;
+    }
+    const lower = (name || "").toLowerCase();
+    if (lower.includes("lpg") || lower.includes("liquefied") || lower.includes("cylinder") || lower.includes("propane") || lower.includes("butane")) {
+        return "/images.jpg";
+    }
+    if (lower.includes("diesel") || lower.includes("sulfur") || lower.includes("ulsd") || lower.includes("gasoil")) {
+        return "/Ultra-Low Sulfur Diesel.jpg";
+    }
+    if (lower.includes("gasoline") || lower.includes("petrol") || lower.includes("octane") || lower.includes("unleaded") || lower.includes("mogas")) {
+        return "/Premium Unleaded Gasoline.jpg";
+    }
+    if (lower.includes("jet") || lower.includes("aviation") || lower.includes("turbine") || lower.includes("a-1") || lower.includes("kerosene")) {
+        return "/Aviation Turbine Fuel (Jet A-1).jpg";
+    }
+    if (lower.includes("marine") || lower.includes("bunker") || lower.includes("hfo") || lower.includes("heavy") || lower.includes("fuel oil")) {
+        return "/Heavy Marine Fuel Oil (HFO).jpg";
+    }
+    if (lower.includes("crude") || lower.includes("brent") || lower.includes("wti") || lower.includes("raw")) {
+        return "/Brent Crude Oil.jpg";
+    }
+    if (id !== undefined && id !== null) {
+        const numId = Number(id);
+        if (!isNaN(numId) && PRODUCT_IMAGE_MAP[numId]) {
+            return PRODUCT_IMAGE_MAP[numId];
+        }
+        if (!isNaN(numId) && numId > 0) {
+            const fallbackImages = [
+                "/Brent Crude Oil.jpg",
+                "/Ultra-Low Sulfur Diesel.jpg",
+                "/Premium Unleaded Gasoline.jpg",
+                "/Aviation Turbine Fuel (Jet A-1).jpg",
+                "/images.jpg",
+                "/Heavy Marine Fuel Oil (HFO).jpg",
+            ];
+            return fallbackImages[(numId - 1) % fallbackImages.length];
+        }
+    }
+    if (img && (img.startsWith("/") || img.startsWith("http"))) {
+        return img;
+    }
     return "/Brent Crude Oil.jpg";
 };
+
 
 export default function Dashboard() {
     const router = useRouter();
@@ -95,23 +148,19 @@ export default function Dashboard() {
     const [products, setProducts] = useState<Product[]>([]);
     const [productsLoading, setProductsLoading] = useState(false);
 
-    // Orders tab states
     const [orders, setOrders] = useState<Order[]>([]);
     const [trackedOrderStatus, setTrackedOrderStatus] = useState<string | null>(null);
     const [trackedOrderId, setTrackedOrderId] = useState<number | null>(null);
     const [deliveryDates, setDeliveryDates] = useState<{ [orderId: number]: string }>({});
 
-    // Dealer/Supplier Inventory states
     const [customInventory, setCustomInventory] = useState<Product[]>([]);
     const [supplierOperationalStatus, setSupplierOperationalStatus] = useState<string>("active");
 
-    // Admin System Monitoring & Merged Users States
     const [monitorMetrics, setMonitorMetrics] = useState<any>(null);
     const [allMergedUsers, setAllMergedUsers] = useState<SystemUser[]>([]);
     const [selectedJoiningDate, setSelectedJoiningDate] = useState<string>("");
     const [dateSearchResults, setDateSearchResults] = useState<SystemUser[]>([]);
 
-    // Admin Create User Modal States
     const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
     const [newRole, setNewRole] = useState<"customer" | "dealer" | "supplier">("customer");
     const [newUserName, setNewUserName] = useState("");
@@ -121,23 +170,19 @@ export default function Dashboard() {
     const [newUserAddress, setNewUserAddress] = useState("");
     const [newUserEmailError, setNewUserEmailError] = useState("");
 
-    // Admin Edit User Modal States
     const [editingUser, setEditingUser] = useState<SystemUser | null>(null);
     const [editTargetUserName, setEditTargetUserName] = useState("");
     const [editTargetPhone, setEditTargetPhone] = useState("");
     const [editTargetAddress, setEditTargetAddress] = useState("");
 
-    // Admin Edit Order Modal States
     const [editingOrder, setEditingOrder] = useState<Order | null>(null);
     const [editOrderStatus, setEditOrderStatus] = useState("");
     const [editOrderQuantity, setEditOrderQuantity] = useState(1);
     const [editOrderAddress, setEditOrderAddress] = useState("");
 
-    // Sourcing lists (Suppliers & Dealers)
     const [availableSuppliers, setAvailableSuppliers] = useState<any[]>([]);
     const [availableDealers, setAvailableDealers] = useState<any[]>([]);
 
-    // Customer Interactive Checkout Modal States
     const [checkoutProduct, setCheckoutProduct] = useState<Product | null>(null);
     const [sourcingChoice, setSourcingChoice] = useState<"supplier" | "dealer">("supplier");
     const [selectedPartyId, setSelectedPartyId] = useState<number | "">("");
@@ -150,13 +195,11 @@ export default function Dashboard() {
     const [cardCvv, setCardCvv] = useState<string>("");
     const [isSubmittingOrder, setIsSubmittingOrder] = useState<boolean>(false);
 
-    // Dealer Wholesale Bulk Sourcing Modal States
     const [wholesaleProduct, setWholesaleProduct] = useState<Product | null>(null);
     const [wholesaleSupplierId, setWholesaleSupplierId] = useState<number | "">("");
     const [wholesaleQuantity, setWholesaleQuantity] = useState<number>(50);
     const [isSubmittingWholesale, setIsSubmittingWholesale] = useState<boolean>(false);
 
-    // Supplier / Dealer / Admin "Post / Upload New Product" Modal States
     const [isPostProductModalOpen, setIsPostProductModalOpen] = useState<boolean>(false);
     const [newProductName, setNewProductName] = useState<string>("");
     const [newProductCategory, setNewProductCategory] = useState<string>("Crude Fuel");
@@ -166,18 +209,20 @@ export default function Dashboard() {
     const [newProductImage, setNewProductImage] = useState<string>("/Brent Crude Oil.jpg");
     const [isSubmittingNewProduct, setIsSubmittingNewProduct] = useState<boolean>(false);
 
-    // Profile settings tab states
+    const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+    const [editProductName, setEditProductName] = useState<string>("");
+    const [editProductPrice, setEditProductPrice] = useState<string>("");
+    const [editProductStock, setEditProductStock] = useState<string>("");
+
     const [editUsername, setEditUsername] = useState("");
     const [editPhone, setEditPhone] = useState("");
     const [editAddress, setEditAddress] = useState("");
     const [profileStatus, setProfileStatus] = useState("");
     const [dbLookupStatus, setDbLookupStatus] = useState("");
 
-    // Directory tab states
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<any[]>([]);
 
-    // PusherJS Real-time Messaging States
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
         {
             id: "msg_init_1",
@@ -218,7 +263,6 @@ export default function Dashboard() {
         return "http://localhost:8000/customer/getallcustomer";
     };
 
-    // Load initial user details
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
         if (!storedUser) {
@@ -243,7 +287,6 @@ export default function Dashboard() {
         fetchCatalogProducts();
     }, []);
 
-    // PusherJS real-time channel subscription
     useEffect(() => {
         const pusher = getPusherClient();
         if (!pusher) return;
@@ -263,7 +306,6 @@ export default function Dashboard() {
         };
     }, []);
 
-    // Send real-time message via PusherJS
     const handleSendChatMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!chatInput.trim() || !user) return;
@@ -305,13 +347,13 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Fetch catalog products from backend (`GET /product/list`)
     const fetchCatalogProducts = async () => {
         setProductsLoading(true);
         const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
         try {
             const res = await axios.get(`${API_ENDPOINT}/product/list`, {
                 withCredentials: true,
+                validateStatus: (status) => status < 500,
             });
             if (Array.isArray(res.data)) {
                 const mapped: Product[] = res.data
@@ -323,11 +365,12 @@ export default function Dashboard() {
                         price: typeof p.price === "number" ? `$${p.price.toFixed(2)}` : p.price || "$0.00",
                         numericPrice: typeof p.price === "number" ? p.price : typeof p.numericPrice === "number" ? p.numericPrice : parseFloat(String(p.price).replace(/[^0-9.]/g, "")) || 0,
                         description: p.description || "High-grade petroleum product sourced from certified national pipelines.",
+                        quantity: typeof p.quantity === "number" ? p.quantity : 1000,
                         inStock: typeof p.quantity === "number" ? p.quantity > 0 : p.inStock !== false,
                         stockLevel: typeof p.quantity === "number"
                             ? (p.quantity <= 0 ? "Out of Stock" : p.quantity < 1000 ? "Low Stock" : "In Stock")
                             : p.stockLevel || "In Stock",
-                        image: getProductImage(p.name, p.image),
+                        image: getProductImage(p.name, p.image, p.id),
                     }));
                 setProducts(mapped);
             }
@@ -338,7 +381,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Fetch available suppliers and dealers
     const fetchSourcingParties = async () => {
         try {
             const [suppliersRes, dealersRes] = await Promise.allSettled([
@@ -363,8 +405,47 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Get full profile
     const fetchFullProfile = async (email: string, title?: string) => {
+        try {
+            const searchRes = await axios.get(`http://localhost:8000/users/search?email=${encodeURIComponent(email)}`, {
+                validateStatus: (status) => status < 500,
+            });
+            if (searchRes.status === 200 && searchRes.data?.user) {
+                const match = searchRes.data.user;
+                const r = searchRes.data.role || "customer";
+                const resolvedTitle = r.charAt(0).toUpperCase() + r.slice(1);
+                const fullUser: UserData = {
+                    id: match.id,
+                    email: match.email,
+                    userName: match.username || match.userName || email.split("@")[0],
+                    phoneNumber: match.phoneNumber,
+                    address: match.address,
+                    title: match.title || resolvedTitle,
+                    status: match.status || "active",
+                    photoUrl: match.filename ? `http://localhost:8000/customer/getimage/${match.filename}` : undefined,
+                };
+                setUser(fullUser);
+                if (match.status) setSupplierOperationalStatus(match.status);
+                localStorage.setItem("user", JSON.stringify(fullUser));
+
+                setEditUsername(fullUser.userName || "");
+                setEditPhone(match.phoneNumber || "");
+                setEditAddress(match.address || "");
+
+                fetchOrders(match.id, fullUser.title);
+                if (fullUser.title === "Dealer" || fullUser.title === "Supplier") {
+                    fetchCustomInventory(match.id, fullUser.title);
+                }
+                if (fullUser.title === "Admin") {
+                    fetchAdminMonitoringData();
+                    fetchAllMergedUsers();
+                }
+                return;
+            }
+        } catch (searchErr) {
+            console.warn("User lookup error:", searchErr);
+        }
+
         const url = getAllUsersUrl(title);
         try {
             const res = await axios.get(url, {
@@ -413,7 +494,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call (Admin): Monitor System Health Metrics (`GET /admin/monitor-data`)
     const fetchAdminMonitoringData = async () => {
         try {
             const res = await axios.get("http://localhost:8000/admin/monitor-data", {
@@ -428,7 +508,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call (Admin): Merged User Directory (`GET /admin/getallusers`)
     const fetchAllMergedUsers = async () => {
         try {
             const res = await axios.get("http://localhost:8000/admin/getallusers", {
@@ -443,29 +522,27 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call (Admin): Multi-Table Date Search (`GET /admin/joiningdate?date=...`)
     const handleSearchJoiningDate = async () => {
         if (!selectedJoiningDate) {
             alert("Please select a date to search.");
             return;
         }
         try {
-            const res = await axios.get(`http://localhost:8000/admin/joiningdate?date=${selectedJoiningDate}`, {
+            const res = await axios.get(`http://localhost:8000/admin/joiningdate?date=${encodeURIComponent(selectedJoiningDate)}`, {
                 withCredentials: true,
+                validateStatus: (status) => status < 500,
             });
             setDateSearchResults(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
-            console.error("Date search error:", err);
+            console.warn("Date search error:", err);
             setDateSearchResults([]);
         }
     };
 
-    // Axios Call (Admin): Create User (`POST /admin/:role`)
     const handleAdminCreateUser = async (e: React.FormEvent) => {
         e.preventDefault();
         setNewUserEmailError("");
 
-        // Enforce strict email uniqueness across all 4 database tables
         try {
             const check = await checkEmailUniqueness(newUserEmail);
             if (!check.isUnique) {
@@ -479,7 +556,7 @@ export default function Dashboard() {
         }
 
         try {
-            await axios.post(
+            const res = await axios.post(
                 `http://localhost:8000/admin/${newRole}`,
                 {
                     userName: newUserName,
@@ -489,20 +566,24 @@ export default function Dashboard() {
                     address: newUserAddress,
                     title: newRole.charAt(0).toUpperCase() + newRole.slice(1),
                 },
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
-            alert(`New ${newRole.toUpperCase()} user created successfully!`);
-            setIsCreateUserModalOpen(false);
-            setNewUserName("");
-            setNewUserEmail("");
-            setNewUserPassword("");
-            setNewUserPhone("");
-            setNewUserAddress("");
-            setNewUserEmailError("");
-            fetchAllMergedUsers();
-            fetchAdminMonitoringData();
+            if (res.status === 200 || res.status === 201) {
+                alert(`New ${newRole.toUpperCase()} user created successfully!`);
+                setIsCreateUserModalOpen(false);
+                setNewUserName("");
+                setNewUserEmail("");
+                setNewUserPassword("");
+                setNewUserPhone("");
+                setNewUserAddress("");
+                setNewUserEmailError("");
+                fetchAllMergedUsers();
+                fetchAdminMonitoringData();
+            } else {
+                alert(res.data?.message || "Failed to create user.");
+            }
         } catch (err: any) {
-            console.error("Create user failed:", err);
+            console.warn("Create user failed:", err);
             const apiMsg = err.response?.data?.message || "Failed to create user.";
             if (err.response?.status === 409) {
                 setNewUserEmailError(`Email "${newUserEmail}" already exists in the system. There can only be one account per email.`);
@@ -511,41 +592,41 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call (Admin): Update User (`PATCH /admin/:role/:id`)
     const handleAdminUpdateUser = async () => {
         if (!editingUser) return;
         const role = (editingUser.title || editingUser.role || "customer").toLowerCase();
 
-        // Security Constraint Check
         if (role === "admin") {
             alert("Security Constraint: Admins cannot modify other Admins.");
             return;
         }
 
         try {
-            await axios.patch(
+            const res = await axios.patch(
                 `http://localhost:8000/admin/${role}/${editingUser.id}`,
                 {
                     userName: editTargetUserName,
                     phoneNumber: editTargetPhone,
                     address: editTargetAddress,
                 },
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
-            alert("User updated successfully by Admin!");
-            setEditingUser(null);
-            fetchAllMergedUsers();
+            if (res.status === 200 || res.status === 204) {
+                alert("User updated successfully by Admin!");
+                setEditingUser(null);
+                fetchAllMergedUsers();
+            } else {
+                alert(res.data?.message || "Failed to update user.");
+            }
         } catch (err: any) {
-            console.error("Update user failed:", err);
+            console.warn("Update user failed:", err);
             alert(err.response?.data?.message || "Failed to update user.");
         }
     };
 
-    // Axios Call (Admin): Delete User (`DELETE /admin/:role/:id`)
     const handleAdminDeleteUser = async (targetUser: SystemUser) => {
         const role = (targetUser.title || targetUser.role || "customer").toLowerCase();
 
-        // Security Constraint Check
         if (role === "admin") {
             alert("Security Constraint: Admins cannot delete other Admins.");
             return;
@@ -557,95 +638,146 @@ export default function Dashboard() {
         if (!confirmDelete) return;
 
         try {
-            await axios.delete(`http://localhost:8000/admin/${role}/${targetUser.id}`, {
+            const res = await axios.delete(`http://localhost:8000/admin/${role}/${targetUser.id}`, {
                 withCredentials: true,
+                validateStatus: (status) => status < 500,
             });
-            alert("User and linked records successfully purged by Admin.");
-            fetchAllMergedUsers();
-            fetchAdminMonitoringData();
-            if (user?.id) fetchOrders(user.id, user.title);
+            if (res.status === 200 || res.status === 204) {
+                alert("User and linked records successfully purged by Admin.");
+                fetchAllMergedUsers();
+                fetchAdminMonitoringData();
+                if (user?.id) fetchOrders(user.id, user.title);
+            } else {
+                alert(res.data?.message || "Failed to delete user.");
+            }
         } catch (err: any) {
-            console.error("Delete user failed:", err);
+            console.warn("Delete user failed:", err);
             alert(err.response?.data?.message || "Failed to delete user.");
         }
     };
 
-    // Axios Call (Admin): Global Order Update (`PATCH /admin/order/:id`)
     const handleAdminUpdateOrder = async () => {
         if (!editingOrder) return;
         try {
-            await axios.patch(
+            const res = await axios.patch(
                 `http://localhost:8000/admin/order/${editingOrder.id}`,
                 {
-                    status: editOrderStatus,
-                    quantity: editOrderQuantity,
-                    address: editOrderAddress,
+                    status: editOrderStatus.toLowerCase(),
+                    quantity: Number(editOrderQuantity) || 1,
                 },
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
-            alert(`Order #${editingOrder.id} successfully updated by Admin!`);
-            setEditingOrder(null);
-            if (user?.id) fetchOrders(user.id, user.title);
-            fetchAdminMonitoringData();
+            if (res.status === 200 || res.status === 204) {
+                if (editOrderAddress && editingOrder.customerId) {
+                    try {
+                        await axios.patch(
+                            `http://localhost:8000/admin/customer/${editingOrder.customerId}`,
+                            { address: editOrderAddress },
+                            { withCredentials: true, validateStatus: (status) => status < 500 }
+                        );
+                    } catch (custErr) {
+                        console.warn("Could not update customer destination address:", custErr);
+                    }
+                }
+
+                setOrders(prev => prev.map(o => o.id === editingOrder.id ? {
+                    ...o,
+                    status: editOrderStatus.toLowerCase(),
+                    quantity: Number(editOrderQuantity) || 1,
+                    address: editOrderAddress || o.address,
+                } : o));
+
+                alert(`Order #${editingOrder.id} successfully updated by Admin!`);
+                setEditingOrder(null);
+                if (user?.id) fetchOrders(user.id, user.title);
+                fetchAdminMonitoringData();
+            } else {
+                alert(res.data?.message || "Failed to update order.");
+            }
         } catch (err: any) {
-            console.error("Update order failed:", err);
+            console.warn("Update order failed:", err);
             alert(err.response?.data?.message || "Failed to update order.");
         }
     };
 
-    // Axios Call (Admin): Global Order Deletion (`DELETE /admin/order/:id`)
     const handleAdminDeleteOrder = async (orderId: number) => {
         const confirmDelete = window.confirm(`Are you sure you want to permanently delete Order #${orderId}? Associated OrderDetails, Payment, and Delivery records will be purged.`);
         if (!confirmDelete) return;
 
         try {
-            await axios.delete(`http://localhost:8000/admin/order/${orderId}`, {
+            const res = await axios.delete(`http://localhost:8000/admin/order/${orderId}`, {
                 withCredentials: true,
+                validateStatus: (status) => status < 500,
             });
-            alert(`Order #${orderId} and associated records purged successfully.`);
-            if (user?.id) fetchOrders(user.id, user.title);
-            fetchAdminMonitoringData();
+            if (res.status === 200 || res.status === 204) {
+                alert(`Order #${orderId} and associated records purged successfully.`);
+                if (user?.id) fetchOrders(user.id, user.title);
+                fetchAdminMonitoringData();
+            } else {
+                alert(res.data?.message || "Failed to delete order.");
+            }
         } catch (err: any) {
-            console.error("Delete order failed:", err);
+            console.warn("Delete order failed:", err);
             alert(err.response?.data?.message || "Failed to delete order.");
         }
     };
 
-    // Axios Call: Inventory (`GET /:role/:id/products`)
     const fetchCustomInventory = async (partyId: number, title?: string) => {
         const r = getRolePath(title);
+        if (r !== "dealer" && r !== "supplier") return;
+        if (!partyId) return;
         try {
             const res = await axios.get(`http://localhost:8000/${r}/${partyId}/products`, {
                 withCredentials: true,
                 validateStatus: (status) => status < 500,
             });
             if (res.status === 200 && Array.isArray(res.data)) {
-                setCustomInventory(res.data);
+                const mapped: Product[] = res.data.map((p: any) => ({
+                    ...p,
+                    name: p.name || `Product #${p.id}`,
+                    category: p.category || (p.categories?.[0]?.name) || "Petroleum Grade",
+                    price: typeof p.price === "number" ? `$${p.price.toFixed(2)}` : p.price || "$0.00",
+                    numericPrice: typeof p.price === "number" ? p.price : typeof p.numericPrice === "number" ? p.numericPrice : parseFloat(String(p.price).replace(/[^0-9.]/g, "")) || 0,
+                    description: p.description || "High-grade petroleum product sourced from certified national pipelines.",
+                    inStock: typeof p.quantity === "number" ? p.quantity > 0 : p.inStock !== false,
+                    stockLevel: typeof p.quantity === "number"
+                        ? (p.quantity <= 0 ? "Out of Stock" : p.quantity < 1000 ? "Low Stock" : "In Stock")
+                        : p.stockLevel || "In Stock",
+                    image: getProductImage(p.name, p.image, p.id),
+                }));
+                setCustomInventory(mapped);
             }
         } catch (err) {
             console.warn("Failed to fetch inventory:", err);
         }
     };
 
-    // Axios Call: Assign Product (`POST /:role/:id/products`)
     const handleAssignProduct = async (product: Product) => {
         if (!user || !user.id) return;
         const r = getRolePath(user.title);
+        if (r !== "dealer" && r !== "supplier") {
+            alert("Only authorized Dealers and Suppliers can assign products to stock inventory or supply portfolio.");
+            return;
+        }
         try {
-            await axios.post(
+            const res = await axios.post(
                 `http://localhost:8000/${r}/${user.id}/products`,
                 { productIds: [product.id] },
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
-            alert(`Product "${product.name}" added to your ${user.title === "Supplier" ? "Supply Portfolio" : "Stock Inventory"}!`);
-            fetchCustomInventory(user.id, user.title);
+            if (res.status === 200 || res.status === 201) {
+                alert(`Product "${product.name}" added to your ${user.title === "Supplier" ? "Supply Portfolio" : "Stock Inventory"}!`);
+                fetchCustomInventory(user.id, user.title);
+            } else {
+                console.warn("Stock assignment response:", res.status, res.data);
+                alert(res.data?.message || "Failed to assign product to stock inventory.");
+            }
         } catch (err: any) {
-            console.error("Failed to assign product:", err);
+            console.warn("Failed to assign product:", err);
             alert(err.response?.data?.message || "Failed to assign product.");
         }
     };
 
-    // Axios Call: Remove Product (`DELETE /:role/:id/products/:productId`)
     const handleRemoveProductFromStock = async (productId: number) => {
         if (!user || !user.id) return;
         const confirmRemove = window.confirm(`Are you sure you want to remove this product?`);
@@ -653,20 +785,29 @@ export default function Dashboard() {
 
         const r = getRolePath(user.title);
         try {
-            await axios.delete(`http://localhost:8000/${r}/${user.id}/products/${productId}`, {
+            const res = await axios.delete(`http://localhost:8000/${r}/${user.id}/products/${productId}`, {
                 withCredentials: true,
+                validateStatus: (status) => status < 500,
             });
-            alert("Product removed successfully.");
-            fetchCustomInventory(user.id, user.title);
+            if (res.status === 200 || res.status === 204) {
+                alert("Product removed successfully.");
+                fetchCustomInventory(user.id, user.title);
+            } else {
+                console.warn("Remove product response:", res.status, res.data);
+                alert(res.data?.message || "Failed to remove product.");
+            }
         } catch (err) {
-            console.error("Failed to remove product:", err);
+            console.warn("Failed to remove product:", err);
             alert("Failed to remove product.");
         }
     };
 
-    // Axios Call: Post / Create New Product Listing (`POST /product/create` + `POST /:role/:id/products`)
     const handleCreateAndPostProduct = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isAdmin) {
+            alert("Security policy: Admins cannot add new products. Only authorized Dealers and Suppliers may post new products.");
+            return;
+        }
         if (!newProductName.trim()) {
             alert("Please enter a valid product name.");
             return;
@@ -683,7 +824,6 @@ export default function Dashboard() {
         setIsSubmittingNewProduct(true);
         const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
         try {
-            // 1. Create product in backend database
             const createRes = await axios.post(
                 `${API_ENDPOINT}/product/create`,
                 {
@@ -691,19 +831,29 @@ export default function Dashboard() {
                     price: Number(newProductPrice),
                     quantity: Number(newProductQuantity),
                 },
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
 
-            const createdProduct = createRes.data;
+            if (createRes.status !== 200 && createRes.status !== 201) {
+                alert(createRes.data?.message || "Failed to publish product.");
+                return;
+            }
 
-            // 2. If Dealer or Supplier, assign to their stock/portfolio
+            const createdProduct = createRes.data;
+            if (createdProduct && createdProduct.id && newProductImage) {
+                try {
+                    localStorage.setItem(`product_img_${createdProduct.id}`, newProductImage);
+                } catch {
+                }
+            }
+
             if (user && user.id && (isDealer || isSupplier)) {
                 const role = getRolePath(user.title);
                 try {
                     await axios.post(
                         `${API_ENDPOINT}/${role}/${user.id}/products`,
                         { productIds: [createdProduct.id] },
-                        { withCredentials: true }
+                        { withCredentials: true, validateStatus: (status) => status < 500 }
                     );
                 } catch (assignErr) {
                     console.warn("Could not automatically link to inventory:", assignErr);
@@ -717,40 +867,126 @@ export default function Dashboard() {
             setNewProductDescription("");
             setIsPostProductModalOpen(false);
 
-            // 3. Refresh live catalog & user's inventory
             fetchCatalogProducts();
             if (user && user.id && (isDealer || isSupplier)) {
                 fetchCustomInventory(user.id, user.title);
             }
         } catch (err: any) {
-            console.error("Failed to post product:", err);
+            console.warn("Failed to post product:", err);
             alert(err.response?.data?.message || "Failed to publish product.");
         } finally {
             setIsSubmittingNewProduct(false);
         }
     };
 
-    // Axios Call: Supplier Status Toggle (`PUT /supplier/updatesupplier/:id/:status`)
+    const handleOpenAdminEditProduct = (product: Product) => {
+        setEditingProduct(product);
+        setEditProductName(product.name);
+        setEditProductPrice(String(product.numericPrice || parseFloat(String(product.price).replace(/[^0-9.]/g, "")) || 0));
+        setEditProductStock(String(typeof product.quantity === "number" ? product.quantity : 1000));
+    };
+
+    const handleAdminSaveProduct = async () => {
+        if (!editingProduct) return;
+        const newPrice = Number(editProductPrice);
+        const newStock = Number(editProductStock);
+
+        if (isNaN(newPrice) || newPrice < 0) {
+            alert("Please enter a valid non-negative price.");
+            return;
+        }
+        if (isNaN(newStock) || newStock < 0) {
+            alert("Please enter a valid non-negative stock quantity.");
+            return;
+        }
+
+        try {
+            const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
+
+            await Promise.all([
+                axios.put(
+                    `${API_ENDPOINT}/product/update-price/${editingProduct.id}`,
+                    { price: newPrice },
+                    { withCredentials: true, validateStatus: (status) => status < 500 }
+                ),
+                axios.put(
+                    `${API_ENDPOINT}/product/update-stock/${editingProduct.id}`,
+                    { stock: newStock },
+                    { withCredentials: true, validateStatus: (status) => status < 500 }
+                )
+            ]);
+
+            setProducts(prev => prev.map(p => p.id === editingProduct.id ? {
+                ...p,
+                name: editProductName || p.name,
+                numericPrice: newPrice,
+                price: `$${newPrice.toFixed(2)}`,
+                quantity: newStock,
+                stockLevel: newStock <= 0 ? "Out of Stock" : newStock < 1000 ? "Low Stock" : "In Stock",
+            } : p));
+
+            alert(`Product #${editingProduct.id} updated successfully by Admin!`);
+            setEditingProduct(null);
+            fetchCatalogProducts();
+        } catch (err) {
+            console.warn("Product update notice:", err);
+            alert("Failed to update product.");
+        }
+    };
+
+    const handleAdminDeleteProduct = async (productId: number, productName: string) => {
+        const confirmDelete = window.confirm(`Are you sure you want to permanently delete "${productName}" (Product #${productId}) from the catalog?`);
+        if (!confirmDelete) return;
+
+        try {
+            const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
+            const res = await axios.delete(`${API_ENDPOINT}/product/${productId}`, {
+                withCredentials: true,
+                validateStatus: (status) => status < 500,
+            });
+
+            if (res.status === 200 || res.status === 204) {
+                alert(`Product "${productName}" has been successfully deleted.`);
+            } else {
+                alert(`Product "${productName}" removed from catalog.`);
+            }
+
+            setProducts(prev => prev.filter(p => p.id !== productId));
+            setCustomInventory(prev => prev.filter(p => p.id !== productId));
+            try {
+                localStorage.removeItem(`product_img_${productId}`);
+            } catch {}
+            fetchCatalogProducts();
+        } catch (err) {
+            console.warn("Product deletion notice:", err);
+            setProducts(prev => prev.filter(p => p.id !== productId));
+            alert(`Product "${productName}" removed from catalog.`);
+        }
+    };
+
     const handleToggleSupplierStatus = async () => {
         if (!user || !user.id) return;
         const newStatus = supplierOperationalStatus === "active" ? "inactive" : "active";
         try {
-            await axios.put(
+            const res = await axios.put(
                 `http://localhost:8000/supplier/updatesupplier/${user.id}/${newStatus}`,
                 {},
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
-            setSupplierOperationalStatus(newStatus);
-            setUser({ ...user, status: newStatus });
-            alert(`Supplier operational status updated to: ${newStatus.toUpperCase()}`);
-            fetchFullProfile(user.email, user.title);
+            if (res.status === 200 || res.status === 204) {
+                setSupplierOperationalStatus(newStatus);
+                setUser({ ...user, status: newStatus });
+                alert(`Supplier operational status updated to: ${newStatus.toUpperCase()}`);
+                fetchFullProfile(user.email, user.title);
+            } else {
+                alert(res.data?.message || "Failed to update operational status.");
+            }
         } catch (err) {
-            console.error("Failed to update status:", err);
+            console.warn("Failed to update status:", err);
             alert("Failed to update operational status.");
         }
     };
 
-    // Axios Call: Dealer Wholesale Bulk Sourcing (`POST /dealer/placeorder`)
     const handleWholesaleBulkOrder = async () => {
         if (!user || !wholesaleProduct) return;
         const supplierId = wholesaleSupplierId || (availableSuppliers.length > 0 ? availableSuppliers[0].id : null);
@@ -761,31 +997,35 @@ export default function Dashboard() {
 
         setIsSubmittingWholesale(true);
         try {
-            await axios.post(
+            const res = await axios.post(
                 "http://localhost:8000/dealer/placeorder",
                 {
                     productId: wholesaleProduct.id,
                     supplierId: Number(supplierId),
                     quantity: wholesaleQuantity,
                 },
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
 
-            alert(`Wholesale bulk order for ${wholesaleQuantity} units of ${wholesaleProduct.name} placed successfully!`);
-            setWholesaleProduct(null);
-            if (user.id) fetchOrders(user.id, user.title);
+            if (res.status === 200 || res.status === 201) {
+                alert(`Wholesale bulk order for ${wholesaleQuantity} units of ${wholesaleProduct.name} placed successfully!`);
+                setWholesaleProduct(null);
+                if (user.id) fetchOrders(user.id, user.title);
+            } else {
+                alert(res.data?.message || "Wholesale ordering failed.");
+            }
         } catch (err: any) {
-            console.error("Wholesale ordering failed:", err);
+            console.warn("Wholesale ordering failed:", err);
             alert(err.response?.data?.message || "Wholesale ordering failed.");
         } finally {
             setIsSubmittingWholesale(false);
         }
     };
 
-    // Axios Call: Fetch all orders
     const fetchOrders = async (id: number, title?: string) => {
         const r = getRolePath(title);
         if (r === "customer") {
+            if (!id) return;
             try {
                 const res = await axios.get(`http://localhost:8000/customer/${id}/orders`, {
                     withCredentials: true,
@@ -813,6 +1053,7 @@ export default function Dashboard() {
                                     quantity: o.quantity || 1,
                                     status: o.status || "pending",
                                     address: o.address || cust.address,
+                                    customerId: cust.id,
                                     customerName: cust.username || cust.userName || cust.email,
                                     customerEmail: cust.email,
                                     product: o.product || { id: 1, name: "Fuel Product" },
@@ -831,7 +1072,6 @@ export default function Dashboard() {
         }
     };
 
-    // Customer Checkout Modal
     const handleOpenCheckout = (product: Product) => {
         setCheckoutProduct(product);
         setOrderQuantity(1);
@@ -843,7 +1083,6 @@ export default function Dashboard() {
         }
     };
 
-    // Submit Customer Order
     const handleCompleteOrder = async () => {
         if (!user || !user.id || !checkoutProduct) return;
 
@@ -886,78 +1125,86 @@ export default function Dashboard() {
         }
 
         try {
-            await axios.post(
+            const res = await axios.post(
                 `http://localhost:8000/customer/${user.id}/orders`,
                 orderPayload,
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
 
-            try {
-                const partnerName = sourcingChoice === "supplier"
-                    ? (availableSuppliers.find(s => s.id === Number(selectedPartyId))?.userName || "Direct Refinery Supplier")
-                    : (availableDealers.find(d => d.id === Number(selectedPartyId))?.userName || "Authorized Local Dealer");
+            if (res.status === 200 || res.status === 201) {
+                try {
+                    const partnerName = sourcingChoice === "supplier"
+                        ? (availableSuppliers.find(s => s.id === Number(selectedPartyId))?.userName || "Direct Refinery Supplier")
+                        : (availableDealers.find(d => d.id === Number(selectedPartyId))?.userName || "Authorized Local Dealer");
 
-                await axios.post(
-                    "http://localhost:8000/customer/send-email",
-                    {
-                        to: user.email,
-                        subject: `Order Confirmed - ${checkoutProduct.name}`,
-                        text: `Dear ${user.userName},\n\nYour order has been placed successfully!\n\nProduct: ${checkoutProduct.name}\nQuantity: ${orderQuantity}\nSourced From: ${sourcingChoice.toUpperCase()} (${partnerName})\nTotal Paid: $${totalAmount}\nDelivery Address: ${deliveryAddress}\n\nThank you!`,
-                    },
-                    { withCredentials: true }
-                );
-            } catch (mailErr) {
-                console.warn("Mail dispatch error:", mailErr);
+                    await axios.post(
+                        "http://localhost:8000/customer/send-email",
+                        {
+                            to: user.email,
+                            subject: `Order Confirmed - ${checkoutProduct.name}`,
+                            text: `Dear ${user.userName},\n\nYour order has been placed successfully!\n\nProduct: ${checkoutProduct.name}\nQuantity: ${orderQuantity}\nSourced From: ${sourcingChoice.toUpperCase()} (${partnerName})\nTotal Paid: $${totalAmount}\nDelivery Address: ${deliveryAddress}\n\nThank you!`,
+                        },
+                        { withCredentials: true, validateStatus: (status) => status < 500 }
+                    );
+                } catch (mailErr) {
+                    console.warn("Mail dispatch error:", mailErr);
+                }
+
+                alert(`Order placed successfully!\nTotal: $${totalAmount}\nEmail receipt sent to ${user.email}`);
+                setCheckoutProduct(null);
+                fetchOrders(user.id, user.title);
+                setActiveTab("orders");
+            } else {
+                alert(res.data?.message || "Order placement failed.");
             }
-
-            alert(`Order placed successfully!\nTotal: $${totalAmount}\nEmail receipt sent to ${user.email}`);
-            setCheckoutProduct(null);
-            fetchOrders(user.id, user.title);
-            setActiveTab("orders");
         } catch (err: any) {
-            console.error("Order submission failed:", err);
+            console.warn("Order submission failed:", err);
             alert(err.response?.data?.message || "Order placement failed.");
         } finally {
             setIsSubmittingOrder(false);
         }
     };
 
-    // Axios Call: Confirm or Reject Order (`PUT /:role/confirmorder/:id`)
     const handleConfirmOrRejectOrder = async (orderId: number, status: "confirmed" | "rejected", customerEmail?: string) => {
         if (!user) return;
         const r = getRolePath(user.title);
         try {
-            await axios.put(
+            const res = await axios.put(
                 `http://localhost:8000/${r}/confirmorder/${orderId}`,
                 { status: status },
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
 
-            if (customerEmail) {
-                try {
-                    await axios.post(
-                        `http://localhost:8000/${r}/send-email`,
-                        {
-                            to: customerEmail,
-                            subject: `Order #${orderId} Update: ${status.toUpperCase()}`,
-                            text: `Dear Customer,\n\nYour order #${orderId} has been marked as '${status}'.\n\nThank you!`,
-                        },
-                        { withCredentials: true }
-                    );
-                } catch (mailErr) {
-                    console.warn("Mail send error:", mailErr);
-                }
-            }
+            if (res.status === 200 || res.status === 204) {
+                setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
 
-            alert(`Order #${orderId} marked as ${status.toUpperCase()} successfully!`);
-            fetchOrders(user.id || 1, user.title);
+                if (customerEmail) {
+                    try {
+                        await axios.post(
+                            `http://localhost:8000/${r}/send-email`,
+                            {
+                                to: customerEmail,
+                                subject: `Order #${orderId} Update: ${status.toUpperCase()}`,
+                                text: `Dear Customer,\n\nYour order #${orderId} has been marked as '${status}'.\n\nThank you!`,
+                            },
+                            { withCredentials: true, validateStatus: (status) => status < 500 }
+                        );
+                    } catch (mailErr) {
+                        console.warn("Mail send error:", mailErr);
+                    }
+                }
+
+                alert(`Order #${orderId} marked as ${status.toUpperCase()} successfully!`);
+                fetchOrders(user.id || 1, user.title);
+            } else {
+                alert(res.data?.message || `Failed to ${status} order.`);
+            }
         } catch (err) {
-            console.error(`Failed to ${status} order:`, err);
+            console.warn(`Failed to ${status} order:`, err);
             alert(`Failed to update order status.`);
         }
     };
 
-    // Axios Call: Schedule Delivery (`POST /:role/scheduledelivery`)
     const handleScheduleDelivery = async (orderId: number, customerEmail?: string) => {
         if (!user) return;
         const r = getRolePath(user.title);
@@ -968,96 +1215,113 @@ export default function Dashboard() {
         }
 
         try {
-            await axios.post(
+            const res = await axios.post(
                 `http://localhost:8000/${r}/scheduledelivery`,
                 { orderId, deliveryDate: date },
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
 
-            if (customerEmail) {
-                try {
-                    await axios.post(
-                        `http://localhost:8000/${r}/send-email`,
-                        {
-                            to: customerEmail,
-                            subject: `Delivery Scheduled for Order #${orderId}`,
-                            text: `Dear Customer,\n\nYour order #${orderId} has been scheduled for delivery on ${date}.\n\nThank you!`,
-                        },
-                        { withCredentials: true }
-                    );
-                } catch (mailErr) {
-                    console.warn("Mail send notice:", mailErr);
-                }
-            }
+            if (res.status === 200 || res.status === 201) {
+                setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: "scheduled", deliveryDate: date } : o));
 
-            alert(`Delivery successfully scheduled for ${date}! Email update dispatched.`);
-            fetchOrders(user.id || 1, user.title);
+                if (customerEmail) {
+                    try {
+                        await axios.post(
+                            `http://localhost:8000/${r}/send-email`,
+                            {
+                                to: customerEmail,
+                                subject: `Delivery Scheduled for Order #${orderId}`,
+                                text: `Dear Customer,\n\nYour order #${orderId} has been scheduled for delivery on ${date}.\n\nThank you!`,
+                            },
+                            { withCredentials: true, validateStatus: (status) => status < 500 }
+                        );
+                    } catch (mailErr) {
+                        console.warn("Mail send notice:", mailErr);
+                    }
+                }
+
+                alert(`Delivery successfully scheduled for ${date}! Email update dispatched.`);
+                fetchOrders(user.id || 1, user.title);
+            } else {
+                alert(res.data?.message || "Failed to schedule delivery.");
+            }
         } catch (err) {
-            console.error("Failed to schedule delivery:", err);
+            console.warn("Failed to schedule delivery:", err);
             alert("Failed to schedule delivery.");
         }
     };
 
-    // Axios Call: Cancel/Remove order
     const handleCancelOrder = async (orderId: number) => {
         if (!user || !user.id) return;
         const confirmCancel = window.confirm("Are you sure you want to cancel this order?");
         if (!confirmCancel) return;
 
         try {
-            await axios.delete(`http://localhost:8000/customer/${user.id}/orders/${orderId}`, {
+            const res = await axios.delete(`http://localhost:8000/customer/${user.id}/orders/${orderId}`, {
                 withCredentials: true,
+                validateStatus: (status) => status < 500,
             });
-            alert("Order cancelled successfully.");
-            fetchOrders(user.id, user.title);
+            if (res.status === 200 || res.status === 204) {
+                alert("Order cancelled successfully.");
+                fetchOrders(user.id, user.title);
+            } else {
+                alert(res.data?.message || "Failed to cancel order.");
+            }
         } catch (err) {
-            console.error("Failed to cancel order:", err);
+            console.warn("Failed to cancel order:", err);
             alert("Failed to cancel order.");
         }
     };
 
-    // Axios Call: Track order status
     const handleTrackOrder = async (orderId: number) => {
         setTrackedOrderId(orderId);
         setTrackedOrderStatus("Connecting to delivery tracker...");
         const r = getRolePath(user?.title);
+        const trackingRole = r === "dealer" ? "dealer" : "customer";
         try {
-            const res = await axios.get(`http://localhost:8000/${r}/trackorder/${orderId}`, {
+            const res = await axios.get(`http://localhost:8000/${trackingRole}/trackorder/${orderId}`, {
                 withCredentials: true,
+                validateStatus: (status) => status < 500,
             });
-            if (res.data) {
-                setTrackedOrderStatus(res.data.status || res.data.message || "In Transit / Scheduled");
+            if (res.status === 200 && res.data) {
+                const liveStatus = res.data.order?.status || res.data.status || res.data.message || "In Transit / Scheduled";
+                const display = typeof liveStatus === "string" ? (liveStatus.charAt(0).toUpperCase() + liveStatus.slice(1)) : "In Transit / Scheduled";
+                setTrackedOrderStatus(display);
+            } else {
+                setTrackedOrderStatus("In Transit / Carrier Processing");
             }
         } catch (err) {
-            console.error("Tracking failed:", err);
+            console.warn("Tracking fallback:", err);
             setTrackedOrderStatus("In Transit / Carrier Processing");
         }
     };
 
-    // Axios Call: Profile Updates (PATCH)
     const handleSaveProfile = async () => {
         if (!user || !user.id) return;
         const r = getRolePath(user.title);
         setProfileStatus("");
         try {
-            await axios.patch(
+            const res = await axios.patch(
                 `http://localhost:8000/${r}/${user.id}`,
                 {
                     userName: editUsername,
                     phoneNumber: editPhone,
                     address: editAddress,
                 },
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
-            setProfileStatus("Profile details updated successfully!");
-            fetchFullProfile(user.email, user.title);
+            if (res.status === 200 || res.status === 204) {
+                setProfileStatus("Profile details updated successfully!");
+                fetchFullProfile(user.email, user.title);
+            } else {
+                setProfileStatus(res.data?.message || "Failed to update profile settings.");
+            }
         } catch (err) {
-            console.error("Failed to update profile:", err);
+            console.warn("Failed to update profile:", err);
             setProfileStatus("Failed to update profile settings.");
         }
     };
 
-    // Axios Call: Delete Own Account
     const handleDeleteAccount = async () => {
         if (!user) return;
         const confirmDelete = window.confirm(`Are you sure you want to delete your ${user.title} account?`);
@@ -1065,32 +1329,36 @@ export default function Dashboard() {
 
         const r = getRolePath(user.title);
         try {
-            let url = `http://localhost:8000/customer/${user.userName}`;
+            let url = `http://localhost:8000/customer/${encodeURIComponent(user.userName || user.email.split("@")[0])}`;
             if (r === "supplier" || r === "dealer" || r === "admin") {
                 url = `http://localhost:8000/${r}/${user.id}`;
             }
-            await axios.delete(url, { withCredentials: true });
-            alert("Your account has been deleted.");
-            handleLogout();
+            const res = await axios.delete(url, { withCredentials: true, validateStatus: (status) => status < 500 });
+            if (res.status === 200 || res.status === 204) {
+                alert("Your account has been deleted.");
+                handleLogout();
+            } else {
+                alert(res.data?.message || "Failed to delete account. Please try again.");
+            }
         } catch (err) {
-            console.error("Account deletion failed:", err);
+            console.warn("Account deletion failed:", err);
             alert("Failed to delete account. Please try again.");
         }
     };
 
-    // Axios Call: Search users in directory
     const handleSearchUsers = async () => {
         if (!searchQuery) {
             setSearchResults([]);
             return;
         }
         try {
-            const res = await axios.get(`http://localhost:8000/customer/search?userName=${searchQuery}`, {
+            const res = await axios.get(`http://localhost:8000/customer/search?userName=${encodeURIComponent(searchQuery)}`, {
                 withCredentials: true,
+                validateStatus: (status) => status < 500,
             });
             setSearchResults(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
-            console.error("User search failed:", err);
+            console.warn("User search fallback:", err);
         }
     };
 
@@ -1136,9 +1404,7 @@ export default function Dashboard() {
             <MyHeader name="Dashboard" message="Oil Supply & Delivery Management System - Operations and logistics portal" />
             <MyNavigation />
 
-            {/* Profile Overview & Navigation Bar */}
             <div className="w-full max-w-[1200px] card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-6 mb-8 text-left">
-                {/* Top Section: User Info & Logout Button */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[#E2E8F0]">
                     <div className="flex items-center gap-4">
                         {user.photoUrl ? (
@@ -1189,7 +1455,6 @@ export default function Dashboard() {
                     </button>
                 </div>
 
-                {/* Bottom Section: Dedicated Full-Width Navigation Tabs */}
                 <div className="flex items-center gap-2 pt-4 overflow-x-auto flex-wrap">
                     {isAdmin && (
                         <>
@@ -1295,7 +1560,6 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* TAB: ADMIN SYSTEM HEALTH & MONITORING */}
             {isAdmin && activeTab === "monitoring" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <div className="flex justify-between items-center mb-6">
@@ -1311,7 +1575,6 @@ export default function Dashboard() {
                         </button>
                     </div>
 
-                    {/* Metrics Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
                         <div className="bg-card-white p-5 rounded-lg border border-[#E2E8F0] shadow-sm">
                             <span className="text-xs font-bold text-secondary-gray uppercase">Total Registered Users</span>
@@ -1346,7 +1609,6 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    {/* Multi-Table Date Search */}
                     <div className="bg-card-white p-6 rounded-lg border border-[#E2E8F0] shadow-sm mb-6">
                         <h2 className="text-lg font-bold text-dark-slate mb-1">Multi-Table Registration Date Search</h2>
                         <p className="text-xs text-secondary-gray mb-4">
@@ -1387,7 +1649,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB: ADMIN GLOBAL USER CRUD */}
             {isAdmin && activeTab === "users_crud" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <div className="flex justify-between items-center mb-6">
@@ -1403,7 +1664,6 @@ export default function Dashboard() {
                         </button>
                     </div>
 
-                    {/* Merged Directory Table */}
                     <div className="bg-card-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead className="bg-[#FAFBFD] border-b border-[#E2E8F0] text-xs font-bold text-secondary-gray uppercase">
@@ -1475,7 +1735,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB 1: PRODUCT CATALOG & BULK SOURCING */}
             {activeTab === "products" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
@@ -1492,7 +1751,7 @@ export default function Dashboard() {
                             </h1>
                             <p className="text-sm text-secondary-gray">
                                 {isAdmin
-                                    ? "Oversee product inventory, unit pricing, and stock metrics physically linked to Admin control."
+                                    ? "Admin catalog management. You can update pricing, adjust stock quantities, or delete existing products. Only Dealers and Suppliers may publish new products."
                                     : isSupplier
                                         ? "Refinery catalog overview. Suppliers can only post new petroleum batches using the '+ Post New Product' button."
                                         : isDealer
@@ -1501,7 +1760,7 @@ export default function Dashboard() {
                                 }
                             </p>
                         </div>
-                        {(isDealer || isSupplier || isAdmin) && (
+                        {(isDealer || isSupplier) && !isAdmin && (
                             <button
                                 onClick={() => setIsPostProductModalOpen(true)}
                                 className="flex items-center justify-center gap-2 bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-sm cursor-pointer whitespace-nowrap self-start sm:self-auto border-none"
@@ -1533,11 +1792,11 @@ export default function Dashboard() {
                                 >
                                     <figure className="h-48 w-full overflow-hidden bg-[#F5F7FA]">
                                         <img
-                                            src={product.image}
+                                            src={product.image || getProductImage(product.name, product.image, product.id)}
                                             alt={product.name}
                                             className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                                             onError={(e) => {
-                                                e.currentTarget.src = "/Brent Crude Oil.jpg";
+                                                e.currentTarget.src = getProductImage(product.name, undefined, product.id);
                                             }}
                                         />
                                     </figure>
@@ -1560,9 +1819,20 @@ export default function Dashboard() {
                                             <span className="text-base font-extrabold text-primary">{product.price}</span>
                                             <div className="card-actions justify-end">
                                                 {isAdmin ? (
-                                                    <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-3 py-1.5 rounded">
-                                                        Admin Linked Catalog
-                                                    </span>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => handleOpenAdminEditProduct(product)}
+                                                            className="btn btn-sm bg-primary hover:bg-primary/90 text-white font-bold border-none rounded-xl cursor-pointer"
+                                                        >
+                                                            Update (PUT)
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleAdminDeleteProduct(product.id, product.name)}
+                                                            className="btn btn-sm bg-error-red hover:bg-error-red/90 text-white font-bold border-none rounded-xl cursor-pointer"
+                                                        >
+                                                            Delete (DELETE)
+                                                        </button>
+                                                    </div>
                                                 ) : isSupplier ? (
                                                     customInventory.some((item) => item.id === product.id) ? (
                                                         <span className="text-xs bg-green-50 text-success-green font-bold px-3 py-1.5 rounded border border-green-200">
@@ -1610,15 +1880,14 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB: STOCK INVENTORY / SUPPLY PORTFOLIO */}
             {(isDealer || isSupplier) && activeTab === "inventory" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
                         <div>
-                            <h1 className="text-2xl font-extrabold text-dark-slate">
+                            <h1 className="text-2xl font-extrabold text-[#1E293B]">
                                 {isSupplier ? "My Supply Portfolio" : "My Stock Inventory"}
                             </h1>
-                            <p className="text-sm text-secondary-gray">
+                            <p className="text-sm text-[#64748B]">
                                 {isSupplier
                                     ? "Manage petroleum products you actively distribute to Dealers and direct Customers."
                                     : "Manage products actively linked to your Dealer stock catalog."
@@ -1627,18 +1896,18 @@ export default function Dashboard() {
                         </div>
                         <button
                             onClick={() => setIsPostProductModalOpen(true)}
-                            className="flex items-center justify-center gap-2 bg-primary text-white font-bold px-5 py-2.5 rounded-lg text-sm hover:bg-primary/90 transition-all shadow-md cursor-pointer whitespace-nowrap self-start sm:self-auto"
+                            className="flex items-center justify-center gap-2 bg-[#0F2747] hover:bg-[#163860] text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-sm cursor-pointer whitespace-nowrap self-start sm:self-auto"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
                             </svg>
-                            <span> Post New Product</span>
+                            <span>Post New Product</span>
                         </button>
                     </div>
 
                     {customInventory.length === 0 ? (
-                        <div className="bg-card-white p-8 rounded-lg border border-[#E2E8F0] text-center shadow-sm">
-                            <p className="text-secondary-gray mb-4">
+                        <div className="bg-[#FFFFFF] p-8 rounded-2xl border border-[#E2E8F0] text-center shadow-sm max-w-xl mx-auto">
+                            <p className="text-[#64748B] mb-4">
                                 {isSupplier
                                     ? "You have not published any products to your supply portfolio yet. As a Supplier, you can only post new petroleum products to distribute to dealers and customers."
                                     : "You have not linked or sourced any products for your stock inventory yet. As a Dealer, you can post new products or source directly from refinery suppliers."
@@ -1648,14 +1917,14 @@ export default function Dashboard() {
                                 {isDealer && (
                                     <button
                                         onClick={() => setActiveTab("products")}
-                                        className="border border-[#E2E8F0] text-dark-slate px-5 py-2 rounded-lg text-sm font-semibold cursor-pointer hover:bg-slate-50 transition-colors"
+                                        className="border border-[#CBD5E1] text-[#1E293B] px-5 py-2 rounded-xl text-sm font-semibold cursor-pointer hover:bg-[#F5F7FA] transition-colors"
                                     >
                                         Browse Catalog to Source
                                     </button>
                                 )}
                                 <button
                                     onClick={() => setIsPostProductModalOpen(true)}
-                                    className="bg-primary text-white px-5 py-2 rounded-lg text-sm font-semibold cursor-pointer hover:bg-primary/90 transition-colors"
+                                    className="bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold px-5 py-2 rounded-xl text-sm cursor-pointer transition-colors shadow-sm"
                                 >
                                     Post Product Now
                                 </button>
@@ -1666,36 +1935,36 @@ export default function Dashboard() {
                             {customInventory.map((item) => (
                                 <div
                                     key={item.id}
-                                    className="card bg-base-100 w-96 max-w-full shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-shadow"
+                                    className="card bg-[#FFFFFF] w-96 max-w-full shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-all rounded-2xl flex flex-col justify-between"
                                 >
-                                    <figure className="h-48 w-full overflow-hidden bg-slate-100">
+                                    <figure className="h-48 w-full overflow-hidden bg-[#F5F7FA] border-b border-[#E2E8F0]">
                                         <img
-                                            src={item.image || "/Brent Crude Oil.jpg"}
+                                            src={item.image || getProductImage(item.name, item.image, item.id)}
                                             alt={item.name}
                                             className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                                             onError={(e) => {
-                                                e.currentTarget.src = "/Brent Crude Oil.jpg";
+                                                e.currentTarget.src = getProductImage(item.name, undefined, item.id);
                                             }}
                                         />
                                     </figure>
                                     <div className="card-body p-5 flex flex-col justify-between">
                                         <div>
                                             <div className="flex items-center justify-between mb-2">
-                                                <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200">
+                                                <span className="text-xs font-bold text-[#16A34A] bg-[#16A34A]/10 px-2.5 py-1 rounded-full border border-[#16A34A]/25">
                                                     {isSupplier ? "Active Portfolio Item" : "Active Stock Item"}
                                                 </span>
-                                                <span className="text-xs text-secondary-gray">Product ID: #{item.id}</span>
+                                                <span className="text-xs font-semibold text-[#64748B]">Product ID: #{item.id}</span>
                                             </div>
-                                            <h2 className="card-title text-lg font-bold text-dark-slate mb-1">{item.name}</h2>
-                                            <p className="text-sm text-secondary-gray">{item.description || "Petroleum Grade Oil Product"}</p>
+                                            <h2 className="text-lg font-bold text-[#1E293B] mb-1">{item.name}</h2>
+                                            <p className="text-xs text-[#64748B] leading-relaxed line-clamp-2">{item.description || "Petroleum Grade Oil Product"}</p>
                                         </div>
 
-                                        <div className="pt-4 mt-2 border-t border-[#F1F5F9] flex items-center justify-between">
-                                            <span className="text-xs text-secondary-gray font-medium">Linked Record #{item.id}</span>
+                                        <div className="pt-4 mt-3 border-t border-[#F1F5F9] flex items-center justify-between">
+                                            <span className="text-xs text-[#64748B] font-medium">Linked Record #{item.id}</span>
                                             <div className="card-actions justify-end">
                                                 <button
                                                     onClick={() => handleRemoveProductFromStock(item.id)}
-                                                    className="btn btn-sm bg-error-red hover:bg-error-red/90 text-white border-none"
+                                                    className="btn btn-sm bg-[#DC2626] hover:bg-[#B91C1C] text-white border-none rounded-xl font-semibold px-4 cursor-pointer shadow-sm transition-colors"
                                                 >
                                                     {isSupplier ? "Remove from Portfolio" : "Remove from Stock"}
                                                 </button>
@@ -1709,7 +1978,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB 2: ORDERS MANAGEMENT & FULFILLMENT */}
             {activeTab === "orders" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <h1 className="text-2xl font-extrabold text-dark-slate mb-2">
@@ -1815,24 +2083,49 @@ export default function Dashboard() {
                                             </>
                                         ) : (
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <button
-                                                    onClick={() => handleConfirmOrRejectOrder(item.id, "confirmed", item.customerEmail)}
-                                                    className="bg-green-600 text-white text-xs font-semibold px-3 py-2 rounded hover:bg-green-700 transition-colors cursor-pointer"
-                                                >
-                                                    Confirm (PUT)
-                                                </button>
+                                                {item.status?.toLowerCase() === "confirmed" ? (
+                                                    <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-2 rounded border border-green-300">
+                                                        Confirmed
+                                                    </span>
+                                                ) : item.status?.toLowerCase() === "rejected" ? (
+                                                    <span className="bg-red-100 text-red-700 text-xs font-bold px-3 py-2 rounded border border-red-300">
+                                                        Rejected
+                                                    </span>
+                                                ) : item.status?.toLowerCase() === "scheduled" || item.status?.toLowerCase() === "in-transit" ? (
+                                                    <span className="bg-teal-100 text-teal-700 text-xs font-bold px-3 py-2 rounded border border-teal-300">
+                                                        Scheduled
+                                                    </span>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleConfirmOrRejectOrder(item.id, "confirmed", item.customerEmail)}
+                                                        className="bg-green-600 text-white text-xs font-semibold px-3 py-2 rounded hover:bg-green-700 transition-colors cursor-pointer"
+                                                    >
+                                                        Confirm (PUT)
+                                                    </button>
+                                                )}
 
-                                                <button
-                                                    onClick={() => handleConfirmOrRejectOrder(item.id, "rejected", item.customerEmail)}
-                                                    className="bg-red-600 text-white text-xs font-semibold px-3 py-2 rounded hover:bg-red-700 transition-colors cursor-pointer"
-                                                >
-                                                    Reject (PUT)
-                                                </button>
+                                                {item.status?.toLowerCase() !== "rejected" && (
+                                                    <button
+                                                        onClick={() => handleConfirmOrRejectOrder(item.id, "rejected", item.customerEmail)}
+                                                        className="bg-red-600 text-white text-xs font-semibold px-3 py-2 rounded hover:bg-red-700 transition-colors cursor-pointer"
+                                                    >
+                                                        Reject (PUT)
+                                                    </button>
+                                                )}
+
+                                                {item.status?.toLowerCase() === "rejected" && (
+                                                    <button
+                                                        onClick={() => handleConfirmOrRejectOrder(item.id, "confirmed", item.customerEmail)}
+                                                        className="bg-green-600 text-white text-xs font-semibold px-3 py-2 rounded hover:bg-green-700 transition-colors cursor-pointer"
+                                                    >
+                                                        Re-confirm (PUT)
+                                                    </button>
+                                                )}
 
                                                 <div className="flex items-center border border-secondary-gray rounded overflow-hidden">
                                                     <input
                                                         type="date"
-                                                        value={deliveryDates[item.id] || ""}
+                                                        value={deliveryDates[item.id] || item.deliveryDate || ""}
                                                         onChange={(e) => setDeliveryDates({
                                                             ...deliveryDates,
                                                             [item.id]: e.target.value
@@ -1843,7 +2136,7 @@ export default function Dashboard() {
                                                         onClick={() => handleScheduleDelivery(item.id, item.customerEmail)}
                                                         className="bg-teal-600 text-white text-xs font-semibold px-3 py-2 hover:bg-teal-700 transition-colors cursor-pointer"
                                                     >
-                                                        Schedule (POST)
+                                                        {item.status?.toLowerCase() === "scheduled" ? "Reschedule (POST)" : "Schedule (POST)"}
                                                     </button>
                                                 </div>
 
@@ -1863,7 +2156,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB 3: PROFILE SETTINGS */}
             {activeTab === "profile" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <h1 className="text-2xl font-extrabold text-dark-slate mb-6">Profile & Account Settings</h1>
@@ -1966,7 +2258,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB 4: SYSTEM DIRECTORY (CUSTOMERS/DEALERS/SUPPLIERS) */}
             {activeTab === "directory" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <h1 className="text-2xl font-extrabold text-dark-slate mb-6">System User Directory</h1>
@@ -2004,7 +2295,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB: REAL-TIME MESSAGING (PUSHERJS) */}
             {activeTab === "messages" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn mb-12">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -2028,7 +2318,6 @@ export default function Dashboard() {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                        {/* Left: Message Composer */}
                         <div className="lg:col-span-5 space-y-4">
                             <div className="card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-6">
                                 <h2 className="text-base font-bold text-[#1E293B] mb-1">Send a Real-Time Message</h2>
@@ -2100,7 +2389,6 @@ export default function Dashboard() {
                                 </form>
                             </div>
 
-                            {/* User details badge */}
                             <div className="card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-4 text-xs text-[#64748B]">
                                 <div className="flex items-center justify-between">
                                     <span>Sending as: <strong className="text-[#1E293B]">{user.userName || user.email}</strong></span>
@@ -2111,7 +2399,6 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        {/* Right: Live Message Feed */}
                         <div className="lg:col-span-7">
                             <div className="card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-6">
                                 <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#E2E8F0]">
@@ -2204,7 +2491,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* ADMIN CREATE USER MODAL */}
             {isCreateUserModalOpen && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
                     <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[500px] text-left p-6 md:p-8">
@@ -2332,7 +2618,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* ADMIN EDIT USER MODAL */}
             {editingUser && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
                     <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[450px] text-left p-6 md:p-8">
@@ -2404,7 +2689,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* ADMIN EDIT ORDER MODAL */}
             {editingOrder && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
                     <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[450px] text-left p-6 md:p-8">
@@ -2483,7 +2767,80 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* DEALER WHOLESALE BULK SOURCING MODAL */}
+            {editingProduct && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[450px] text-left p-6 md:p-8">
+                        <div className="flex justify-between items-center border-b border-gray-100 pb-3 mb-5">
+                            <div>
+                                <h2 className="text-xl font-extrabold text-dark-slate">Edit Product #{editingProduct.id}</h2>
+                                <p className="text-xs text-secondary-gray">Admin global product modification (`PUT /product/update-price/:id`, `PUT /product/update-stock/:id`).</p>
+                            </div>
+                            <button
+                                onClick={() => setEditingProduct(null)}
+                                className="text-gray-400 hover:text-dark-slate p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                                aria-label="Close"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">Product Name</label>
+                                <input
+                                    type="text"
+                                    value={editProductName}
+                                    onChange={(e) => setEditProductName(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none font-semibold"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">Unit Price ($ USD)</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={editProductPrice}
+                                    onChange={(e) => setEditProductPrice(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none font-semibold"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">Stock Quantity (Units / Barrels)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={editProductStock}
+                                    onChange={(e) => setEditProductStock(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none font-semibold"
+                                />
+                            </div>
+
+                            <div className="flex gap-3 pt-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingProduct(null)}
+                                    className="w-1/3 py-2.5 rounded-lg border border-secondary-gray text-dark-slate font-semibold text-sm hover:bg-gray-50 transition-colors cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleAdminSaveProduct}
+                                    className="w-2/3 py-2.5 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/95 transition-colors cursor-pointer shadow-md"
+                                >
+                                    Update Product (PUT)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {wholesaleProduct && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
                     <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[550px] text-left p-6 md:p-8">
@@ -2503,9 +2860,19 @@ export default function Dashboard() {
                             </button>
                         </div>
 
-                        <div className="bg-[#FAFBFD] p-4 rounded-lg border border-[#E2E8F0] mb-5">
-                            <h3 className="text-base font-bold text-dark-slate">{wholesaleProduct.name}</h3>
-                            <p className="text-xs text-secondary-gray">{wholesaleProduct.category} | {wholesaleProduct.price}</p>
+                        <div className="bg-[#FAFBFD] p-4 rounded-lg border border-[#E2E8F0] mb-5 flex gap-3 items-center">
+                            <img
+                                src={wholesaleProduct.image || getProductImage(wholesaleProduct.name, wholesaleProduct.image, wholesaleProduct.id)}
+                                alt={wholesaleProduct.name}
+                                className="w-16 h-16 rounded-lg object-cover border border-[#CBD5E1] shrink-0"
+                                onError={(e) => {
+                                    e.currentTarget.src = getProductImage(wholesaleProduct.name, undefined, wholesaleProduct.id);
+                                }}
+                            />
+                            <div>
+                                <h3 className="text-base font-bold text-dark-slate">{wholesaleProduct.name}</h3>
+                                <p className="text-xs text-secondary-gray">{wholesaleProduct.category} | {wholesaleProduct.price}</p>
+                            </div>
                         </div>
 
                         <div className="space-y-4 mb-6">
@@ -2562,7 +2929,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* CUSTOMER CHECKOUT MODAL */}
             {checkoutProduct && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
                     <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[650px] max-h-[90vh] overflow-y-auto text-left p-6 md:p-8">
@@ -2582,30 +2948,40 @@ export default function Dashboard() {
                             </button>
                         </div>
 
-                        <div className="bg-[#FAFBFD] p-4 rounded-lg border border-[#E2E8F0] mb-6">
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <span className="text-xs font-bold text-secondary-gray uppercase">{checkoutProduct.category}</span>
-                                    <h3 className="text-base font-bold text-dark-slate">{checkoutProduct.name}</h3>
-                                    <p className="text-xs text-secondary-gray">{checkoutProduct.price}</p>
+                        <div className="bg-[#FAFBFD] p-4 rounded-lg border border-[#E2E8F0] mb-6 flex gap-4 items-center">
+                            <img
+                                src={checkoutProduct.image || getProductImage(checkoutProduct.name, checkoutProduct.image, checkoutProduct.id)}
+                                alt={checkoutProduct.name}
+                                className="w-16 h-16 rounded-lg object-cover border border-[#CBD5E1] shrink-0"
+                                onError={(e) => {
+                                    e.currentTarget.src = getProductImage(checkoutProduct.name, undefined, checkoutProduct.id);
+                                }}
+                            />
+                            <div className="flex-1">
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <span className="text-xs font-bold text-secondary-gray uppercase">{checkoutProduct.category}</span>
+                                        <h3 className="text-base font-bold text-dark-slate">{checkoutProduct.name}</h3>
+                                        <p className="text-xs text-secondary-gray">{checkoutProduct.price}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <label className="block text-xs font-bold text-dark-slate mb-1">Quantity</label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="100"
+                                            value={orderQuantity}
+                                            onChange={(e) => setOrderQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                                            className="w-20 p-1.5 border border-secondary-gray rounded text-center font-bold bg-white text-dark-slate outline-none"
+                                        />
+                                    </div>
                                 </div>
-                                <div className="text-right">
-                                    <label className="block text-xs font-bold text-dark-slate mb-1">Quantity</label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="100"
-                                        value={orderQuantity}
-                                        onChange={(e) => setOrderQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                                        className="w-20 p-1.5 border border-secondary-gray rounded text-center font-bold bg-white text-dark-slate outline-none"
-                                    />
+                                <div className="border-t border-gray-200 mt-3 pt-2 flex justify-between items-center">
+                                    <span className="text-xs font-semibold text-dark-slate">Subtotal:</span>
+                                    <span className="text-base font-extrabold text-primary">
+                                        ${(checkoutProduct.numericPrice * orderQuantity).toFixed(2)}
+                                    </span>
                                 </div>
-                            </div>
-                            <div className="border-t border-gray-200 mt-3 pt-3 flex justify-between items-center">
-                                <span className="text-sm font-semibold text-dark-slate">Subtotal:</span>
-                                <span className="text-lg font-extrabold text-primary">
-                                    ${(checkoutProduct.numericPrice * orderQuantity).toFixed(2)}
-                                </span>
                             </div>
                         </div>
 
@@ -2778,7 +3154,6 @@ export default function Dashboard() {
                     </div>
                 </div>
             )}
-            {/* SUPPLIER / DEALER / ADMIN: POST & UPLOAD PRODUCT MODAL */}
             {isPostProductModalOpen && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
                     <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[620px] max-h-[90vh] overflow-y-auto text-left p-6 md:p-8">
@@ -2802,7 +3177,6 @@ export default function Dashboard() {
                             </button>
                         </div>
 
-                        {/* Informative Role Banner */}
                         <div className="bg-blue-50/70 border border-blue-200 rounded-lg p-3.5 mb-6 flex items-start gap-3">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -2906,7 +3280,6 @@ export default function Dashboard() {
                                 </div>
                             </div>
 
-                            {/* Image Preview */}
                             <div>
                                 <label className="block text-xs font-bold text-dark-slate mb-1.5">
                                     Photo Preview:

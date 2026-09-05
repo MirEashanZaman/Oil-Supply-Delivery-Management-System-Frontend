@@ -9,7 +9,6 @@ export default function AboutUs() {
             <MyNavigation />
 
             <div className="w-full max-w-5xl mt-6 space-y-6">
-                {/* System Overview Card */}
                 <div className="card bg-[#FFFFFF] shadow-md border border-[#E2E8F0] rounded-2xl">
                     <div className="card-body p-6 sm:p-10 text-left">
                         <div className="max-w-3xl">
@@ -43,7 +42,6 @@ export default function AboutUs() {
                     </div>
                 </div>
 
-                {/* Key Pillars & Roles */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
                     <div className="card bg-[#FFFFFF] shadow-md border border-[#E2E8F0] rounded-2xl">
                         <div className="card-body p-6">
@@ -88,7 +86,6 @@ export default function AboutUs() {
                     </div>
                 </div>
 
-                {/* Practical Process Steps */}
                 <div className="card bg-[#FFFFFF] shadow-md border border-[#E2E8F0] rounded-2xl p-6 sm:p-8 text-left">
                     <h2 className="text-xl font-bold text-[#1E293B] mb-4">How The Delivery Process Works</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

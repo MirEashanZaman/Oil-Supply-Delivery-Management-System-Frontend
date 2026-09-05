@@ -55,7 +55,6 @@ export default function Login() {
 
             const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
 
-            // Automatically check against the 4 backend auth controllers
             for (const r of roles) {
                 try {
                     const response = await axios.post(
@@ -76,7 +75,6 @@ export default function Login() {
                         apiUserData = response.data;
                         break;
                     } else if (response.status === 401) {
-                        // NestJS throws UnauthorizedException with { message: "Unauthorized" } on invalid credentials
                         lastErrorMessage = "Invalid email or password. Please check your credentials or register a new account.";
                     } else if (response.status === 400 && response.data?.message) {
                         lastErrorMessage = Array.isArray(response.data.message)
@@ -116,40 +114,59 @@ export default function Login() {
                 photoUrl: apiUserData?.photoUrl || apiUserData?.photo,
             };
 
-            // Fetch profile data if needed based on automatically detected role
             try {
-                const rolePath = matchedRole.toLowerCase();
-                let fetchUrl = `${API_ENDPOINT}/${rolePath}/getallcustomer`;
-                if (rolePath === "supplier") {
-                    fetchUrl = `${API_ENDPOINT}/supplier/getallsupplier`;
-                } else if (rolePath === "dealer") {
-                    fetchUrl = `${API_ENDPOINT}/dealer/all`;
-                } else if (rolePath === "admin") {
-                    fetchUrl = `${API_ENDPOINT}/admin/getallusers`;
-                }
+                const searchRes = await axios.get(
+                    `${API_ENDPOINT}/users/search?email=${encodeURIComponent(signInEmail)}`,
+                    { validateStatus: (status) => status < 500 }
+                );
 
-                const responseAll = await axios.get(fetchUrl, {
-                    withCredentials: true,
-                });
+                if (searchRes.status === 200 && searchRes.data?.user) {
+                    const u = searchRes.data.user;
+                    const r = searchRes.data.role || matchedRole;
+                    userData = {
+                        id: u.id || userData.id,
+                        email: u.email || userData.email,
+                        userName: u.username || u.userName || userData.userName,
+                        phoneNumber: u.phoneNumber || userData.phoneNumber,
+                        address: u.address || userData.address,
+                        title: u.title || (r.charAt(0).toUpperCase() + r.slice(1)),
+                        photoUrl: u.filename ? `${API_ENDPOINT}/customer/getimage/${u.filename}` : userData.photoUrl,
+                    };
+                } else {
+                    const rolePath = matchedRole.toLowerCase();
+                    let fetchUrl = `${API_ENDPOINT}/${rolePath}/getallcustomer`;
+                    if (rolePath === "supplier") {
+                        fetchUrl = `${API_ENDPOINT}/supplier/getallsupplier`;
+                    } else if (rolePath === "dealer") {
+                        fetchUrl = `${API_ENDPOINT}/dealer/all`;
+                    } else if (rolePath === "admin") {
+                        fetchUrl = `${API_ENDPOINT}/admin/getallusers`;
+                    }
 
-                if (Array.isArray(responseAll.data)) {
-                    const matchedUser = responseAll.data.find(
-                        (c: any) => c.email === signInEmail
-                    );
-                    if (matchedUser) {
-                        userData = {
-                            id: matchedUser.id || userData.id,
-                            email: matchedUser.email,
-                            userName: matchedUser.username || matchedUser.userName || userData.userName,
-                            phoneNumber: matchedUser.phoneNumber || userData.phoneNumber,
-                            address: matchedUser.address || userData.address,
-                            title: matchedUser.title || matchedRole,
-                            photoUrl: matchedUser.photoUrl || matchedUser.photo || userData.photoUrl,
-                        };
+                    const responseAll = await axios.get(fetchUrl, {
+                        withCredentials: true,
+                        validateStatus: (status) => status < 500,
+                    });
+
+                    if (responseAll.status === 200 && Array.isArray(responseAll.data)) {
+                        const matchedUser = responseAll.data.find(
+                            (c: any) => c.email === signInEmail
+                        );
+                        if (matchedUser) {
+                            userData = {
+                                id: matchedUser.id || userData.id,
+                                email: matchedUser.email,
+                                userName: matchedUser.username || matchedUser.userName || userData.userName,
+                                phoneNumber: matchedUser.phoneNumber || userData.phoneNumber,
+                                address: matchedUser.address || userData.address,
+                                title: matchedUser.title || matchedRole,
+                                photoUrl: matchedUser.photoUrl || matchedUser.photo || userData.photoUrl,
+                            };
+                        }
                     }
                 }
             } catch (fetchErr) {
-                console.warn("Failed to fetch user profile details:", fetchErr);
+                console.warn("User profile fetch notice:", fetchErr);
             }
 
             localStorage.setItem("user", JSON.stringify(userData));
@@ -159,7 +176,7 @@ export default function Login() {
                 router.push("/dashboard");
             }, 1200);
         } catch (error: any) {
-            console.error("Login request error:", error);
+            console.warn("Login request notice:", error);
             const apiMessage = error.response?.data?.message || "Invalid credentials or backend connection error.";
             setErrors({
                 form: Array.isArray(apiMessage) ? apiMessage.join(", ") : apiMessage,

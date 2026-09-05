@@ -16,18 +16,68 @@ type CarouselProduct = {
     image: string;
 };
 
-const getProductImage = (name?: string, img?: string) => {
-    if (img && (img.startsWith("/") || img.startsWith("http"))) return img;
-    if (!name) return "/Brent Crude Oil.jpg";
-    const lower = name.toLowerCase();
-    if (lower.includes("crude") || lower.includes("brent")) return "/Brent Crude Oil.jpg";
-    if (lower.includes("diesel")) return "/Ultra-Low Sulfur Diesel.jpg";
-    if (lower.includes("gasoline") || lower.includes("petrol") || lower.includes("octane")) return "/Premium Unleaded Gasoline.jpg";
-    if (lower.includes("jet") || lower.includes("aviation") || lower.includes("turbine")) return "/Aviation Turbine Fuel (Jet A-1).jpg";
-    if (lower.includes("lpg") || lower.includes("gas") || lower.includes("cylinder")) return "/images.jpg";
-    if (lower.includes("heavy") || lower.includes("marine") || lower.includes("bunker") || lower.includes("hfo")) return "/Heavy Marine Fuel Oil (HFO).jpg";
+const PRODUCT_IMAGE_MAP: Record<number, string> = {
+    1: "/Brent Crude Oil.jpg",
+    2: "/Ultra-Low Sulfur Diesel.jpg",
+    3: "/Premium Unleaded Gasoline.jpg",
+    4: "/Aviation Turbine Fuel (Jet A-1).jpg",
+    5: "/images.jpg",
+    6: "/Heavy Marine Fuel Oil (HFO).jpg",
+};
+
+const getProductImage = (name?: string, img?: string, id?: number | string) => {
+    if (typeof window !== "undefined" && id) {
+        try {
+            const customStored = localStorage.getItem(`product_img_${id}`);
+            if (customStored) return customStored;
+        } catch {
+        }
+    }
+    if (img && (img.startsWith("/") || img.startsWith("http")) && img !== "/Brent Crude Oil.jpg") {
+        return img;
+    }
+    const lower = (name || "").toLowerCase();
+    if (lower.includes("lpg") || lower.includes("liquefied") || lower.includes("cylinder") || lower.includes("propane") || lower.includes("butane")) {
+        return "/images.jpg";
+    }
+    if (lower.includes("diesel") || lower.includes("sulfur") || lower.includes("ulsd") || lower.includes("gasoil")) {
+        return "/Ultra-Low Sulfur Diesel.jpg";
+    }
+    if (lower.includes("gasoline") || lower.includes("petrol") || lower.includes("octane") || lower.includes("unleaded") || lower.includes("mogas")) {
+        return "/Premium Unleaded Gasoline.jpg";
+    }
+    if (lower.includes("jet") || lower.includes("aviation") || lower.includes("turbine") || lower.includes("a-1") || lower.includes("kerosene")) {
+        return "/Aviation Turbine Fuel (Jet A-1).jpg";
+    }
+    if (lower.includes("marine") || lower.includes("bunker") || lower.includes("hfo") || lower.includes("heavy") || lower.includes("fuel oil")) {
+        return "/Heavy Marine Fuel Oil (HFO).jpg";
+    }
+    if (lower.includes("crude") || lower.includes("brent") || lower.includes("wti") || lower.includes("raw")) {
+        return "/Brent Crude Oil.jpg";
+    }
+    if (id !== undefined && id !== null) {
+        const numId = Number(id);
+        if (!isNaN(numId) && PRODUCT_IMAGE_MAP[numId]) {
+            return PRODUCT_IMAGE_MAP[numId];
+        }
+        if (!isNaN(numId) && numId > 0) {
+            const fallbackImages = [
+                "/Brent Crude Oil.jpg",
+                "/Ultra-Low Sulfur Diesel.jpg",
+                "/Premium Unleaded Gasoline.jpg",
+                "/Aviation Turbine Fuel (Jet A-1).jpg",
+                "/images.jpg",
+                "/Heavy Marine Fuel Oil (HFO).jpg",
+            ];
+            return fallbackImages[(numId - 1) % fallbackImages.length];
+        }
+    }
+    if (img && (img.startsWith("/") || img.startsWith("http"))) {
+        return img;
+    }
     return "/Brent Crude Oil.jpg";
 };
+
 
 const HERO_SLIDES = [
     {
@@ -85,6 +135,7 @@ export default function Home() {
             try {
                 const res = await axios.get(`${API_ENDPOINT}/product/list`, {
                     withCredentials: true,
+                    validateStatus: (status) => status < 500,
                 });
                 if (Array.isArray(res.data)) {
                     const mapped: CarouselProduct[] = res.data
@@ -98,7 +149,7 @@ export default function Home() {
                             stockLevel: typeof p.quantity === "number" 
                                 ? (p.quantity <= 0 ? "Out of Stock" : p.quantity < 1000 ? "Low Stock" : "In Stock") 
                                 : p.stockLevel || "In Stock",
-                            image: getProductImage(p.name, p.image),
+                            image: getProductImage(p.name, p.image, p.id),
                         }));
                     setProducts(mapped);
                 }
@@ -111,7 +162,6 @@ export default function Home() {
         fetchHomeProducts();
     }, []);
 
-    // Auto-advance hero carousel from right to left every 4 seconds
     useEffect(() => {
         if (!isAutoPlay) return;
         const timer = setInterval(() => {
@@ -120,7 +170,6 @@ export default function Home() {
         return () => clearInterval(timer);
     }, [isAutoPlay]);
 
-    // Manual scroll handlers for product carousel
     const handleScroll = (direction: "left" | "right") => {
         if (scrollContainerRef.current) {
             const scrollAmount = 380;
@@ -136,7 +185,6 @@ export default function Home() {
             <MyHeader name="Home" message="Centralized petroleum supply, dealer management, and delivery tracking" />
             <MyNavigation />
 
-            {/* Welcome Greeting Banner */}
             <div className="w-full bg-[#0F2747] text-white rounded-2xl p-6 sm:p-8 shadow-md mb-8 flex flex-col md:flex-row items-center justify-between gap-6 text-left border border-[#0F2747]/30">
                 <div>
                     <span className="text-xs uppercase font-extrabold tracking-wider bg-[#F59E0B]/20 text-[#F59E0B] px-3 py-1 rounded-full border border-[#F59E0B]/30">
@@ -190,7 +238,6 @@ export default function Home() {
                 </div>
             </div>
 
-            {/* HERO CAROUSEL (SLIDES FROM RIGHT TO LEFT) */}
             <div className="w-full mb-12">
                 <div className="flex items-center justify-between mb-3 px-1 text-left">
                     <div>
@@ -249,7 +296,6 @@ export default function Home() {
                         </div>
                     ))}
 
-                    {/* Carousel Arrow Controls */}
                     <div className="absolute left-4 right-4 top-1/2 -translate-y-1/2 flex justify-between z-20 pointer-events-none">
                         <button
                             onClick={() => setCurrentHeroSlide((prev) => (prev === 0 ? HERO_SLIDES.length - 1 : prev - 1))}
@@ -271,7 +317,6 @@ export default function Home() {
                         </button>
                     </div>
 
-                    {/* Indicator Dots */}
                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
                         {HERO_SLIDES.map((_, idx) => (
                             <button
@@ -287,7 +332,6 @@ export default function Home() {
                 </div>
             </div>
 
-            {/* PRODUCT STREAM CAROUSEL */}
             <div className="w-full mb-12">
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 px-1 text-left gap-2">
                     <div>
@@ -336,7 +380,6 @@ export default function Home() {
                     </div>
                 </div>
 
-                {/* Right-to-Left Carousel Container */}
                 <div className="w-full bg-[#FFFFFF] border border-[#E2E8F0] rounded-2xl p-4 md:p-6 shadow-sm overflow-hidden">
                     {loadingProducts ? (
                         <div className="flex flex-col justify-center items-center py-16">
@@ -349,10 +392,8 @@ export default function Home() {
                             <p className="text-xs">Verified oil products will appear here once listed.</p>
                         </div>
                     ) : isMarqueeMode ? (
-                        /* Infinite Continuous Right-to-Left Stream */
                         <div className="carousel w-full overflow-hidden">
                             <div className="animate-carousel-rtl flex gap-6">
-                                {/* First set of products */}
                                 {products.map((product) => (
                                     <div key={`prod-1-${product.id}`} className="carousel-item">
                                         <div className="card bg-[#FFFFFF] w-80 sm:w-96 shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-all text-left rounded-2xl">
@@ -362,7 +403,7 @@ export default function Home() {
                                                     alt={product.name}
                                                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                                                     onError={(e) => {
-                                                        e.currentTarget.src = "/Brent Crude Oil.jpg";
+                                                        e.currentTarget.src = getProductImage(product.name, undefined, product.id);
                                                     }}
                                                 />
                                             </figure>
@@ -404,7 +445,6 @@ export default function Home() {
                                     </div>
                                 ))}
 
-                                {/* Duplicate set to ensure seamless infinite looping right-to-left */}
                                 {products.map((product) => (
                                     <div key={`prod-2-${product.id}`} className="carousel-item">
                                         <div className="card bg-[#FFFFFF] w-80 sm:w-96 shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-all text-left rounded-2xl">
@@ -414,7 +454,7 @@ export default function Home() {
                                                     alt={product.name}
                                                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                                                     onError={(e) => {
-                                                        e.currentTarget.src = "/Brent Crude Oil.jpg";
+                                                        e.currentTarget.src = getProductImage(product.name, undefined, product.id);
                                                     }}
                                                 />
                                             </figure>
@@ -458,7 +498,6 @@ export default function Home() {
                             </div>
                         </div>
                     ) : (
-                        /* Manual Swipeable Carousel */
                         <div
                             ref={scrollContainerRef}
                             className="carousel carousel-center rounded-box w-full space-x-6 p-2 overflow-x-auto scroll-smooth"
@@ -472,7 +511,7 @@ export default function Home() {
                                                 alt={product.name}
                                                 className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                                                 onError={(e) => {
-                                                    e.currentTarget.src = "/Brent Crude Oil.jpg";
+                                                    e.currentTarget.src = getProductImage(product.name, undefined, product.id);
                                                 }}
                                             />
                                         </figure>
@@ -518,7 +557,6 @@ export default function Home() {
                 </div>
             </div>
 
-            {/* PLATFORM ROLES & FEATURES */}
             <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 text-left">
                 <div className="card bg-[#FFFFFF] p-6 rounded-2xl border border-[#E2E8F0] shadow-sm hover:border-[#0F2747]/40 transition-all">
                     <div className="w-10 h-10 rounded-xl bg-[#0F2747]/10 text-[#0F2747] flex items-center justify-center mb-3">

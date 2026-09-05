@@ -7,11 +7,6 @@ export interface EmailUniquenessResult {
     message?: string;
 }
 
-/**
- * Checks whether an email address is already registered in the system.
- * Cross-checks across all 4 database tables (Customers, Admins, Dealers, Suppliers).
- * Ensures that there can only be ONE account per email address across the entire platform.
- */
 export async function checkEmailUniqueness(email: string): Promise<EmailUniquenessResult> {
     if (!email || !email.includes("@")) {
         return { isUnique: true };
@@ -21,7 +16,6 @@ export async function checkEmailUniqueness(email: string): Promise<EmailUniquene
     const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
 
     try {
-        // Query /users/all to check against all 4 database tables simultaneously
         const resAll = await axios.get(`${API_ENDPOINT}/users/all`, {
             validateStatus: (status) => status < 500,
         });
@@ -52,7 +46,6 @@ export async function checkEmailUniqueness(email: string): Promise<EmailUniquene
         console.warn("Cross-table check /users/all error, falling back to /users/search:", err);
     }
 
-    // Fallback search check: /users/search?email=...
     try {
         const searchRes = await axios.get(
             `${API_ENDPOINT}/users/search?email=${encodeURIComponent(cleanEmail)}`,

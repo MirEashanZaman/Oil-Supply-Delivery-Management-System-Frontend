@@ -47,32 +47,49 @@ export default function Login() {
 
         try {
             const signInEmail = result.data.email;
-            const roles = ["customer", "dealer", "supplier", "admin"];
+            const roles = ["admin", "customer", "dealer", "supplier"];
             let loginSuccess = false;
             let matchedRole = "Customer";
             let lastErrorMessage = "";
+            let apiUserData: any = null;
+
+            const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
 
             // Automatically check against the 4 backend auth controllers
             for (const r of roles) {
-                try {
-                    const response = await axios.post(
-                        `http://localhost:8000/${r}/auth/signIn`,
-                        {
-                            email: result.data.email,
-                            password: result.data.password,
-                        },
-                        {
-                            withCredentials: true,
+                const candidateUrls = [
+                    `${API_ENDPOINT}/${r}/signin/`,
+                    `${API_ENDPOINT}/${r}/signin`,
+                    `${API_ENDPOINT}/${r}/auth/signIn`,
+                ];
+
+                for (const url of candidateUrls) {
+                    try {
+                        const response = await axios.post(
+                            url,
+                            {
+                                email: result.data.email,
+                                password: result.data.password,
+                            },
+                            {
+                                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                                withCredentials: true,
+                            }
+                        );
+                        if (response.data) {
+                            loginSuccess = true;
+                            matchedRole = r.charAt(0).toUpperCase() + r.slice(1);
+                            apiUserData = response.data;
+                            break;
                         }
-                    );
-                    if (response.data) {
-                        loginSuccess = true;
-                        matchedRole = r.charAt(0).toUpperCase() + r.slice(1);
-                        break;
+                    } catch (err: any) {
+                        if (err.response?.status !== 404) {
+                            lastErrorMessage = err.response?.data?.message || lastErrorMessage;
+                        }
                     }
-                } catch (err: any) {
-                    lastErrorMessage = err.response?.data?.message || lastErrorMessage;
                 }
+
+                if (loginSuccess) break;
             }
 
             if (!loginSuccess) {
@@ -84,27 +101,33 @@ export default function Login() {
             }
 
             let userData: {
+                id?: number;
                 email: string;
                 userName: string;
                 title: string;
                 phoneNumber?: string;
                 address?: string;
+                photoUrl?: string;
             } = {
-                email: signInEmail,
-                userName: signInEmail.split("@")[0],
-                title: matchedRole,
+                id: apiUserData?.id || apiUserData?.user?.id,
+                email: apiUserData?.email || apiUserData?.user?.email || signInEmail,
+                userName: apiUserData?.userName || apiUserData?.username || apiUserData?.user?.userName || signInEmail.split("@")[0],
+                title: apiUserData?.title || apiUserData?.role || matchedRole,
+                phoneNumber: apiUserData?.phoneNumber || apiUserData?.user?.phoneNumber,
+                address: apiUserData?.address || apiUserData?.user?.address,
+                photoUrl: apiUserData?.photoUrl || apiUserData?.photo,
             };
 
-            // Fetch profile data based on automatically detected role
+            // Fetch profile data if needed based on automatically detected role
             try {
                 const rolePath = matchedRole.toLowerCase();
-                let fetchUrl = `http://localhost:8000/${rolePath}/getallcustomer`;
+                let fetchUrl = `${API_ENDPOINT}/${rolePath}/getallcustomer`;
                 if (rolePath === "supplier") {
-                    fetchUrl = `http://localhost:8000/supplier/getallsupplier`;
+                    fetchUrl = `${API_ENDPOINT}/supplier/getallsupplier`;
                 } else if (rolePath === "dealer") {
-                    fetchUrl = `http://localhost:8000/dealer/all`;
+                    fetchUrl = `${API_ENDPOINT}/dealer/all`;
                 } else if (rolePath === "admin") {
-                    fetchUrl = `http://localhost:8000/admin/getallusers`;
+                    fetchUrl = `${API_ENDPOINT}/admin/getallusers`;
                 }
 
                 const responseAll = await axios.get(fetchUrl, {
@@ -117,11 +140,13 @@ export default function Login() {
                     );
                     if (matchedUser) {
                         userData = {
+                            id: matchedUser.id || userData.id,
                             email: matchedUser.email,
-                            userName: matchedUser.username || matchedUser.userName || signInEmail.split("@")[0],
-                            phoneNumber: matchedUser.phoneNumber,
-                            address: matchedUser.address,
+                            userName: matchedUser.username || matchedUser.userName || userData.userName,
+                            phoneNumber: matchedUser.phoneNumber || userData.phoneNumber,
+                            address: matchedUser.address || userData.address,
                             title: matchedUser.title || matchedRole,
+                            photoUrl: matchedUser.photoUrl || matchedUser.photo || userData.photoUrl,
                         };
                     }
                 }

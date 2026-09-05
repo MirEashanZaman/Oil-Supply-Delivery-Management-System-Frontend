@@ -345,6 +345,7 @@ export default function Dashboard() {
         try {
             const res = await axios.get(`${API_ENDPOINT}/product/list`, {
                 withCredentials: true,
+                validateStatus: (status) => status < 500,
             });
             if (Array.isArray(res.data)) {
                 const mapped: Product[] = res.data
@@ -396,6 +397,46 @@ export default function Dashboard() {
     };
 
     const fetchFullProfile = async (email: string, title?: string) => {
+        try {
+            const searchRes = await axios.get(`http://localhost:8000/users/search?email=${encodeURIComponent(email)}`, {
+                validateStatus: (status) => status < 500,
+            });
+            if (searchRes.status === 200 && searchRes.data?.user) {
+                const match = searchRes.data.user;
+                const r = searchRes.data.role || "customer";
+                const resolvedTitle = r.charAt(0).toUpperCase() + r.slice(1);
+                const fullUser: UserData = {
+                    id: match.id,
+                    email: match.email,
+                    userName: match.username || match.userName || email.split("@")[0],
+                    phoneNumber: match.phoneNumber,
+                    address: match.address,
+                    title: match.title || resolvedTitle,
+                    status: match.status || "active",
+                    photoUrl: match.filename ? `http://localhost:8000/customer/getimage/${match.filename}` : undefined,
+                };
+                setUser(fullUser);
+                if (match.status) setSupplierOperationalStatus(match.status);
+                localStorage.setItem("user", JSON.stringify(fullUser));
+
+                setEditUsername(fullUser.userName || "");
+                setEditPhone(match.phoneNumber || "");
+                setEditAddress(match.address || "");
+
+                fetchOrders(match.id, fullUser.title);
+                if (fullUser.title === "Dealer" || fullUser.title === "Supplier") {
+                    fetchCustomInventory(match.id, fullUser.title);
+                }
+                if (fullUser.title === "Admin") {
+                    fetchAdminMonitoringData();
+                    fetchAllMergedUsers();
+                }
+                return;
+            }
+        } catch (searchErr) {
+            console.warn("User lookup error:", searchErr);
+        }
+
         const url = getAllUsersUrl(title);
         try {
             const res = await axios.get(url, {
@@ -478,12 +519,13 @@ export default function Dashboard() {
             return;
         }
         try {
-            const res = await axios.get(`http://localhost:8000/admin/joiningdate?date=${selectedJoiningDate}`, {
+            const res = await axios.get(`http://localhost:8000/admin/joiningdate?date=${encodeURIComponent(selectedJoiningDate)}`, {
                 withCredentials: true,
+                validateStatus: (status) => status < 500,
             });
             setDateSearchResults(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
-            console.error("Date search error:", err);
+            console.warn("Date search error:", err);
             setDateSearchResults([]);
         }
     };
@@ -505,7 +547,7 @@ export default function Dashboard() {
         }
 
         try {
-            await axios.post(
+            const res = await axios.post(
                 `http://localhost:8000/admin/${newRole}`,
                 {
                     userName: newUserName,
@@ -515,20 +557,24 @@ export default function Dashboard() {
                     address: newUserAddress,
                     title: newRole.charAt(0).toUpperCase() + newRole.slice(1),
                 },
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
-            alert(`New ${newRole.toUpperCase()} user created successfully!`);
-            setIsCreateUserModalOpen(false);
-            setNewUserName("");
-            setNewUserEmail("");
-            setNewUserPassword("");
-            setNewUserPhone("");
-            setNewUserAddress("");
-            setNewUserEmailError("");
-            fetchAllMergedUsers();
-            fetchAdminMonitoringData();
+            if (res.status === 200 || res.status === 201) {
+                alert(`New ${newRole.toUpperCase()} user created successfully!`);
+                setIsCreateUserModalOpen(false);
+                setNewUserName("");
+                setNewUserEmail("");
+                setNewUserPassword("");
+                setNewUserPhone("");
+                setNewUserAddress("");
+                setNewUserEmailError("");
+                fetchAllMergedUsers();
+                fetchAdminMonitoringData();
+            } else {
+                alert(res.data?.message || "Failed to create user.");
+            }
         } catch (err: any) {
-            console.error("Create user failed:", err);
+            console.warn("Create user failed:", err);
             const apiMsg = err.response?.data?.message || "Failed to create user.";
             if (err.response?.status === 409) {
                 setNewUserEmailError(`Email "${newUserEmail}" already exists in the system. There can only be one account per email.`);
@@ -547,20 +593,24 @@ export default function Dashboard() {
         }
 
         try {
-            await axios.patch(
+            const res = await axios.patch(
                 `http://localhost:8000/admin/${role}/${editingUser.id}`,
                 {
                     userName: editTargetUserName,
                     phoneNumber: editTargetPhone,
                     address: editTargetAddress,
                 },
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
-            alert("User updated successfully by Admin!");
-            setEditingUser(null);
-            fetchAllMergedUsers();
+            if (res.status === 200 || res.status === 204) {
+                alert("User updated successfully by Admin!");
+                setEditingUser(null);
+                fetchAllMergedUsers();
+            } else {
+                alert(res.data?.message || "Failed to update user.");
+            }
         } catch (err: any) {
-            console.error("Update user failed:", err);
+            console.warn("Update user failed:", err);
             alert(err.response?.data?.message || "Failed to update user.");
         }
     };
@@ -579,15 +629,20 @@ export default function Dashboard() {
         if (!confirmDelete) return;
 
         try {
-            await axios.delete(`http://localhost:8000/admin/${role}/${targetUser.id}`, {
+            const res = await axios.delete(`http://localhost:8000/admin/${role}/${targetUser.id}`, {
                 withCredentials: true,
+                validateStatus: (status) => status < 500,
             });
-            alert("User and linked records successfully purged by Admin.");
-            fetchAllMergedUsers();
-            fetchAdminMonitoringData();
-            if (user?.id) fetchOrders(user.id, user.title);
+            if (res.status === 200 || res.status === 204) {
+                alert("User and linked records successfully purged by Admin.");
+                fetchAllMergedUsers();
+                fetchAdminMonitoringData();
+                if (user?.id) fetchOrders(user.id, user.title);
+            } else {
+                alert(res.data?.message || "Failed to delete user.");
+            }
         } catch (err: any) {
-            console.error("Delete user failed:", err);
+            console.warn("Delete user failed:", err);
             alert(err.response?.data?.message || "Failed to delete user.");
         }
     };
@@ -595,21 +650,25 @@ export default function Dashboard() {
     const handleAdminUpdateOrder = async () => {
         if (!editingOrder) return;
         try {
-            await axios.patch(
+            const res = await axios.patch(
                 `http://localhost:8000/admin/order/${editingOrder.id}`,
                 {
                     status: editOrderStatus,
                     quantity: editOrderQuantity,
                     address: editOrderAddress,
                 },
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
-            alert(`Order #${editingOrder.id} successfully updated by Admin!`);
-            setEditingOrder(null);
-            if (user?.id) fetchOrders(user.id, user.title);
-            fetchAdminMonitoringData();
+            if (res.status === 200 || res.status === 204) {
+                alert(`Order #${editingOrder.id} successfully updated by Admin!`);
+                setEditingOrder(null);
+                if (user?.id) fetchOrders(user.id, user.title);
+                fetchAdminMonitoringData();
+            } else {
+                alert(res.data?.message || "Failed to update order.");
+            }
         } catch (err: any) {
-            console.error("Update order failed:", err);
+            console.warn("Update order failed:", err);
             alert(err.response?.data?.message || "Failed to update order.");
         }
     };
@@ -619,20 +678,27 @@ export default function Dashboard() {
         if (!confirmDelete) return;
 
         try {
-            await axios.delete(`http://localhost:8000/admin/order/${orderId}`, {
+            const res = await axios.delete(`http://localhost:8000/admin/order/${orderId}`, {
                 withCredentials: true,
+                validateStatus: (status) => status < 500,
             });
-            alert(`Order #${orderId} and associated records purged successfully.`);
-            if (user?.id) fetchOrders(user.id, user.title);
-            fetchAdminMonitoringData();
+            if (res.status === 200 || res.status === 204) {
+                alert(`Order #${orderId} and associated records purged successfully.`);
+                if (user?.id) fetchOrders(user.id, user.title);
+                fetchAdminMonitoringData();
+            } else {
+                alert(res.data?.message || "Failed to delete order.");
+            }
         } catch (err: any) {
-            console.error("Delete order failed:", err);
+            console.warn("Delete order failed:", err);
             alert(err.response?.data?.message || "Failed to delete order.");
         }
     };
 
     const fetchCustomInventory = async (partyId: number, title?: string) => {
         const r = getRolePath(title);
+        if (r !== "dealer" && r !== "supplier") return;
+        if (!partyId) return;
         try {
             const res = await axios.get(`http://localhost:8000/${r}/${partyId}/products`, {
                 withCredentials: true,
@@ -662,16 +728,25 @@ export default function Dashboard() {
     const handleAssignProduct = async (product: Product) => {
         if (!user || !user.id) return;
         const r = getRolePath(user.title);
+        if (r !== "dealer" && r !== "supplier") {
+            alert("Only authorized Dealers and Suppliers can assign products to stock inventory or supply portfolio.");
+            return;
+        }
         try {
-            await axios.post(
+            const res = await axios.post(
                 `http://localhost:8000/${r}/${user.id}/products`,
                 { productIds: [product.id] },
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
-            alert(`Product "${product.name}" added to your ${user.title === "Supplier" ? "Supply Portfolio" : "Stock Inventory"}!`);
-            fetchCustomInventory(user.id, user.title);
+            if (res.status === 200 || res.status === 201) {
+                alert(`Product "${product.name}" added to your ${user.title === "Supplier" ? "Supply Portfolio" : "Stock Inventory"}!`);
+                fetchCustomInventory(user.id, user.title);
+            } else {
+                console.warn("Stock assignment response:", res.status, res.data);
+                alert(res.data?.message || "Failed to assign product to stock inventory.");
+            }
         } catch (err: any) {
-            console.error("Failed to assign product:", err);
+            console.warn("Failed to assign product:", err);
             alert(err.response?.data?.message || "Failed to assign product.");
         }
     };
@@ -683,13 +758,19 @@ export default function Dashboard() {
 
         const r = getRolePath(user.title);
         try {
-            await axios.delete(`http://localhost:8000/${r}/${user.id}/products/${productId}`, {
+            const res = await axios.delete(`http://localhost:8000/${r}/${user.id}/products/${productId}`, {
                 withCredentials: true,
+                validateStatus: (status) => status < 500,
             });
-            alert("Product removed successfully.");
-            fetchCustomInventory(user.id, user.title);
+            if (res.status === 200 || res.status === 204) {
+                alert("Product removed successfully.");
+                fetchCustomInventory(user.id, user.title);
+            } else {
+                console.warn("Remove product response:", res.status, res.data);
+                alert(res.data?.message || "Failed to remove product.");
+            }
         } catch (err) {
-            console.error("Failed to remove product:", err);
+            console.warn("Failed to remove product:", err);
             alert("Failed to remove product.");
         }
     };
@@ -719,8 +800,13 @@ export default function Dashboard() {
                     price: Number(newProductPrice),
                     quantity: Number(newProductQuantity),
                 },
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
+
+            if (createRes.status !== 200 && createRes.status !== 201) {
+                alert(createRes.data?.message || "Failed to publish product.");
+                return;
+            }
 
             const createdProduct = createRes.data;
             if (createdProduct && createdProduct.id && newProductImage) {
@@ -736,7 +822,7 @@ export default function Dashboard() {
                     await axios.post(
                         `${API_ENDPOINT}/${role}/${user.id}/products`,
                         { productIds: [createdProduct.id] },
-                        { withCredentials: true }
+                        { withCredentials: true, validateStatus: (status) => status < 500 }
                     );
                 } catch (assignErr) {
                     console.warn("Could not automatically link to inventory:", assignErr);
@@ -755,7 +841,7 @@ export default function Dashboard() {
                 fetchCustomInventory(user.id, user.title);
             }
         } catch (err: any) {
-            console.error("Failed to post product:", err);
+            console.warn("Failed to post product:", err);
             alert(err.response?.data?.message || "Failed to publish product.");
         } finally {
             setIsSubmittingNewProduct(false);
@@ -766,17 +852,21 @@ export default function Dashboard() {
         if (!user || !user.id) return;
         const newStatus = supplierOperationalStatus === "active" ? "inactive" : "active";
         try {
-            await axios.put(
+            const res = await axios.put(
                 `http://localhost:8000/supplier/updatesupplier/${user.id}/${newStatus}`,
                 {},
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
-            setSupplierOperationalStatus(newStatus);
-            setUser({ ...user, status: newStatus });
-            alert(`Supplier operational status updated to: ${newStatus.toUpperCase()}`);
-            fetchFullProfile(user.email, user.title);
+            if (res.status === 200 || res.status === 204) {
+                setSupplierOperationalStatus(newStatus);
+                setUser({ ...user, status: newStatus });
+                alert(`Supplier operational status updated to: ${newStatus.toUpperCase()}`);
+                fetchFullProfile(user.email, user.title);
+            } else {
+                alert(res.data?.message || "Failed to update operational status.");
+            }
         } catch (err) {
-            console.error("Failed to update status:", err);
+            console.warn("Failed to update status:", err);
             alert("Failed to update operational status.");
         }
     };
@@ -791,21 +881,25 @@ export default function Dashboard() {
 
         setIsSubmittingWholesale(true);
         try {
-            await axios.post(
+            const res = await axios.post(
                 "http://localhost:8000/dealer/placeorder",
                 {
                     productId: wholesaleProduct.id,
                     supplierId: Number(supplierId),
                     quantity: wholesaleQuantity,
                 },
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
 
-            alert(`Wholesale bulk order for ${wholesaleQuantity} units of ${wholesaleProduct.name} placed successfully!`);
-            setWholesaleProduct(null);
-            if (user.id) fetchOrders(user.id, user.title);
+            if (res.status === 200 || res.status === 201) {
+                alert(`Wholesale bulk order for ${wholesaleQuantity} units of ${wholesaleProduct.name} placed successfully!`);
+                setWholesaleProduct(null);
+                if (user.id) fetchOrders(user.id, user.title);
+            } else {
+                alert(res.data?.message || "Wholesale ordering failed.");
+            }
         } catch (err: any) {
-            console.error("Wholesale ordering failed:", err);
+            console.warn("Wholesale ordering failed:", err);
             alert(err.response?.data?.message || "Wholesale ordering failed.");
         } finally {
             setIsSubmittingWholesale(false);
@@ -815,6 +909,7 @@ export default function Dashboard() {
     const fetchOrders = async (id: number, title?: string) => {
         const r = getRolePath(title);
         if (r === "customer") {
+            if (!id) return;
             try {
                 const res = await axios.get(`http://localhost:8000/customer/${id}/orders`, {
                     withCredentials: true,
@@ -913,36 +1008,40 @@ export default function Dashboard() {
         }
 
         try {
-            await axios.post(
+            const res = await axios.post(
                 `http://localhost:8000/customer/${user.id}/orders`,
                 orderPayload,
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
 
-            try {
-                const partnerName = sourcingChoice === "supplier"
-                    ? (availableSuppliers.find(s => s.id === Number(selectedPartyId))?.userName || "Direct Refinery Supplier")
-                    : (availableDealers.find(d => d.id === Number(selectedPartyId))?.userName || "Authorized Local Dealer");
+            if (res.status === 200 || res.status === 201) {
+                try {
+                    const partnerName = sourcingChoice === "supplier"
+                        ? (availableSuppliers.find(s => s.id === Number(selectedPartyId))?.userName || "Direct Refinery Supplier")
+                        : (availableDealers.find(d => d.id === Number(selectedPartyId))?.userName || "Authorized Local Dealer");
 
-                await axios.post(
-                    "http://localhost:8000/customer/send-email",
-                    {
-                        to: user.email,
-                        subject: `Order Confirmed - ${checkoutProduct.name}`,
-                        text: `Dear ${user.userName},\n\nYour order has been placed successfully!\n\nProduct: ${checkoutProduct.name}\nQuantity: ${orderQuantity}\nSourced From: ${sourcingChoice.toUpperCase()} (${partnerName})\nTotal Paid: $${totalAmount}\nDelivery Address: ${deliveryAddress}\n\nThank you!`,
-                    },
-                    { withCredentials: true }
-                );
-            } catch (mailErr) {
-                console.warn("Mail dispatch error:", mailErr);
+                    await axios.post(
+                        "http://localhost:8000/customer/send-email",
+                        {
+                            to: user.email,
+                            subject: `Order Confirmed - ${checkoutProduct.name}`,
+                            text: `Dear ${user.userName},\n\nYour order has been placed successfully!\n\nProduct: ${checkoutProduct.name}\nQuantity: ${orderQuantity}\nSourced From: ${sourcingChoice.toUpperCase()} (${partnerName})\nTotal Paid: $${totalAmount}\nDelivery Address: ${deliveryAddress}\n\nThank you!`,
+                        },
+                        { withCredentials: true, validateStatus: (status) => status < 500 }
+                    );
+                } catch (mailErr) {
+                    console.warn("Mail dispatch error:", mailErr);
+                }
+
+                alert(`Order placed successfully!\nTotal: $${totalAmount}\nEmail receipt sent to ${user.email}`);
+                setCheckoutProduct(null);
+                fetchOrders(user.id, user.title);
+                setActiveTab("orders");
+            } else {
+                alert(res.data?.message || "Order placement failed.");
             }
-
-            alert(`Order placed successfully!\nTotal: $${totalAmount}\nEmail receipt sent to ${user.email}`);
-            setCheckoutProduct(null);
-            fetchOrders(user.id, user.title);
-            setActiveTab("orders");
         } catch (err: any) {
-            console.error("Order submission failed:", err);
+            console.warn("Order submission failed:", err);
             alert(err.response?.data?.message || "Order placement failed.");
         } finally {
             setIsSubmittingOrder(false);
@@ -953,32 +1052,36 @@ export default function Dashboard() {
         if (!user) return;
         const r = getRolePath(user.title);
         try {
-            await axios.put(
+            const res = await axios.put(
                 `http://localhost:8000/${r}/confirmorder/${orderId}`,
                 { status: status },
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
 
-            if (customerEmail) {
-                try {
-                    await axios.post(
-                        `http://localhost:8000/${r}/send-email`,
-                        {
-                            to: customerEmail,
-                            subject: `Order #${orderId} Update: ${status.toUpperCase()}`,
-                            text: `Dear Customer,\n\nYour order #${orderId} has been marked as '${status}'.\n\nThank you!`,
-                        },
-                        { withCredentials: true }
-                    );
-                } catch (mailErr) {
-                    console.warn("Mail send error:", mailErr);
+            if (res.status === 200 || res.status === 204) {
+                if (customerEmail) {
+                    try {
+                        await axios.post(
+                            `http://localhost:8000/${r}/send-email`,
+                            {
+                                to: customerEmail,
+                                subject: `Order #${orderId} Update: ${status.toUpperCase()}`,
+                                text: `Dear Customer,\n\nYour order #${orderId} has been marked as '${status}'.\n\nThank you!`,
+                            },
+                            { withCredentials: true, validateStatus: (status) => status < 500 }
+                        );
+                    } catch (mailErr) {
+                        console.warn("Mail send error:", mailErr);
+                    }
                 }
-            }
 
-            alert(`Order #${orderId} marked as ${status.toUpperCase()} successfully!`);
-            fetchOrders(user.id || 1, user.title);
+                alert(`Order #${orderId} marked as ${status.toUpperCase()} successfully!`);
+                fetchOrders(user.id || 1, user.title);
+            } else {
+                alert(res.data?.message || `Failed to ${status} order.`);
+            }
         } catch (err) {
-            console.error(`Failed to ${status} order:`, err);
+            console.warn(`Failed to ${status} order:`, err);
             alert(`Failed to update order status.`);
         }
     };
@@ -993,32 +1096,36 @@ export default function Dashboard() {
         }
 
         try {
-            await axios.post(
+            const res = await axios.post(
                 `http://localhost:8000/${r}/scheduledelivery`,
                 { orderId, deliveryDate: date },
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
 
-            if (customerEmail) {
-                try {
-                    await axios.post(
-                        `http://localhost:8000/${r}/send-email`,
-                        {
-                            to: customerEmail,
-                            subject: `Delivery Scheduled for Order #${orderId}`,
-                            text: `Dear Customer,\n\nYour order #${orderId} has been scheduled for delivery on ${date}.\n\nThank you!`,
-                        },
-                        { withCredentials: true }
-                    );
-                } catch (mailErr) {
-                    console.warn("Mail send notice:", mailErr);
+            if (res.status === 200 || res.status === 201) {
+                if (customerEmail) {
+                    try {
+                        await axios.post(
+                            `http://localhost:8000/${r}/send-email`,
+                            {
+                                to: customerEmail,
+                                subject: `Delivery Scheduled for Order #${orderId}`,
+                                text: `Dear Customer,\n\nYour order #${orderId} has been scheduled for delivery on ${date}.\n\nThank you!`,
+                            },
+                            { withCredentials: true, validateStatus: (status) => status < 500 }
+                        );
+                    } catch (mailErr) {
+                        console.warn("Mail send notice:", mailErr);
+                    }
                 }
-            }
 
-            alert(`Delivery successfully scheduled for ${date}! Email update dispatched.`);
-            fetchOrders(user.id || 1, user.title);
+                alert(`Delivery successfully scheduled for ${date}! Email update dispatched.`);
+                fetchOrders(user.id || 1, user.title);
+            } else {
+                alert(res.data?.message || "Failed to schedule delivery.");
+            }
         } catch (err) {
-            console.error("Failed to schedule delivery:", err);
+            console.warn("Failed to schedule delivery:", err);
             alert("Failed to schedule delivery.");
         }
     };
@@ -1029,13 +1136,18 @@ export default function Dashboard() {
         if (!confirmCancel) return;
 
         try {
-            await axios.delete(`http://localhost:8000/customer/${user.id}/orders/${orderId}`, {
+            const res = await axios.delete(`http://localhost:8000/customer/${user.id}/orders/${orderId}`, {
                 withCredentials: true,
+                validateStatus: (status) => status < 500,
             });
-            alert("Order cancelled successfully.");
-            fetchOrders(user.id, user.title);
+            if (res.status === 200 || res.status === 204) {
+                alert("Order cancelled successfully.");
+                fetchOrders(user.id, user.title);
+            } else {
+                alert(res.data?.message || "Failed to cancel order.");
+            }
         } catch (err) {
-            console.error("Failed to cancel order:", err);
+            console.warn("Failed to cancel order:", err);
             alert("Failed to cancel order.");
         }
     };
@@ -1044,15 +1156,19 @@ export default function Dashboard() {
         setTrackedOrderId(orderId);
         setTrackedOrderStatus("Connecting to delivery tracker...");
         const r = getRolePath(user?.title);
+        const trackingRole = r === "dealer" ? "dealer" : "customer";
         try {
-            const res = await axios.get(`http://localhost:8000/${r}/trackorder/${orderId}`, {
+            const res = await axios.get(`http://localhost:8000/${trackingRole}/trackorder/${orderId}`, {
                 withCredentials: true,
+                validateStatus: (status) => status < 500,
             });
-            if (res.data) {
+            if (res.status === 200 && res.data) {
                 setTrackedOrderStatus(res.data.status || res.data.message || "In Transit / Scheduled");
+            } else {
+                setTrackedOrderStatus("In Transit / Carrier Processing");
             }
         } catch (err) {
-            console.error("Tracking failed:", err);
+            console.warn("Tracking fallback:", err);
             setTrackedOrderStatus("In Transit / Carrier Processing");
         }
     };
@@ -1062,19 +1178,23 @@ export default function Dashboard() {
         const r = getRolePath(user.title);
         setProfileStatus("");
         try {
-            await axios.patch(
+            const res = await axios.patch(
                 `http://localhost:8000/${r}/${user.id}`,
                 {
                     userName: editUsername,
                     phoneNumber: editPhone,
                     address: editAddress,
                 },
-                { withCredentials: true }
+                { withCredentials: true, validateStatus: (status) => status < 500 }
             );
-            setProfileStatus("Profile details updated successfully!");
-            fetchFullProfile(user.email, user.title);
+            if (res.status === 200 || res.status === 204) {
+                setProfileStatus("Profile details updated successfully!");
+                fetchFullProfile(user.email, user.title);
+            } else {
+                setProfileStatus(res.data?.message || "Failed to update profile settings.");
+            }
         } catch (err) {
-            console.error("Failed to update profile:", err);
+            console.warn("Failed to update profile:", err);
             setProfileStatus("Failed to update profile settings.");
         }
     };
@@ -1086,15 +1206,19 @@ export default function Dashboard() {
 
         const r = getRolePath(user.title);
         try {
-            let url = `http://localhost:8000/customer/${user.userName}`;
+            let url = `http://localhost:8000/customer/${encodeURIComponent(user.userName || user.email.split("@")[0])}`;
             if (r === "supplier" || r === "dealer" || r === "admin") {
                 url = `http://localhost:8000/${r}/${user.id}`;
             }
-            await axios.delete(url, { withCredentials: true });
-            alert("Your account has been deleted.");
-            handleLogout();
+            const res = await axios.delete(url, { withCredentials: true, validateStatus: (status) => status < 500 });
+            if (res.status === 200 || res.status === 204) {
+                alert("Your account has been deleted.");
+                handleLogout();
+            } else {
+                alert(res.data?.message || "Failed to delete account. Please try again.");
+            }
         } catch (err) {
-            console.error("Account deletion failed:", err);
+            console.warn("Account deletion failed:", err);
             alert("Failed to delete account. Please try again.");
         }
     };
@@ -1105,12 +1229,13 @@ export default function Dashboard() {
             return;
         }
         try {
-            const res = await axios.get(`http://localhost:8000/customer/search?userName=${searchQuery}`, {
+            const res = await axios.get(`http://localhost:8000/customer/search?userName=${encodeURIComponent(searchQuery)}`, {
                 withCredentials: true,
+                validateStatus: (status) => status < 500,
             });
             setSearchResults(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
-            console.error("User search failed:", err);
+            console.warn("User search fallback:", err);
         }
     };
 

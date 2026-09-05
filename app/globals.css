@@ -3,19 +3,23 @@
 
 @theme {
   --color-primary: #0F2747;
-  --color-primary-hover: #1A3A60;
-  --color-secondary: #D97706;
-  --color-secondary-hover: #B45309;
-  --color-accent: #0284C7;
-  --color-soft-gray: #F8FAFC;
-  --color-dark-slate: #0F172A;
-  --color-success-green: #16A34A;
-  --color-warning-amber: #F59E0B;
-  --color-error-red: #EF4444;
+  --color-primary-hover: #163860;
+  --color-accent: #F59E0B;
+  --color-accent-hover: #D97706;
+  --color-bg-light: #F5F7FA;
   --color-card-white: #FFFFFF;
+  --color-success-green: #16A34A;
+  --color-error-red: #DC2626;
+  --color-dark-slate: #1E293B;
   --color-secondary-gray: #64748B;
 }
 
+body {
+  background-color: #F5F7FA;
+  color: #1E293B;
+}
+
+/* User-Specified Action Buttons */
 .btn-primary {
   background-color: #0F2747 !important;
   color: #FFFFFF !important;
@@ -23,19 +27,34 @@
 }
 
 .btn-primary:hover {
-  background-color: #1A3A60 !important;
-  border-color: #1A3A60 !important;
+  background-color: #163860 !important;
+  border-color: #163860 !important;
+}
+
+.btn-accent {
+  background-color: #F59E0B !important;
+  color: #1E293B !important;
+  border-color: #F59E0B !important;
+  font-weight: 700 !important;
+}
+
+.btn-accent:hover {
+  background-color: #D97706 !important;
+  border-color: #D97706 !important;
+  color: #FFFFFF !important;
 }
 
 .btn-secondary {
-  background-color: #D97706 !important;
-  color: #FFFFFF !important;
-  border-color: #D97706 !important;
+  background-color: #F59E0B !important;
+  color: #1E293B !important;
+  border-color: #F59E0B !important;
+  font-weight: 700 !important;
 }
 
 .btn-secondary:hover {
-  background-color: #B45309 !important;
-  border-color: #B45309 !important;
+  background-color: #D97706 !important;
+  border-color: #D97706 !important;
+  color: #FFFFFF !important;
 }
 
 @keyframes marquee-rtl {

@@ -2407,8 +2407,8 @@ export default function Dashboard() {
                     <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[620px] max-h-[90vh] overflow-y-auto text-left p-6 md:p-8">
                         <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-6">
                             <div>
-                                <h2 className="text-xl font-extrabold text-dark-slate flex items-center gap-2">
-                                    <span>📦</span> Post & Upload Oil Product
+                                <h2 className="text-xl font-extrabold text-dark-slate">
+                                    Post & Upload Oil Product
                                 </h2>
                                 <p className="text-xs text-secondary-gray mt-1">
                                     Publish a new petroleum grade or fuel product to the active network catalog.
@@ -2424,7 +2424,9 @@ export default function Dashboard() {
 
                         {/* Informative Role Banner */}
                         <div className="bg-blue-50/70 border border-blue-200 rounded-lg p-3.5 mb-6 flex items-start gap-3">
-                            <span className="text-xl">ℹ️</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
                             <div className="text-xs text-slate-700 leading-relaxed">
                                 <strong className="font-semibold text-primary">
                                     Posting as {isSupplier ? "Refinery Supplier" : isDealer ? "Authorized Dealer" : "System Admin"}:
@@ -2575,7 +2577,7 @@ export default function Dashboard() {
                                             <span>Publishing Product...</span>
                                         </>
                                     ) : (
-                                        <span>🚀 Publish & Post Product</span>
+                                        <span>Publish & Post Product</span>
                                     )}
                                 </button>
                             </div>

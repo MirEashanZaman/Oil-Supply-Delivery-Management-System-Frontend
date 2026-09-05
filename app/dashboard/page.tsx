@@ -144,7 +144,7 @@ export default function Dashboard() {
     const router = useRouter();
     const [user, setUser] = useState<UserData | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<"products" | "orders" | "inventory" | "users_crud" | "monitoring" | "profile" | "directory" | "messages">("products");
+    const [activeTab, setActiveTab] = useState<"products" | "orders" | "inventory" | "users_crud" | "monitoring" | "profile" | "messages">("products");
     const [products, setProducts] = useState<Product[]>([]);
     const [productsLoading, setProductsLoading] = useState(false);
     const [productSearchQuery, setProductSearchQuery] = useState<string>("");
@@ -188,6 +188,21 @@ export default function Dashboard() {
 
     const [monitorMetrics, setMonitorMetrics] = useState<any>(null);
     const [allMergedUsers, setAllMergedUsers] = useState<SystemUser[]>([]);
+    const [userSearchQuery, setUserSearchQuery] = useState<string>("");
+    const [selectedUserRole, setSelectedUserRole] = useState<string>("All");
+
+    const filteredUsers = useMemo(() => {
+        const query = userSearchQuery.trim().toLowerCase();
+        return allMergedUsers.filter((u) => {
+            const uName = (u.userName || u.username || "").toLowerCase();
+            const uEmail = (u.email || "").toLowerCase();
+            const matchesQuery = !query || uName.includes(query) || uEmail.includes(query);
+            const role = (u.title || u.role || "user").toLowerCase();
+            const matchesRole = selectedUserRole === "All" || role === selectedUserRole.toLowerCase();
+            return matchesQuery && matchesRole;
+        });
+    }, [allMergedUsers, userSearchQuery, selectedUserRole]);
+
     const [selectedJoiningDate, setSelectedJoiningDate] = useState<string>("");
     const [dateSearchResults, setDateSearchResults] = useState<SystemUser[]>([]);
 
@@ -249,9 +264,6 @@ export default function Dashboard() {
     const [editAddress, setEditAddress] = useState("");
     const [profileStatus, setProfileStatus] = useState("");
     const [dbLookupStatus, setDbLookupStatus] = useState("");
-
-    const [searchQuery, setSearchQuery] = useState("");
-    const [searchResults, setSearchResults] = useState<any[]>([]);
 
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
         {
@@ -1376,22 +1388,6 @@ export default function Dashboard() {
         }
     };
 
-    const handleSearchUsers = async () => {
-        if (!searchQuery) {
-            setSearchResults([]);
-            return;
-        }
-        try {
-            const res = await axios.get(`http://localhost:8000/customer/search?userName=${encodeURIComponent(searchQuery)}`, {
-                withCredentials: true,
-                validateStatus: (status) => status < 500,
-            });
-            setSearchResults(Array.isArray(res.data) ? res.data : []);
-        } catch (err) {
-            console.warn("User search fallback:", err);
-        }
-    };
-
     const handleLogout = () => {
         localStorage.removeItem("user");
         router.push("/login");
@@ -1566,18 +1562,6 @@ export default function Dashboard() {
                         Profile Settings
                     </button>
 
-                    {!isAdmin && (
-                        <button
-                            onClick={() => setActiveTab("directory")}
-                            className={`btn btn-sm font-semibold transition-all cursor-pointer ${activeTab === "directory"
-                                    ? "btn-primary text-white shadow-md"
-                                    : "btn-ghost text-slate-600 hover:bg-base-200 border border-base-300"
-                                }`}
-                        >
-                            Directory Search
-                        </button>
-                    )}
-
                     <button
                         onClick={() => setActiveTab("messages")}
                         className={`btn btn-sm font-semibold transition-all cursor-pointer ${activeTab === "messages"
@@ -1681,87 +1665,184 @@ export default function Dashboard() {
 
             {isAdmin && activeTab === "users_crud" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
-                    <div className="flex justify-between items-center mb-6">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
                         <div>
-                            <h1 className="text-2xl font-extrabold text-dark-slate">Global User Management (CRUD)</h1>
-                            <p className="text-sm text-secondary-gray">Full authority to Create, Update, and Delete Customers, Dealers, and Suppliers.</p>
+                            <h1 className="text-2xl font-extrabold text-dark-slate">Global User Management & Search</h1>
+                            <p className="text-sm text-secondary-gray">Search users by username across all system roles, create new users, and manage account details.</p>
                         </div>
                         <button
                             onClick={() => setIsCreateUserModalOpen(true)}
-                            className="bg-green-600 text-white px-5 py-2.5 rounded text-sm font-bold hover:bg-green-700 transition-colors cursor-pointer shadow-sm"
+                            className="bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-green-700 transition-colors cursor-pointer shadow-sm self-start sm:self-auto"
                         >
                             + Create New User
                         </button>
                     </div>
 
-                    <div className="bg-card-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-[#FAFBFD] border-b border-[#E2E8F0] text-xs font-bold text-secondary-gray uppercase">
-                                <tr>
-                                    <th className="p-4">ID</th>
-                                    <th className="p-4">User / Entity Name</th>
-                                    <th className="p-4">Role / Category</th>
-                                    <th className="p-4">Email</th>
-                                    <th className="p-4">Phone</th>
-                                    <th className="p-4">Address / Hub</th>
-                                    <th className="p-4 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {allMergedUsers.map((u, idx) => {
-                                    const role = (u.title || u.role || "User").toLowerCase();
-                                    const isTargetAdmin = role === "admin";
+                    <div className="bg-card-white border border-[#E2E8F0] p-4 sm:p-5 rounded-2xl mb-6 shadow-sm">
+                        <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between mb-3">
+                            <div className="relative flex-1">
+                                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-secondary-gray">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    value={userSearchQuery}
+                                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                                    placeholder="Search users by username or email..."
+                                    className="w-full pl-10 pr-10 py-2.5 border border-[#E2E8F0] rounded-xl text-sm bg-[#F8FAFC] text-dark-slate placeholder-secondary-gray focus:outline-none focus:border-primary focus:bg-card-white transition-all shadow-inner"
+                                />
+                                {userSearchQuery && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setUserSearchQuery("")}
+                                        className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-secondary-gray hover:text-dark-slate cursor-pointer"
+                                        title="Clear search"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                )}
+                            </div>
 
-                                    return (
-                                        <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
-                                            <td className="p-4 font-mono font-bold text-xs text-secondary-gray">#{u.id}</td>
-                                            <td className="p-4 font-bold text-dark-slate">{u.userName || u.username || u.email.split("@")[0]}</td>
-                                            <td className="p-4">
-                                                <span className={`text-xs px-2.5 py-0.5 rounded font-bold uppercase ${role === "admin"
-                                                        ? "bg-purple-100 text-purple-800 border border-purple-200"
-                                                        : role === "dealer"
-                                                            ? "bg-amber-100 text-amber-800 border border-amber-200"
-                                                            : role === "supplier"
-                                                                ? "bg-blue-100 text-primary border border-blue-200"
-                                                                : "bg-green-100 text-success-green border border-green-200"
-                                                    }`}>
-                                                    {role}
-                                                </span>
-                                            </td>
-                                            <td className="p-4 text-secondary-gray">{u.email}</td>
-                                            <td className="p-4 text-secondary-gray">{u.phoneNumber || "N/A"}</td>
-                                            <td className="p-4 text-secondary-gray">{u.address || "N/A"}</td>
-                                            <td className="p-4 text-right">
-                                                {isTargetAdmin ? (
-                                                    <span className="text-xs text-gray-400 font-semibold italic">Admin Protected</span>
-                                                ) : (
-                                                    <div className="flex justify-end gap-2">
-                                                        <button
-                                                            onClick={() => {
-                                                                setEditingUser(u);
-                                                                setEditTargetUserName(u.userName || u.username || "");
-                                                                setEditTargetPhone(u.phoneNumber || "");
-                                                                setEditTargetAddress(u.address || "");
-                                                            }}
-                                                            className="bg-primary text-white text-xs font-semibold px-3 py-1.5 rounded hover:bg-primary/90 transition-colors cursor-pointer"
-                                                        >
-                                                            Edit (PATCH)
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleAdminDeleteUser(u)}
-                                                            className="bg-error-red text-white text-xs font-semibold px-3 py-1.5 rounded hover:bg-error-red/90 transition-colors cursor-pointer"
-                                                        >
-                                                            Delete (DELETE)
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                            <div className="flex items-center justify-between sm:justify-end gap-3 text-xs">
+                                <span className="font-semibold text-secondary-gray whitespace-nowrap">
+                                    Showing <span className="font-bold text-dark-slate">{filteredUsers.length}</span> of <span className="font-bold text-dark-slate">{allMergedUsers.length}</span> users
+                                </span>
+                                {(userSearchQuery || selectedUserRole !== "All") && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setUserSearchQuery("");
+                                            setSelectedUserRole("All");
+                                        }}
+                                        className="text-xs text-error-red hover:underline font-bold cursor-pointer whitespace-nowrap"
+                                    >
+                                        Reset Filters
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-[#F1F5F9]">
+                            <span className="text-xs font-bold text-secondary-gray mr-1">Filter by Role:</span>
+                            {["All", "Customer", "Dealer", "Supplier", "Admin"].map((roleOption) => (
+                                <button
+                                    key={roleOption}
+                                    type="button"
+                                    onClick={() => setSelectedUserRole(roleOption)}
+                                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                                        selectedUserRole === roleOption
+                                            ? "bg-primary text-white shadow-sm"
+                                            : "bg-[#F1F5F9] text-secondary-gray hover:bg-[#E2E8F0] hover:text-dark-slate"
+                                    }`}
+                                >
+                                    {roleOption}
+                                </button>
+                            ))}
+                        </div>
                     </div>
+
+                    {allMergedUsers.length === 0 ? (
+                        <div className="bg-card-white p-8 rounded-2xl border border-[#E2E8F0] text-center shadow-sm max-w-xl mx-auto">
+                            <p className="text-secondary-gray font-medium mb-1">No users currently registered in the database.</p>
+                        </div>
+                    ) : filteredUsers.length === 0 ? (
+                        <div className="bg-card-white p-8 rounded-2xl border border-[#E2E8F0] text-center shadow-sm max-w-xl mx-auto my-6">
+                            <div className="w-12 h-12 rounded-full bg-[#F1F5F9] flex items-center justify-center mx-auto mb-3 text-secondary-gray">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                            <h3 className="text-base font-bold text-dark-slate mb-1">No matching users found</h3>
+                            <p className="text-xs text-secondary-gray mb-4">
+                                No user accounts match username {userSearchQuery ? `"${userSearchQuery}"` : ""} {selectedUserRole !== "All" ? `under role "${selectedUserRole}"` : ""}.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setUserSearchQuery("");
+                                    setSelectedUserRole("All");
+                                }}
+                                className="px-4 py-2 bg-primary hover:bg-primary/90 text-white font-bold text-xs rounded-xl cursor-pointer transition-colors shadow-sm"
+                            >
+                                Reset Search & Filters
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="bg-card-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-[#FAFBFD] border-b border-[#E2E8F0] text-xs font-bold text-secondary-gray uppercase">
+                                        <tr>
+                                            <th className="p-4">ID</th>
+                                            <th className="p-4">User / Entity Name</th>
+                                            <th className="p-4">Role / Category</th>
+                                            <th className="p-4">Email</th>
+                                            <th className="p-4">Phone</th>
+                                            <th className="p-4">Address / Hub</th>
+                                            <th className="p-4 text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {filteredUsers.map((u, idx) => {
+                                            const role = (u.title || u.role || "User").toLowerCase();
+                                            const isTargetAdmin = role === "admin";
+
+                                            return (
+                                                <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                                                    <td className="p-4 font-mono font-bold text-xs text-secondary-gray">#{u.id}</td>
+                                                    <td className="p-4 font-bold text-dark-slate">{u.userName || u.username || u.email.split("@")[0]}</td>
+                                                    <td className="p-4">
+                                                        <span className={`text-xs px-2.5 py-0.5 rounded font-bold uppercase ${role === "admin"
+                                                                ? "bg-purple-100 text-purple-800 border border-purple-200"
+                                                                : role === "dealer"
+                                                                    ? "bg-amber-100 text-amber-800 border border-amber-200"
+                                                                    : role === "supplier"
+                                                                        ? "bg-blue-100 text-primary border border-blue-200"
+                                                                        : "bg-green-100 text-success-green border border-green-200"
+                                                            }`}>
+                                                            {role}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-4 text-secondary-gray">{u.email}</td>
+                                                    <td className="p-4 text-secondary-gray">{u.phoneNumber || "N/A"}</td>
+                                                    <td className="p-4 text-secondary-gray">{u.address || "N/A"}</td>
+                                                    <td className="p-4 text-right">
+                                                        {isTargetAdmin ? (
+                                                            <span className="text-xs text-gray-400 font-semibold italic">Admin Protected</span>
+                                                        ) : (
+                                                            <div className="flex justify-end gap-2">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setEditingUser(u);
+                                                                        setEditTargetUserName(u.userName || u.username || "");
+                                                                        setEditTargetPhone(u.phoneNumber || "");
+                                                                        setEditTargetAddress(u.address || "");
+                                                                    }}
+                                                                    className="bg-primary text-white text-xs font-semibold px-3 py-1.5 rounded hover:bg-primary/90 transition-colors cursor-pointer"
+                                                                >
+                                                                    Edit (PATCH)
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleAdminDeleteUser(u)}
+                                                                    className="bg-error-red text-white text-xs font-semibold px-3 py-1.5 rounded hover:bg-error-red/90 transition-colors cursor-pointer"
+                                                                >
+                                                                    Delete (DELETE)
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -2445,42 +2526,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {activeTab === "directory" && (
-                <div className="w-full max-w-[1200px] text-left animate-fadeIn">
-                    <h1 className="text-2xl font-extrabold text-dark-slate mb-6">System User Directory</h1>
-
-                    <div className="bg-card-white p-5 rounded-lg border border-[#E2E8F0] shadow-sm mb-6 max-w-[600px] flex gap-2">
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            placeholder="Search users by name in database..."
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="flex-grow p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none"
-                        />
-                        <button
-                            onClick={handleSearchUsers}
-                            className="bg-primary text-white px-5 py-2.5 rounded font-semibold text-sm hover:bg-primary/90 transition-colors cursor-pointer"
-                        >
-                            Search
-                        </button>
-                    </div>
-
-                    {searchResults.length > 0 && (
-                        <div className="mb-8">
-                            <h2 className="text-lg font-bold text-dark-slate mb-3">Search Results</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {searchResults.map((userObj: any) => (
-                                    <div key={userObj.id} className="bg-card-white p-4 rounded-lg border border-primary/20 shadow-sm">
-                                        <h3 className="font-bold text-primary">{userObj.username || userObj.userName}</h3>
-                                        <p className="text-xs text-secondary-gray">Email: {userObj.email}</p>
-                                        <p className="text-xs text-secondary-gray">Role: {userObj.title || user.title}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
 
             {activeTab === "messages" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn mb-12">

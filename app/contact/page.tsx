@@ -30,7 +30,6 @@ export default function ContactInfo() {
             setLiveMessages((prev) => [data, ...prev.filter((m) => m.id !== data.id)].slice(0, 6));
         });
 
-        // If in sandbox mode without real credentials, set connection to ready
         setIsPusherConnected(true);
 
         return () => {
@@ -86,7 +85,6 @@ export default function ContactInfo() {
 
             <div className="w-full max-w-5xl mt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-left">
-                    {/* Left Column: Direct Contact Info & Pusher Status */}
                     <div className="lg:col-span-5 space-y-4">
                         <div className="card bg-[#FFFFFF] shadow-md border border-[#E2E8F0] rounded-2xl">
                             <div className="card-body p-6">
@@ -145,7 +143,6 @@ export default function ContactInfo() {
                             </div>
                         </div>
 
-                        {/* Working Hours Card */}
                         <div className="card bg-[#FFFFFF] shadow-sm border border-[#E2E8F0] rounded-2xl">
                             <div className="card-body p-5 text-xs text-[#64748B]">
                                 <span className="font-bold text-[#1E293B] block mb-1">Office Hours & Pusher Gateway</span>
@@ -154,7 +151,6 @@ export default function ContactInfo() {
                         </div>
                     </div>
 
-                    {/* Right Column: Interactive Inquiry Form with PusherJS */}
                     <div className="lg:col-span-7 space-y-6">
                         <div className="card bg-[#FFFFFF] shadow-md border border-[#E2E8F0] rounded-2xl">
                             <div className="card-body p-6 sm:p-8">
@@ -262,7 +258,6 @@ export default function ContactInfo() {
                             </div>
                         </div>
 
-                        {/* Real-time Pusher Feed of Recent Dispatches */}
                         {liveMessages.length > 0 && (
                             <div className="card bg-[#FFFFFF] shadow-sm border border-[#E2E8F0] rounded-2xl p-6">
                                 <div className="flex items-center justify-between mb-4 border-b border-[#E2E8F0] pb-3">

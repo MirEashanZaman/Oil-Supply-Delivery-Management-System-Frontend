@@ -30,7 +30,6 @@ export default function Navigation() {
 
     return (
         <nav className="navbar bg-[#0F2747] text-white shadow-lg rounded-2xl px-4 py-2.5 my-3 w-full max-w-[1240px] flex items-center justify-between gap-3 border border-[#163860] transition-all">
-            {/* Brand / Project Name */}
             <div className="flex items-center gap-2.5">
                 <Link href="/" className="flex items-center gap-2 text-white font-black text-sm sm:text-base tracking-tight hover:opacity-95 transition-opacity">
                     <span className="w-8 h-8 rounded-lg bg-[#F59E0B] text-[#1E293B] flex items-center justify-center font-black text-xs shadow-sm">
@@ -41,7 +40,6 @@ export default function Navigation() {
                 </Link>
             </div>
 
-            {/* Navigation Links */}
             <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-center">
                 <Link
                     href="/"
@@ -88,7 +86,6 @@ export default function Navigation() {
                 )}
             </div>
 
-            {/* Auth Actions */}
             <div className="flex items-center gap-2">
                 {!user ? (
                     <div className="flex items-center gap-2">

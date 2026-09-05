@@ -135,6 +135,7 @@ export default function Home() {
             try {
                 const res = await axios.get(`${API_ENDPOINT}/product/list`, {
                     withCredentials: true,
+                    validateStatus: (status) => status < 500,
                 });
                 if (Array.isArray(res.data)) {
                     const mapped: CarouselProduct[] = res.data

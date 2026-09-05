@@ -40,7 +40,6 @@ export default function ProductDetails({
     const [product, setProduct] = useState<Product | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // PusherJS Message Inquiry States
     const [isInquireModalOpen, setIsInquireModalOpen] = useState(false);
     const [inquiryName, setInquiryName] = useState("");
     const [inquiryEmail, setInquiryEmail] = useState("");
@@ -127,7 +126,6 @@ export default function ProductDetails({
             <MyNavigation />
 
             <div className="w-full max-w-4xl mt-6">
-                {/* Breadcrumbs */}
                 <div className="breadcrumbs text-xs text-[#64748B] mb-4 px-1">
                     <ul>
                         <li><Link href="/" className="hover:text-[#0F2747]">Home</Link></li>
@@ -180,7 +178,6 @@ export default function ProductDetails({
                                     {product.description || "High quality fuel supply delivered safely to authorized commercial and retail dealers."}
                                 </p>
 
-                                {/* Quick Spec Sheet */}
                                 <div className="mt-5 pt-4 border-t border-[#E2E8F0] space-y-2 text-xs">
                                     <div className="flex justify-between py-1 border-b border-[#F1F5F9]">
                                         <span className="text-[#64748B]">Item Code</span>
@@ -242,7 +239,6 @@ export default function ProductDetails({
                 )}
             </div>
 
-            {/* PUSHERJS PRODUCT INQUIRY MODAL */}
             {isInquireModalOpen && product && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
                     <div className="bg-[#FFFFFF] rounded-2xl shadow-xl border border-[#E2E8F0] w-full max-w-[500px] text-left p-6 sm:p-8">

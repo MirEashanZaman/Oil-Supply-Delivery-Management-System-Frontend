@@ -138,26 +138,26 @@ export default function Registration() {
 
     return (
         <div className="w-full flex flex-col items-center">
-            <MyHeader name="Registration" message="Create an enterprise account to join the oil supply network" />
+            <MyHeader name="Registration" message="Create your account for the Oil Supply & Delivery Management System" />
             <MyNavigation />
 
-            <div className="mt-8 w-full max-w-2xl">
-                <div className="card bg-base-100 shadow-xl border border-base-300">
+            <div className="mt-6 w-full max-w-2xl">
+                <div className="card bg-[#FFFFFF] shadow-md border border-[#E2E8F0] rounded-2xl">
                     <div className="card-body p-6 sm:p-8">
                         <div className="flex items-center gap-3 mb-4">
-                            <div className="p-3 bg-primary/10 text-primary rounded-xl">
+                            <div className="p-3 bg-[#0F2747]/10 text-[#0F2747] rounded-xl">
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                                 </svg>
                             </div>
                             <div>
-                                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Create Account</h1>
-                                <p className="text-xs text-slate-500 font-medium">Register as a customer, dealer, supplier, or administrator</p>
+                                <h1 className="text-2xl font-bold text-[#1E293B] tracking-tight">Create Account</h1>
+                                <p className="text-xs text-[#64748B]">Choose your role and register to begin trading or ordering</p>
                             </div>
                         </div>
 
                         {successMessage && (
-                            <div role="alert" className="alert alert-success shadow-sm mb-5 text-sm py-3">
+                            <div role="alert" className="alert bg-[#16A34A] text-white shadow-sm mb-5 text-sm py-2.5 rounded-xl border-none">
                                 <svg className="w-5 h-5 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
@@ -166,7 +166,7 @@ export default function Registration() {
                         )}
 
                         {errors.form && (
-                            <div role="alert" className="alert alert-error shadow-sm mb-5 text-sm py-3 text-white bg-error">
+                            <div role="alert" className="alert bg-[#DC2626] text-white shadow-sm mb-5 text-sm py-2.5 rounded-xl border-none">
                                 <svg className="w-5 h-5 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
@@ -178,13 +178,13 @@ export default function Registration() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="form-control w-full">
                                     <label className="label pb-1" htmlFor="title">
-                                        <span className="label-text font-semibold text-slate-700">Account Role / Title</span>
+                                        <span className="label-text font-semibold text-[#1E293B]">Account Role</span>
                                     </label>
                                     <select
                                         id="title"
                                         value={title}
                                         onChange={(e) => setTitle(e.target.value)}
-                                        className="select select-bordered w-full focus:outline-primary"
+                                        className="select select-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none rounded-xl"
                                     >
                                         <option value="Customer">Customer</option>
                                         <option value="Supplier">Supplier</option>
@@ -192,13 +192,13 @@ export default function Registration() {
                                         <option value="Admin">Admin</option>
                                     </select>
                                     {errors.title && (
-                                        <span className="text-error text-xs font-medium mt-1">{errors.title}</span>
+                                        <span className="text-[#DC2626] text-xs font-medium mt-1">{errors.title}</span>
                                     )}
                                 </div>
 
                                 <div className="form-control w-full">
                                     <label className="label pb-1" htmlFor="username">
-                                        <span className="label-text font-semibold text-slate-700">Username</span>
+                                        <span className="label-text font-semibold text-[#1E293B]">Username</span>
                                     </label>
                                     <input
                                         id="username"
@@ -206,10 +206,10 @@ export default function Registration() {
                                         value={username}
                                         placeholder="johndoe"
                                         onChange={(e) => setUsername(e.target.value)}
-                                        className={`input input-bordered w-full focus:outline-primary ${errors.username ? "input-error" : ""}`}
+                                        className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none rounded-xl ${errors.username ? "border-[#DC2626]" : ""}`}
                                     />
                                     {errors.username && (
-                                        <span className="text-error text-xs font-medium mt-1">{errors.username}</span>
+                                        <span className="text-[#DC2626] text-xs font-medium mt-1">{errors.username}</span>
                                     )}
                                 </div>
                             </div>
@@ -217,24 +217,24 @@ export default function Registration() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="form-control w-full">
                                     <label className="label pb-1" htmlFor="email">
-                                        <span className="label-text font-semibold text-slate-700">Email Address</span>
+                                        <span className="label-text font-semibold text-[#1E293B]">Email Address</span>
                                     </label>
                                     <input
                                         id="email"
                                         type="email"
                                         value={email}
-                                        placeholder="john@company.com"
+                                        placeholder="user@example.com"
                                         onChange={(e) => setEmail(e.target.value)}
-                                        className={`input input-bordered w-full focus:outline-primary ${errors.email ? "input-error" : ""}`}
+                                        className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none rounded-xl ${errors.email ? "border-[#DC2626]" : ""}`}
                                     />
                                     {errors.email && (
-                                        <span className="text-error text-xs font-medium mt-1">{errors.email}</span>
+                                        <span className="text-[#DC2626] text-xs font-medium mt-1">{errors.email}</span>
                                     )}
                                 </div>
 
                                 <div className="form-control w-full">
                                     <label className="label pb-1" htmlFor="phoneNumber">
-                                        <span className="label-text font-semibold text-slate-700">Phone Number</span>
+                                        <span className="label-text font-semibold text-[#1E293B]">Phone Number</span>
                                     </label>
                                     <input
                                         id="phoneNumber"
@@ -242,17 +242,17 @@ export default function Registration() {
                                         value={phoneNumber}
                                         placeholder="+1 234 567 890"
                                         onChange={(e) => setPhoneNumber(e.target.value)}
-                                        className={`input input-bordered w-full focus:outline-primary ${errors.phoneNumber ? "input-error" : ""}`}
+                                        className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none rounded-xl ${errors.phoneNumber ? "border-[#DC2626]" : ""}`}
                                     />
                                     {errors.phoneNumber && (
-                                        <span className="text-error text-xs font-medium mt-1">{errors.phoneNumber}</span>
+                                        <span className="text-[#DC2626] text-xs font-medium mt-1">{errors.phoneNumber}</span>
                                     )}
                                 </div>
                             </div>
 
                             <div className="form-control w-full">
                                 <label className="label pb-1" htmlFor="address">
-                                    <span className="label-text font-semibold text-slate-700">Physical / Operating Address</span>
+                                    <span className="label-text font-semibold text-[#1E293B]">Delivery / Office Address</span>
                                 </label>
                                 <input
                                     id="address"
@@ -260,33 +260,33 @@ export default function Registration() {
                                     value={address}
                                     placeholder="123 Industrial Boulevard, Sector 4"
                                     onChange={(e) => setAddress(e.target.value)}
-                                    className={`input input-bordered w-full focus:outline-primary ${errors.address ? "input-error" : ""}`}
+                                    className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none rounded-xl ${errors.address ? "border-[#DC2626]" : ""}`}
                                 />
                                 {errors.address && (
-                                    <span className="text-error text-xs font-medium mt-1">{errors.address}</span>
+                                    <span className="text-[#DC2626] text-xs font-medium mt-1">{errors.address}</span>
                                 )}
                             </div>
 
                             <div className="form-control w-full">
                                 <label className="label pb-1" htmlFor="photo">
-                                    <span className="label-text font-semibold text-slate-700">Profile / Identification Photo</span>
+                                    <span className="label-text font-semibold text-[#1E293B]">Profile Photo</span>
                                 </label>
                                 <input
                                     id="photo"
                                     type="file"
                                     accept="image/*"
                                     onChange={(e) => setPhoto(e.target.files?.[0] || null)}
-                                    className="file-input file-input-bordered file-input-primary w-full"
+                                    className="file-input file-input-bordered w-full bg-[#FFFFFF] border-[#CBD5E1] text-[#1E293B] rounded-xl"
                                 />
                                 {errors.photo && (
-                                    <span className="text-error text-xs font-medium mt-1">{errors.photo}</span>
+                                    <span className="text-[#DC2626] text-xs font-medium mt-1">{errors.photo}</span>
                                 )}
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="form-control w-full">
                                     <label className="label pb-1" htmlFor="password">
-                                        <span className="label-text font-semibold text-slate-700">Password</span>
+                                        <span className="label-text font-semibold text-[#1E293B]">Password</span>
                                     </label>
                                     <input
                                         id="password"
@@ -294,16 +294,16 @@ export default function Registration() {
                                         value={password}
                                         placeholder="Min. 8 characters"
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className={`input input-bordered w-full focus:outline-primary ${errors.password ? "input-error" : ""}`}
+                                        className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none rounded-xl ${errors.password ? "border-[#DC2626]" : ""}`}
                                     />
                                     {errors.password && (
-                                        <span className="text-error text-xs font-medium mt-1">{errors.password}</span>
+                                        <span className="text-[#DC2626] text-xs font-medium mt-1">{errors.password}</span>
                                     )}
                                 </div>
 
                                 <div className="form-control w-full">
                                     <label className="label pb-1" htmlFor="confirmPassword">
-                                        <span className="label-text font-semibold text-slate-700">Confirm Password</span>
+                                        <span className="label-text font-semibold text-[#1E293B]">Confirm Password</span>
                                     </label>
                                     <input
                                         id="confirmPassword"
@@ -311,10 +311,10 @@ export default function Registration() {
                                         value={confirmPassword}
                                         placeholder="Re-enter password"
                                         onChange={(e) => setConfirmPassword(e.target.value)}
-                                        className={`input input-bordered w-full focus:outline-primary ${errors.confirmPassword ? "input-error" : ""}`}
+                                        className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none rounded-xl ${errors.confirmPassword ? "border-[#DC2626]" : ""}`}
                                     />
                                     {errors.confirmPassword && (
-                                        <span className="text-error text-xs font-medium mt-1">{errors.confirmPassword}</span>
+                                        <span className="text-[#DC2626] text-xs font-medium mt-1">{errors.confirmPassword}</span>
                                     )}
                                 </div>
                             </div>
@@ -323,7 +323,7 @@ export default function Registration() {
                                 <button
                                     type="submit"
                                     disabled={isSubmitting}
-                                    className="btn btn-primary w-full shadow-md text-white font-semibold flex items-center justify-center gap-2"
+                                    className="btn bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold w-full border-none shadow-sm rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors"
                                 >
                                     {isSubmitting ? (
                                         <>
@@ -342,12 +342,12 @@ export default function Registration() {
                             </div>
                         </form>
 
-                        <div className="divider text-xs text-slate-400 my-4">OR</div>
+                        <div className="divider text-xs text-[#64748B] my-4">OR</div>
 
                         <div className="text-center">
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-[#64748B]">
                                 Already have an account?{" "}
-                                <a href="/login" className="link link-primary font-semibold hover:underline">
+                                <a href="/login" className="text-[#0F2747] font-bold hover:underline">
                                     Sign in here
                                 </a>
                             </p>

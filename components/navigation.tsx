@@ -2,50 +2,123 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 export default function Navigation() {
     const router = useRouter();
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const linkClass = "text-white no-underline font-medium text-[15px] hover:text-secondary cursor-pointer";
-    const separatorClass = "text-secondary-gray";
+    const pathname = usePathname();
+    const [user, setUser] = useState<any>(null);
 
     useEffect(() => {
-        const user = localStorage.getItem("user");
-        setIsLoggedIn(!!user);
+        const stored = localStorage.getItem("user");
+        if (stored) {
+            try {
+                setUser(JSON.parse(stored));
+            } catch (e) {
+                setUser(null);
+            }
+        }
     }, []);
 
     const handleLogout = () => {
         localStorage.removeItem("user");
-        setIsLoggedIn(false);
+        setUser(null);
         router.push("/login");
     };
 
-    return (
-        <nav className="bg-primary px-5 py-4 rounded my-4 flex gap-2.5 items-center flex-wrap">
-            <Link href="/" className={linkClass}>Home</Link>
-            <span className={separatorClass}>|</span>
-            <Link href="/about" className={linkClass}>About Us</Link>
-            <span className={separatorClass}>|</span>
-            <Link href="/contact" className={linkClass}>Contact Us</Link>
+    const isActive = (path: string) => pathname === path;
 
-            {!isLoggedIn ? (
-                <>
-                    <span className={separatorClass}>|</span>
-                    <Link href="/login" className={linkClass}>Login</Link>
-                    <span className={separatorClass}>|</span>
-                    <Link href="/registration" className={linkClass}>Registration</Link>
-                </>
-            ) : (
-                <>
-                    <span className={separatorClass}>|</span>
-                    <Link href="/dashboard" className={linkClass}>Dashboard</Link>
-                    <span className={separatorClass}>|</span>
-                    <button onClick={handleLogout} className="bg-transparent border-none text-white no-underline font-medium text-[15px] hover:text-secondary cursor-pointer p-0">
-                        Logout
-                    </button>
-                </>
-            )}
+    return (
+        <nav className="navbar bg-[#0F2747] text-white shadow-lg rounded-2xl px-4 py-2.5 my-3 w-full max-w-[1240px] flex items-center justify-between gap-3 border border-[#163860] transition-all">
+            {/* Brand / Project Name */}
+            <div className="flex items-center gap-2.5">
+                <Link href="/" className="flex items-center gap-2 text-white font-black text-sm sm:text-base tracking-tight hover:opacity-95 transition-opacity">
+                    <span className="w-8 h-8 rounded-lg bg-[#F59E0B] text-[#1E293B] flex items-center justify-center font-black text-xs shadow-sm">
+                        OS
+                    </span>
+                    <span className="hidden sm:inline font-bold">Oil Supply & Delivery Management System</span>
+                    <span className="sm:hidden font-bold">OSDMS</span>
+                </Link>
+            </div>
+
+            {/* Navigation Links */}
+            <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-center">
+                <Link
+                    href="/"
+                    className={`btn btn-sm rounded-lg text-xs sm:text-sm font-semibold border-none transition-all ${
+                        isActive("/")
+                            ? "bg-[#163860] text-[#F59E0B] font-bold shadow-sm"
+                            : "btn-ghost text-slate-200 hover:bg-[#163860]/70 hover:text-white"
+                    }`}
+                >
+                    Home
+                </Link>
+                <Link
+                    href="/about"
+                    className={`btn btn-sm rounded-lg text-xs sm:text-sm font-semibold border-none transition-all ${
+                        isActive("/about")
+                            ? "bg-[#163860] text-[#F59E0B] font-bold shadow-sm"
+                            : "btn-ghost text-slate-200 hover:bg-[#163860]/70 hover:text-white"
+                    }`}
+                >
+                    About Us
+                </Link>
+                <Link
+                    href="/contact"
+                    className={`btn btn-sm rounded-lg text-xs sm:text-sm font-semibold border-none transition-all ${
+                        isActive("/contact")
+                            ? "bg-[#163860] text-[#F59E0B] font-bold shadow-sm"
+                            : "btn-ghost text-slate-200 hover:bg-[#163860]/70 hover:text-white"
+                    }`}
+                >
+                    Contact
+                </Link>
+
+                {user && (
+                    <Link
+                        href="/dashboard"
+                        className={`btn btn-sm rounded-lg text-xs sm:text-sm font-semibold border-none transition-all ${
+                            isActive("/dashboard")
+                                ? "bg-[#F59E0B] text-[#1E293B] font-bold shadow-sm"
+                                : "btn-ghost text-slate-200 hover:bg-[#163860]/70 hover:text-white"
+                        }`}
+                    >
+                        Dashboard
+                    </Link>
+                )}
+            </div>
+
+            {/* Auth Actions */}
+            <div className="flex items-center gap-2">
+                {!user ? (
+                    <div className="flex items-center gap-2">
+                        <Link
+                            href="/login"
+                            className="btn btn-sm bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold rounded-lg border-none shadow-sm text-xs sm:text-sm"
+                        >
+                            Sign In
+                        </Link>
+                        <Link
+                            href="/registration"
+                            className="btn btn-sm btn-outline text-white border-slate-400 hover:bg-white/10 hover:border-white rounded-lg text-xs sm:text-sm font-semibold"
+                        >
+                            Register
+                        </Link>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <span className="badge bg-[#163860] text-[#F59E0B] border border-[#F59E0B]/30 font-bold text-xs px-2.5 py-1 hidden md:inline-flex">
+                            {user.title || "User"}
+                        </span>
+                        <button
+                            onClick={handleLogout}
+                            className="btn btn-sm btn-ghost text-red-300 hover:bg-red-950/40 hover:text-red-200 rounded-lg font-bold text-xs sm:text-sm cursor-pointer"
+                        >
+                            Sign Out
+                        </button>
+                    </div>
+                )}
+            </div>
         </nav>
     );
 }

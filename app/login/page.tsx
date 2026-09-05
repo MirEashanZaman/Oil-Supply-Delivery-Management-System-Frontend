@@ -70,7 +70,7 @@ export default function Login() {
                             validateStatus: (status) => status < 500,
                         }
                     );
-                    if (response.status === 200 && response.data) {
+                    if ((response.status === 200 || response.status === 201) && response.data) {
                         loginSuccess = true;
                         matchedRole = r.charAt(0).toUpperCase() + r.slice(1);
                         apiUserData = response.data;
@@ -170,65 +170,114 @@ export default function Login() {
     };
 
     return (
-        <>
-            <MyHeader name="Login" message="access your account!" />
+        <div className="w-full flex flex-col items-center">
+            <MyHeader name="Login" message="Sign in to your Oil Supply & Delivery account" />
             <MyNavigation />
 
-            <div className="mt-5 w-full max-w-[500px] bg-card-white p-6 rounded-lg border border-[#E2E8F0] shadow-md text-left">
-                <h1 className="mt-0 text-dark-slate mb-5 text-2xl font-bold">Login</h1>
+            <div className="mt-6 w-full max-w-md">
+                <div className="card bg-[#FFFFFF] shadow-md border border-[#E2E8F0] rounded-2xl">
+                    <div className="card-body p-6 sm:p-8">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-3 bg-[#0F2747]/10 text-[#0F2747] rounded-xl">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-[#1E293B] tracking-tight">Account Login</h1>
+                                <p className="text-xs text-[#64748B]">Sign in to access orders, delivery status, and inventory</p>
+                            </div>
+                        </div>
 
-                {successMessage && (
-                    <p className="text-success-green font-bold mb-4">{successMessage}</p>
-                )}
-
-                {errors.form && (
-                    <p className="text-error-red font-bold mb-4">{errors.form}</p>
-                )}
-
-                <form onSubmit={handleSubmit} noValidate>
-                    <div className="mb-4">
-                        <label htmlFor="email" className="block mb-1 font-medium text-dark-slate">
-                            Email Address:
-                        </label>
-                        <input
-                            id="email"
-                            type="email"
-                            value={email}
-                            placeholder="Enter your email"
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
-                        />
-                        {errors.email && (
-                            <span className="text-error-red text-sm block mt-1">{errors.email}</span>
+                        {successMessage && (
+                            <div role="alert" className="alert bg-[#16A34A] text-white shadow-sm mb-5 text-sm py-2.5 rounded-xl border-none">
+                                <svg className="w-5 h-5 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>{successMessage}</span>
+                            </div>
                         )}
-                    </div>
 
-                    <div className="mb-5">
-                        <label htmlFor="password" className="block mb-1 font-medium text-dark-slate">
-                            Password:
-                        </label>
-                        <input
-                            id="password"
-                            type="password"
-                            value={password}
-                            placeholder="Enter your password"
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
-                        />
-                        {errors.password && (
-                            <span className="text-error-red text-sm block mt-1">{errors.password}</span>
+                        {errors.form && (
+                            <div role="alert" className="alert bg-[#DC2626] text-white shadow-sm mb-5 text-sm py-2.5 rounded-xl border-none">
+                                <svg className="w-5 h-5 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>{errors.form}</span>
+                            </div>
                         )}
-                    </div>
 
-                    <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="w-full bg-primary text-white border-none py-3 px-4 rounded text-base font-semibold cursor-pointer transition hover:bg-primary/95 shadow-sm disabled:bg-primary/50"
-                    >
-                        {isSubmitting ? "Logging in..." : "Login"}
-                    </button>
-                </form>
+                        <form onSubmit={handleSubmit} noValidate className="space-y-4">
+                            <div className="form-control w-full">
+                                <label className="label pb-1" htmlFor="email">
+                                    <span className="label-text font-semibold text-[#1E293B]">Email Address</span>
+                                </label>
+                                <input
+                                    id="email"
+                                    type="email"
+                                    value={email}
+                                    placeholder="user@example.com"
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none transition rounded-xl ${errors.email ? "border-[#DC2626]" : ""}`}
+                                />
+                                {errors.email && (
+                                    <span className="text-[#DC2626] text-xs font-medium mt-1">{errors.email}</span>
+                                )}
+                            </div>
+
+                            <div className="form-control w-full">
+                                <label className="label pb-1" htmlFor="password">
+                                    <span className="label-text font-semibold text-[#1E293B]">Password</span>
+                                </label>
+                                <input
+                                    id="password"
+                                    type="password"
+                                    value={password}
+                                    placeholder="Enter password"
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none transition rounded-xl ${errors.password ? "border-[#DC2626]" : ""}`}
+                                />
+                                {errors.password && (
+                                    <span className="text-[#DC2626] text-xs font-medium mt-1">{errors.password}</span>
+                                )}
+                            </div>
+
+                            <div className="pt-2">
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="btn bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold w-full border-none shadow-sm rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <span className="loading loading-spinner loading-sm"></span>
+                                            Signing in...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>Sign In</span>
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                            </svg>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+
+                        <div className="divider text-xs text-[#64748B] my-4">OR</div>
+
+                        <div className="text-center">
+                            <p className="text-xs text-[#64748B]">
+                                Don&apos;t have an account yet?{" "}
+                                <a href="/registration" className="text-[#0F2747] font-bold hover:underline">
+                                    Register here
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </>
+        </div>
     );
 }

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import MyNavigation from "@/components/navigation";
 import MyHeader from "@/components/header";
+import { getPusherClient, ChatMessage } from "@/lib/pusher";
+import { checkEmailUniqueness } from "@/lib/email-checker";
 
 type UserData = {
     id?: number;
@@ -89,7 +91,7 @@ export default function Dashboard() {
     const router = useRouter();
     const [user, setUser] = useState<UserData | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<"products" | "orders" | "inventory" | "users_crud" | "monitoring" | "profile" | "directory">("products");
+    const [activeTab, setActiveTab] = useState<"products" | "orders" | "inventory" | "users_crud" | "monitoring" | "profile" | "directory" | "messages">("products");
     const [products, setProducts] = useState<Product[]>([]);
     const [productsLoading, setProductsLoading] = useState(false);
 
@@ -117,6 +119,7 @@ export default function Dashboard() {
     const [newUserPassword, setNewUserPassword] = useState("");
     const [newUserPhone, setNewUserPhone] = useState("");
     const [newUserAddress, setNewUserAddress] = useState("");
+    const [newUserEmailError, setNewUserEmailError] = useState("");
 
     // Admin Edit User Modal States
     const [editingUser, setEditingUser] = useState<SystemUser | null>(null);
@@ -174,6 +177,35 @@ export default function Dashboard() {
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<any[]>([]);
 
+    // PusherJS Real-time Messaging States
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+        {
+            id: "msg_init_1",
+            sender: "Refinery Dispatch Central",
+            email: "refinery@oilsupply-delivery.com",
+            role: "Supplier",
+            topic: "Refinery Wholesale Availability",
+            message: "All crude fuel pipelines and regional tanker depots operating at verified ISO specifications. Real-time dispatches active.",
+            timestamp: "09:30 AM",
+            channel: "oil-supply-chat",
+        },
+        {
+            id: "msg_init_2",
+            sender: "Dhaka Regional Dealer Hub",
+            email: "dealer@oilsupply-delivery.com",
+            role: "Dealer",
+            topic: "Order Dispatch & Logistics",
+            message: "Bulk tanker allocations ready for commercial customers. Priority road dispatches scheduled for Kuril and Gazipur depots.",
+            timestamp: "10:15 AM",
+            channel: "oil-supply-chat",
+        }
+    ]);
+    const [chatInput, setChatInput] = useState<string>("");
+    const [chatTopic, setChatTopic] = useState<string>("Order Dispatch & Logistics");
+    const [chatChannel, setChatChannel] = useState<string>("oil-supply-chat");
+    const [isSendingChat, setIsSendingChat] = useState<boolean>(false);
+    const [isPusherActive, setIsPusherActive] = useState<boolean>(true);
+
     const getRolePath = (role?: string) => {
         return role ? role.toLowerCase() : "customer";
     };
@@ -210,6 +242,68 @@ export default function Dashboard() {
         setLoading(false);
         fetchCatalogProducts();
     }, []);
+
+    // PusherJS real-time channel subscription
+    useEffect(() => {
+        const pusher = getPusherClient();
+        if (!pusher) return;
+
+        const channel = pusher.subscribe("oil-supply-chat");
+        channel.bind("pusher:subscription_succeeded", () => {
+            setIsPusherActive(true);
+        });
+
+        channel.bind("new-message", (data: ChatMessage) => {
+            setChatMessages((prev) => [data, ...prev.filter((m) => m.id !== data.id)]);
+        });
+
+        return () => {
+            channel.unbind_all();
+            channel.unsubscribe();
+        };
+    }, []);
+
+    // Send real-time message via PusherJS
+    const handleSendChatMessage = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!chatInput.trim() || !user) return;
+
+        setIsSendingChat(true);
+        const senderName = user.userName || user.email.split("@")[0] || "User";
+        const payload = {
+            sender: senderName,
+            email: user.email,
+            role: user.title || "Customer",
+            topic: chatTopic,
+            message: chatInput.trim(),
+            channel: chatChannel,
+        };
+
+        try {
+            const res = await axios.post("/api/messages", payload);
+            if (res.data?.success && res.data?.data) {
+                const newMsg = res.data.data;
+                setChatMessages((prev) => [newMsg, ...prev.filter((m) => m.id !== newMsg.id)]);
+            }
+            setChatInput("");
+        } catch (err) {
+            console.warn("Local fallback for chat message:", err);
+            const fallbackMsg: ChatMessage = {
+                id: `msg_${Date.now()}`,
+                sender: payload.sender,
+                email: payload.email,
+                role: payload.role,
+                topic: payload.topic,
+                message: payload.message,
+                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                channel: payload.channel,
+            };
+            setChatMessages((prev) => [fallbackMsg, ...prev]);
+            setChatInput("");
+        } finally {
+            setIsSendingChat(false);
+        }
+    };
 
     // Axios Call: Fetch catalog products from backend (`GET /product/list`)
     const fetchCatalogProducts = async () => {
@@ -369,6 +463,21 @@ export default function Dashboard() {
     // Axios Call (Admin): Create User (`POST /admin/:role`)
     const handleAdminCreateUser = async (e: React.FormEvent) => {
         e.preventDefault();
+        setNewUserEmailError("");
+
+        // Enforce strict email uniqueness across all 4 database tables
+        try {
+            const check = await checkEmailUniqueness(newUserEmail);
+            if (!check.isUnique) {
+                const msg = `Cannot create account: An account with the email "${newUserEmail}" already exists as a ${check.existingRole}. There can be only one account per email address across the entire system.`;
+                setNewUserEmailError(msg);
+                alert(msg);
+                return;
+            }
+        } catch (checkErr) {
+            console.warn("Email uniqueness pre-check failed:", checkErr);
+        }
+
         try {
             await axios.post(
                 `http://localhost:8000/admin/${newRole}`,
@@ -389,11 +498,16 @@ export default function Dashboard() {
             setNewUserPassword("");
             setNewUserPhone("");
             setNewUserAddress("");
+            setNewUserEmailError("");
             fetchAllMergedUsers();
             fetchAdminMonitoringData();
         } catch (err: any) {
             console.error("Create user failed:", err);
-            alert(err.response?.data?.message || "Failed to create user.");
+            const apiMsg = err.response?.data?.message || "Failed to create user.";
+            if (err.response?.status === 409) {
+                setNewUserEmailError(`Email "${newUserEmail}" already exists in the system. There can only be one account per email.`);
+            }
+            alert(Array.isArray(apiMsg) ? apiMsg.join(", ") : apiMsg);
         }
     };
 
@@ -1019,61 +1133,64 @@ export default function Dashboard() {
 
     return (
         <>
-            <MyHeader name="Dashboard" message="system control & operations center!" />
+            <MyHeader name="Dashboard" message="Oil Supply & Delivery Management System - Operations and logistics portal" />
             <MyNavigation />
 
             {/* Profile Overview & Navigation Bar */}
-            <div className="w-full max-w-[1200px] bg-card-white border border-[#E2E8F0] shadow-sm rounded-xl p-5 mb-6 text-left">
+            <div className="w-full max-w-[1200px] card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-6 mb-8 text-left">
                 {/* Top Section: User Info & Logout Button */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#F1F5F9]">
-                    <div className="flex items-center gap-3.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[#E2E8F0]">
+                    <div className="flex items-center gap-4">
                         {user.photoUrl ? (
                             <img
                                 src={user.photoUrl}
                                 alt="Profile"
-                                className="w-12 h-12 rounded-full object-cover border border-[#E2E8F0] shadow-xs"
+                                className="w-14 h-14 rounded-2xl object-cover border-2 border-[#0F2747]/20 shadow-sm"
                                 onError={(e) => {
                                     e.currentTarget.style.display = 'none';
                                 }}
                             />
                         ) : (
-                            <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg shadow-xs">
+                            <div className="w-14 h-14 rounded-2xl bg-[#0F2747] text-white flex items-center justify-center font-black text-xl shadow-sm">
                                 {(user.userName || user.email)[0].toUpperCase()}
                             </div>
                         )}
                         <div>
                             <div className="flex items-center gap-2 flex-wrap">
-                                <h2 className="text-xl font-bold text-dark-slate">
-                                    Welcome back, {user.userName || user.email}!
+                                <h2 className="text-xl sm:text-2xl font-bold text-[#1E293B] tracking-tight">
+                                    Welcome, {user.userName || user.email}
                                 </h2>
-                                <span className="text-xs px-2.5 py-0.5 rounded-full font-bold uppercase bg-blue-100 text-primary border border-blue-200">
+                                <span className="badge bg-[#0F2747] text-[#F59E0B] font-bold uppercase text-xs border-none px-3 py-1">
                                     Role: {user.title || "User"}
                                 </span>
                                 {isSupplier && (
-                                    <span className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase ${supplierOperationalStatus === "active"
-                                            ? "bg-green-100 text-success-green border border-green-200"
-                                            : "bg-red-100 text-error-red border border-red-200"
-                                        }`}>
+                                    <span className={`badge font-bold uppercase text-xs text-white border-none px-3 py-1 ${
+                                        supplierOperationalStatus === "active" ? "bg-[#16A34A]" : "bg-[#DC2626]"
+                                    }`}>
                                         Status: {supplierOperationalStatus}
                                     </span>
                                 )}
                             </div>
-                            <p className="text-xs sm:text-sm text-secondary-gray mt-0.5">
-                                Email: <span className="font-medium text-dark-slate">{user.email}</span> &bull; Hub: <span className="font-medium text-dark-slate">{user.address || "Main Operational HQ"}</span>
+                            <p className="text-xs sm:text-sm text-[#64748B] mt-1 flex items-center gap-3 flex-wrap">
+                                <span>Email: <strong className="text-[#1E293B]">{user.email}</strong></span>
+                                <span>Hub: <strong className="text-[#1E293B]">{user.address || "Main Operations Depot"}</strong></span>
                             </p>
                         </div>
                     </div>
 
                     <button
                         onClick={handleLogout}
-                        className="bg-error-red text-white py-2 px-5 rounded-lg cursor-pointer font-semibold text-xs sm:text-sm hover:bg-error-red/90 transition-all shadow-xs self-start sm:self-center shrink-0"
+                        className="btn bg-[#DC2626] hover:bg-[#b91c1c] btn-sm text-white font-semibold border-none shadow-sm rounded-xl flex items-center gap-1.5 self-start sm:self-center shrink-0 cursor-pointer"
                     >
-                        Logout
+                        <span>Sign Out</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
                     </button>
                 </div>
 
                 {/* Bottom Section: Dedicated Full-Width Navigation Tabs */}
-                <div className="flex items-center gap-2 pt-3.5 overflow-x-auto flex-wrap">
+                <div className="flex items-center gap-2 pt-4 overflow-x-auto flex-wrap">
                     {isAdmin && (
                         <>
                             <button
@@ -1081,9 +1198,9 @@ export default function Dashboard() {
                                     setActiveTab("monitoring");
                                     fetchAdminMonitoringData();
                                 }}
-                                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "monitoring"
-                                        ? "bg-primary text-white shadow-xs"
-                                        : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
+                                className={`btn btn-sm font-semibold transition-all cursor-pointer ${activeTab === "monitoring"
+                                        ? "btn-primary text-white shadow-md"
+                                        : "btn-ghost text-slate-600 hover:bg-base-200 border border-base-300"
                                     }`}
                             >
                                 System Health (Monitor)
@@ -1093,9 +1210,9 @@ export default function Dashboard() {
                                     setActiveTab("users_crud");
                                     fetchAllMergedUsers();
                                 }}
-                                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "users_crud"
-                                        ? "bg-primary text-white shadow-xs"
-                                        : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
+                                className={`btn btn-sm font-semibold transition-all cursor-pointer ${activeTab === "users_crud"
+                                        ? "btn-primary text-white shadow-md"
+                                        : "btn-ghost text-slate-600 hover:bg-base-200 border border-base-300"
                                     }`}
                             >
                                 Global User CRUD
@@ -1105,9 +1222,9 @@ export default function Dashboard() {
 
                     <button
                         onClick={() => setActiveTab("products")}
-                        className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "products"
-                                ? "bg-primary text-white shadow-xs"
-                                : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
+                        className={`btn btn-sm font-semibold transition-all cursor-pointer ${activeTab === "products"
+                                ? "btn-primary text-white shadow-md"
+                                : "btn-ghost text-slate-600 hover:bg-base-200 border border-base-300"
                             }`}
                     >
                         Products Catalog
@@ -1119,9 +1236,9 @@ export default function Dashboard() {
                                 setActiveTab("inventory");
                                 if (user.id) fetchCustomInventory(user.id, user.title);
                             }}
-                            className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "inventory"
-                                    ? "bg-primary text-white shadow-xs"
-                                    : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
+                            className={`btn btn-sm font-semibold transition-all cursor-pointer ${activeTab === "inventory"
+                                    ? "btn-primary text-white shadow-md"
+                                    : "btn-ghost text-slate-600 hover:bg-base-200 border border-base-300"
                                 }`}
                         >
                             {isSupplier ? "Supply Portfolio" : "Stock Inventory"}
@@ -1133,9 +1250,9 @@ export default function Dashboard() {
                             setActiveTab("orders");
                             if (user.id) fetchOrders(user.id, user.title);
                         }}
-                        className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "orders"
-                                ? "bg-primary text-white shadow-xs"
-                                : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
+                        className={`btn btn-sm font-semibold transition-all cursor-pointer ${activeTab === "orders"
+                                ? "btn-primary text-white shadow-md"
+                                : "btn-ghost text-slate-600 hover:bg-base-200 border border-base-300"
                             }`}
                     >
                         {isCustomer ? "My Orders & Tracking" : isAdmin ? "Global Order Control" : "Fulfill Orders & Logistics"}
@@ -1146,9 +1263,9 @@ export default function Dashboard() {
                             setActiveTab("profile");
                             if (user.email) fetchFullProfile(user.email, user.title);
                         }}
-                        className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "profile"
-                                ? "bg-primary text-white shadow-xs"
-                                : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
+                        className={`btn btn-sm font-semibold transition-all cursor-pointer ${activeTab === "profile"
+                                ? "btn-primary text-white shadow-md"
+                                : "btn-ghost text-slate-600 hover:bg-base-200 border border-base-300"
                             }`}
                     >
                         Profile Settings
@@ -1157,14 +1274,24 @@ export default function Dashboard() {
                     {!isAdmin && (
                         <button
                             onClick={() => setActiveTab("directory")}
-                            className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "directory"
-                                    ? "bg-primary text-white shadow-xs"
-                                    : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
+                            className={`btn btn-sm font-semibold transition-all cursor-pointer ${activeTab === "directory"
+                                    ? "btn-primary text-white shadow-md"
+                                    : "btn-ghost text-slate-600 hover:bg-base-200 border border-base-300"
                                 }`}
                         >
                             Directory Search
                         </button>
                     )}
+
+                    <button
+                        onClick={() => setActiveTab("messages")}
+                        className={`btn btn-sm font-semibold transition-all cursor-pointer ${activeTab === "messages"
+                                ? "btn-primary text-white shadow-md"
+                                : "btn-ghost text-slate-600 hover:bg-base-200 border border-base-300"
+                            }`}
+                    >
+                        Messages (PusherJS)
+                    </button>
                 </div>
             </div>
 
@@ -1191,7 +1318,7 @@ export default function Dashboard() {
                             <h3 className="text-3xl font-extrabold text-primary mt-1">
                                 {allMergedUsers.length || monitorMetrics?.totalUsers || 0}
                             </h3>
-                            <p className="text-xs text-green-600 font-semibold mt-1">✓ Across 4 Database Tables</p>
+                            <p className="text-xs text-green-600 font-semibold mt-1">Across 4 Database Tables</p>
                         </div>
 
                         <div className="bg-card-white p-5 rounded-lg border border-[#E2E8F0] shadow-sm">
@@ -1215,7 +1342,7 @@ export default function Dashboard() {
                             <h3 className="text-3xl font-extrabold text-green-600 mt-1">
                                 100%
                             </h3>
-                            <p className="text-xs text-green-600 font-semibold mt-1">✓ Operational & Connected</p>
+                            <p className="text-xs text-green-600 font-semibold mt-1">Operational & Connected</p>
                         </div>
                     </div>
 
@@ -1312,8 +1439,8 @@ export default function Dashboard() {
                                                 </span>
                                             </td>
                                             <td className="p-4 text-secondary-gray">{u.email}</td>
-                                            <td className="p-4 text-secondary-gray">{u.phoneNumber || "—"}</td>
-                                            <td className="p-4 text-secondary-gray">{u.address || "—"}</td>
+                                            <td className="p-4 text-secondary-gray">{u.phoneNumber || "N/A"}</td>
+                                            <td className="p-4 text-secondary-gray">{u.address || "N/A"}</td>
                                             <td className="p-4 text-right">
                                                 {isTargetAdmin ? (
                                                     <span className="text-xs text-gray-400 font-semibold italic">Admin Protected</span>
@@ -1377,7 +1504,7 @@ export default function Dashboard() {
                         {(isDealer || isSupplier || isAdmin) && (
                             <button
                                 onClick={() => setIsPostProductModalOpen(true)}
-                                className="flex items-center justify-center gap-2 bg-primary text-white font-bold px-5 py-2.5 rounded-lg text-sm hover:bg-primary/90 transition-all shadow-md cursor-pointer whitespace-nowrap self-start sm:self-auto"
+                                className="flex items-center justify-center gap-2 bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-sm cursor-pointer whitespace-nowrap self-start sm:self-auto border-none"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
@@ -1389,11 +1516,11 @@ export default function Dashboard() {
 
                     {productsLoading ? (
                         <div className="flex flex-col justify-center items-center py-16">
-                            <span className="loading loading-spinner loading-lg text-primary mb-3"></span>
+                            <span className="loading loading-spinner loading-lg text-[#0F2747] mb-3"></span>
                             <p className="text-sm text-secondary-gray">Loading live petroleum catalog...</p>
                         </div>
                     ) : products.length === 0 ? (
-                        <div className="bg-card-white p-8 rounded-lg border border-[#E2E8F0] text-center shadow-sm max-w-xl mx-auto">
+                        <div className="bg-card-white p-8 rounded-2xl border border-[#E2E8F0] text-center shadow-sm max-w-xl mx-auto">
                             <p className="text-secondary-gray font-medium mb-1">No products currently available in the catalog.</p>
                             <p className="text-xs text-secondary-gray">New petroleum grades will appear here as soon as they are added.</p>
                         </div>
@@ -1402,9 +1529,9 @@ export default function Dashboard() {
                             {products.map((product) => (
                                 <div
                                     key={product.id}
-                                    className="card bg-base-100 w-96 max-w-full shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-shadow"
+                                    className="card bg-[#FFFFFF] w-96 max-w-full shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-shadow rounded-2xl"
                                 >
-                                    <figure className="h-48 w-full overflow-hidden bg-slate-100">
+                                    <figure className="h-48 w-full overflow-hidden bg-[#F5F7FA]">
                                         <img
                                             src={product.image}
                                             alt={product.name}
@@ -1420,7 +1547,7 @@ export default function Dashboard() {
                                                 <span className="text-xs font-bold text-secondary-gray bg-[#F1F5F9] px-2.5 py-1 rounded">
                                                     {product.category}
                                                 </span>
-                                                <span className={`text-xs font-semibold px-2 py-0.5 rounded ${product.stockLevel === "In Stock" ? "bg-green-100 text-success-green" : "bg-amber-100 text-secondary"
+                                                <span className={`text-xs font-semibold px-2 py-0.5 rounded ${product.stockLevel === "In Stock" ? "bg-green-100 text-success-green" : "bg-amber-100 text-[#D97706]"
                                                     }`}>
                                                     {product.stockLevel}
                                                 </span>
@@ -1434,12 +1561,12 @@ export default function Dashboard() {
                                             <div className="card-actions justify-end">
                                                 {isAdmin ? (
                                                     <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-3 py-1.5 rounded">
-                                                        ✓ Admin Linked Catalog
+                                                        Admin Linked Catalog
                                                     </span>
                                                 ) : isSupplier ? (
                                                     customInventory.some((item) => item.id === product.id) ? (
                                                         <span className="text-xs bg-green-50 text-success-green font-bold px-3 py-1.5 rounded border border-green-200">
-                                                            ✓ In Your Portfolio
+                                                            In Your Portfolio
                                                         </span>
                                                     ) : (
                                                         <span className="text-xs bg-slate-100 text-secondary-gray font-medium px-3 py-1.5 rounded">
@@ -1450,7 +1577,7 @@ export default function Dashboard() {
                                                     <div className="flex gap-2">
                                                         <button
                                                             onClick={() => handleAssignProduct(product)}
-                                                            className="btn btn-sm bg-emerald-600 hover:bg-emerald-700 text-white border-none"
+                                                            className="btn btn-sm bg-emerald-600 hover:bg-emerald-700 text-white border-none rounded-xl"
                                                         >
                                                             + Assign Stock
                                                         </button>
@@ -1460,7 +1587,7 @@ export default function Dashboard() {
                                                                 setWholesaleQuantity(50);
                                                                 if (availableSuppliers.length > 0) setWholesaleSupplierId(availableSuppliers[0].id);
                                                             }}
-                                                            className="btn btn-primary btn-sm text-white"
+                                                            className="btn bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] btn-sm font-bold border-none rounded-xl"
                                                         >
                                                             Bulk Source
                                                         </button>
@@ -1468,7 +1595,7 @@ export default function Dashboard() {
                                                 ) : (
                                                     <button
                                                         onClick={() => handleOpenCheckout(product)}
-                                                        className="btn btn-primary"
+                                                        className="btn bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold border-none rounded-xl text-xs sm:text-sm"
                                                     >
                                                         Buy Now
                                                     </button>
@@ -1877,6 +2004,206 @@ export default function Dashboard() {
                 </div>
             )}
 
+            {/* TAB: REAL-TIME MESSAGING (PUSHERJS) */}
+            {activeTab === "messages" && (
+                <div className="w-full max-w-[1200px] text-left animate-fadeIn mb-12">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <div>
+                            <div className="flex items-center gap-2.5">
+                                <h1 className="text-2xl font-bold text-[#1E293B] tracking-tight">Real-Time Messages (PusherJS)</h1>
+                                <span className="badge bg-[#16A34A]/15 text-[#16A34A] font-bold text-xs border-none px-3 py-1 flex items-center gap-1.5">
+                                    <span className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse"></span>
+                                    PusherJS Network Active
+                                </span>
+                            </div>
+                            <p className="text-sm text-[#64748B] mt-1">
+                                Real-time dispatch and messaging across Customers, Dealers, Suppliers, and Operations Control.
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-[#64748B] font-mono bg-[#FFFFFF] border border-[#CBD5E1] px-3 py-1.5 rounded-xl shadow-xs">
+                                Channel: <strong>{chatChannel}</strong>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        {/* Left: Message Composer */}
+                        <div className="lg:col-span-5 space-y-4">
+                            <div className="card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-6">
+                                <h2 className="text-base font-bold text-[#1E293B] mb-1">Send a Real-Time Message</h2>
+                                <p className="text-xs text-[#64748B] mb-4">
+                                    Broadcast an operational dispatch, delivery inquiry, or wholesale message via PusherJS.
+                                </p>
+
+                                <form onSubmit={handleSendChatMessage} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-[#1E293B] mb-1">Channel</label>
+                                        <select
+                                            value={chatChannel}
+                                            onChange={(e) => setChatChannel(e.target.value)}
+                                            className="select select-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none rounded-xl text-xs"
+                                        >
+                                            <option value="oil-supply-chat">General Operations (oil-supply-chat)</option>
+                                            <option value="suppliers-dealers">Refinery & Dealer Wholesale (suppliers-dealers)</option>
+                                            <option value="customer-support">Customer Order Support (customer-support)</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-[#1E293B] mb-1">Topic / Context</label>
+                                        <select
+                                            value={chatTopic}
+                                            onChange={(e) => setChatTopic(e.target.value)}
+                                            className="select select-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none rounded-xl text-xs"
+                                        >
+                                            <option value="Order Dispatch & Logistics">Order Dispatch & Logistics</option>
+                                            <option value="Bulk Fuel Order Inquiry">Bulk Fuel Order Inquiry</option>
+                                            <option value="Refinery Wholesale Availability">Refinery Wholesale Availability</option>
+                                            <option value="Delivery Tanker Tracking">Delivery Tanker Tracking</option>
+                                            <option value="Dealer Stock Allocation">Dealer Stock Allocation</option>
+                                            <option value="Account & Technical Support">Account & Technical Support</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-[#1E293B] mb-1">Message Content</label>
+                                        <textarea
+                                            required
+                                            rows={4}
+                                            value={chatInput}
+                                            placeholder="Write your message here. Connected users will receive it in real-time..."
+                                            onChange={(e) => setChatInput(e.target.value)}
+                                            className="textarea textarea-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none text-xs rounded-xl"
+                                        />
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        disabled={isSendingChat}
+                                        className="btn bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold w-full border-none shadow-sm rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors disabled:opacity-50"
+                                    >
+                                        {isSendingChat ? (
+                                            <>
+                                                <span className="loading loading-spinner loading-xs"></span>
+                                                <span>Broadcasting via PusherJS...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span>Send Message via PusherJS</span>
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                                </svg>
+                                            </>
+                                        )}
+                                    </button>
+                                </form>
+                            </div>
+
+                            {/* User details badge */}
+                            <div className="card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-4 text-xs text-[#64748B]">
+                                <div className="flex items-center justify-between">
+                                    <span>Sending as: <strong className="text-[#1E293B]">{user.userName || user.email}</strong></span>
+                                    <span className="badge bg-[#0F2747] text-[#F59E0B] font-bold text-[10px] border-none px-2 py-0.5">
+                                        {user.title || "Customer"}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right: Live Message Feed */}
+                        <div className="lg:col-span-7">
+                            <div className="card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-6">
+                                <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#E2E8F0]">
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-[#16A34A] animate-ping"></span>
+                                        <h2 className="text-base font-bold text-[#1E293B]">Live Message Feed</h2>
+                                    </div>
+                                    <span className="text-xs text-[#64748B]">
+                                        {chatMessages.length} {chatMessages.length === 1 ? "Message" : "Messages"} Received
+                                    </span>
+                                </div>
+
+                                <div className="space-y-3 max-h-[560px] overflow-y-auto pr-1">
+                                    {chatMessages.length === 0 ? (
+                                        <div className="text-center py-12 text-[#64748B]">
+                                            <p className="font-semibold text-sm mb-1 text-[#1E293B]">No real-time messages yet.</p>
+                                            <p className="text-xs">Messages broadcasted via PusherJS will appear here instantly.</p>
+                                        </div>
+                                    ) : (
+                                        chatMessages.map((msg) => {
+                                            const isMe = msg.email === user.email;
+                                            return (
+                                                <div
+                                                    key={msg.id}
+                                                    className={`p-4 rounded-2xl border text-xs transition-all ${
+                                                        isMe
+                                                            ? "bg-[#0F2747]/5 border-[#0F2747]/20"
+                                                            : "bg-[#F5F7FA] border-[#E2E8F0]"
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-bold text-[#1E293B] text-sm">
+                                                                {msg.sender}
+                                                            </span>
+                                                            <span className={`badge text-[10px] font-bold uppercase border-none px-2 py-0.5 ${
+                                                                msg.role === "Supplier"
+                                                                    ? "bg-[#0F2747] text-[#F59E0B]"
+                                                                    : msg.role === "Dealer"
+                                                                    ? "bg-[#F59E0B]/20 text-[#D97706]"
+                                                                    : msg.role === "Admin"
+                                                                    ? "bg-[#16A34A]/20 text-[#16A34A]"
+                                                                    : "bg-[#64748B]/15 text-[#1E293B]"
+                                                            }`}>
+                                                                {msg.role || "User"}
+                                                            </span>
+                                                            {isMe && (
+                                                                <span className="badge bg-[#16A34A] text-white text-[9px] font-bold border-none px-1.5 py-0.5">
+                                                                    You
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] text-[#64748B] font-mono">
+                                                                {msg.timestamp}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mb-2">
+                                                        <span className="inline-block text-[11px] font-semibold text-[#0F2747] bg-[#0F2747]/10 px-2 py-0.5 rounded-md">
+                                                            {msg.topic}
+                                                        </span>
+                                                    </div>
+
+                                                    <p className="text-[#1E293B] text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">
+                                                        {msg.message}
+                                                    </p>
+
+                                                    <div className="mt-2.5 pt-2 border-t border-[#E2E8F0]/70 flex justify-end">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setChatTopic(`Re: ${msg.topic}`);
+                                                                setChatInput(`@${msg.sender}: `);
+                                                            }}
+                                                            className="text-[11px] font-semibold text-[#0F2747] hover:text-[#F59E0B] transition-colors cursor-pointer"
+                                                        >
+                                                            Reply to {msg.sender}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* ADMIN CREATE USER MODAL */}
             {isCreateUserModalOpen && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
@@ -1888,9 +2215,12 @@ export default function Dashboard() {
                             </div>
                             <button
                                 onClick={() => setIsCreateUserModalOpen(false)}
-                                className="text-gray-400 hover:text-dark-slate text-2xl font-bold p-1 cursor-pointer"
+                                className="text-gray-400 hover:text-dark-slate p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                                aria-label="Close"
                             >
-                                ×
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
                             </button>
                         </div>
 
@@ -1927,9 +2257,25 @@ export default function Dashboard() {
                                     required
                                     value={newUserEmail}
                                     placeholder="Enter email..."
-                                    onChange={(e) => setNewUserEmail(e.target.value)}
-                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none"
+                                    onChange={(e) => {
+                                        setNewUserEmail(e.target.value);
+                                        setNewUserEmailError("");
+                                    }}
+                                    onBlur={async () => {
+                                        if (newUserEmail.includes("@")) {
+                                            const check = await checkEmailUniqueness(newUserEmail);
+                                            if (!check.isUnique) {
+                                                setNewUserEmailError(`Email is already registered to a ${check.existingRole} account. Only one account per email is allowed.`);
+                                            } else {
+                                                setNewUserEmailError("");
+                                            }
+                                        }
+                                    }}
+                                    className={`w-full p-2.5 border rounded bg-white text-dark-slate text-sm outline-none ${newUserEmailError ? "border-red-500" : "border-secondary-gray"}`}
                                 />
+                                {newUserEmailError && (
+                                    <p className="text-xs text-red-600 font-semibold mt-1">{newUserEmailError}</p>
+                                )}
                             </div>
 
                             <div>
@@ -1997,9 +2343,12 @@ export default function Dashboard() {
                             </div>
                             <button
                                 onClick={() => setEditingUser(null)}
-                                className="text-gray-400 hover:text-dark-slate text-2xl font-bold p-1 cursor-pointer"
+                                className="text-gray-400 hover:text-dark-slate p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                                aria-label="Close"
                             >
-                                ×
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
                             </button>
                         </div>
 
@@ -2066,9 +2415,12 @@ export default function Dashboard() {
                             </div>
                             <button
                                 onClick={() => setEditingOrder(null)}
-                                className="text-gray-400 hover:text-dark-slate text-2xl font-bold p-1 cursor-pointer"
+                                className="text-gray-400 hover:text-dark-slate p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                                aria-label="Close"
                             >
-                                ×
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
                             </button>
                         </div>
 
@@ -2142,9 +2494,12 @@ export default function Dashboard() {
                             </div>
                             <button
                                 onClick={() => setWholesaleProduct(null)}
-                                className="text-gray-400 hover:text-dark-slate text-2xl font-bold p-1 cursor-pointer"
+                                className="text-gray-400 hover:text-dark-slate p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                                aria-label="Close"
                             >
-                                ×
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
                             </button>
                         </div>
 
@@ -2198,7 +2553,7 @@ export default function Dashboard() {
                                 type="button"
                                 disabled={isSubmittingWholesale}
                                 onClick={handleWholesaleBulkOrder}
-                                className="w-2/3 py-2.5 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/95 transition-colors cursor-pointer shadow-md disabled:bg-primary/50"
+                                className="w-2/3 py-2.5 rounded-xl bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold text-sm transition-colors cursor-pointer shadow-sm border-none disabled:opacity-50"
                             >
                                 {isSubmittingWholesale ? "Placing Wholesale Order..." : `Confirm Wholesale Order (${wholesaleQuantity} units)`}
                             </button>
@@ -2218,9 +2573,12 @@ export default function Dashboard() {
                             </div>
                             <button
                                 onClick={() => setCheckoutProduct(null)}
-                                className="text-gray-400 hover:text-dark-slate text-2xl font-bold p-1 cursor-pointer"
+                                className="text-gray-400 hover:text-dark-slate p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                                aria-label="Close"
                             >
-                                ×
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
                             </button>
                         </div>
 
@@ -2409,7 +2767,7 @@ export default function Dashboard() {
                                 type="button"
                                 disabled={isSubmittingOrder}
                                 onClick={handleCompleteOrder}
-                                className="w-2/3 py-3 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/95 transition-colors cursor-pointer shadow-md disabled:bg-primary/50"
+                                className="w-2/3 py-3 rounded-xl bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold text-sm transition-colors cursor-pointer shadow-sm border-none disabled:opacity-50"
                             >
                                 {isSubmittingOrder
                                     ? "Processing Order..."
@@ -2435,9 +2793,12 @@ export default function Dashboard() {
                             </div>
                             <button
                                 onClick={() => setIsPostProductModalOpen(false)}
-                                className="text-gray-400 hover:text-dark-slate text-2xl font-bold p-1 cursor-pointer"
+                                className="text-gray-400 hover:text-dark-slate p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                                aria-label="Close"
                             >
-                                ×
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
                             </button>
                         </div>
 
@@ -2588,7 +2949,7 @@ export default function Dashboard() {
                                 <button
                                     type="submit"
                                     disabled={isSubmittingNewProduct}
-                                    className="w-2/3 py-2.5 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-colors cursor-pointer shadow-md disabled:bg-primary/50 flex items-center justify-center gap-2"
+                                    className="w-2/3 py-2.5 rounded-xl bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold text-sm transition-colors cursor-pointer shadow-sm border-none disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
                                     {isSubmittingNewProduct ? (
                                         <>

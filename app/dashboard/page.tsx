@@ -74,18 +74,68 @@ type SystemUser = {
     createdAt?: string;
     joiningDate?: string;
 };
-const getProductImage = (name?: string, img?: string) => {
-    if (img && (img.startsWith("/") || img.startsWith("http"))) return img;
-    if (!name) return "/Brent Crude Oil.jpg";
-    const lower = name.toLowerCase();
-    if (lower.includes("crude") || lower.includes("brent")) return "/Brent Crude Oil.jpg";
-    if (lower.includes("diesel")) return "/Ultra-Low Sulfur Diesel.jpg";
-    if (lower.includes("gasoline") || lower.includes("petrol") || lower.includes("octane")) return "/Premium Unleaded Gasoline.jpg";
-    if (lower.includes("jet") || lower.includes("aviation") || lower.includes("turbine")) return "/Aviation Turbine Fuel (Jet A-1).jpg";
-    if (lower.includes("lpg") || lower.includes("gas") || lower.includes("cylinder")) return "/images.jpg";
-    if (lower.includes("heavy") || lower.includes("marine") || lower.includes("bunker") || lower.includes("hfo")) return "/Heavy Marine Fuel Oil (HFO).jpg";
+const PRODUCT_IMAGE_MAP: Record<number, string> = {
+    1: "/Brent Crude Oil.jpg",
+    2: "/Ultra-Low Sulfur Diesel.jpg",
+    3: "/Premium Unleaded Gasoline.jpg",
+    4: "/Aviation Turbine Fuel (Jet A-1).jpg",
+    5: "/images.jpg",
+    6: "/Heavy Marine Fuel Oil (HFO).jpg",
+};
+
+const getProductImage = (name?: string, img?: string, id?: number | string) => {
+    if (typeof window !== "undefined" && id) {
+        try {
+            const customStored = localStorage.getItem(`product_img_${id}`);
+            if (customStored) return customStored;
+        } catch {
+        }
+    }
+    if (img && (img.startsWith("/") || img.startsWith("http")) && img !== "/Brent Crude Oil.jpg") {
+        return img;
+    }
+    const lower = (name || "").toLowerCase();
+    if (lower.includes("lpg") || lower.includes("liquefied") || lower.includes("cylinder") || lower.includes("propane") || lower.includes("butane")) {
+        return "/images.jpg";
+    }
+    if (lower.includes("diesel") || lower.includes("sulfur") || lower.includes("ulsd") || lower.includes("gasoil")) {
+        return "/Ultra-Low Sulfur Diesel.jpg";
+    }
+    if (lower.includes("gasoline") || lower.includes("petrol") || lower.includes("octane") || lower.includes("unleaded") || lower.includes("mogas")) {
+        return "/Premium Unleaded Gasoline.jpg";
+    }
+    if (lower.includes("jet") || lower.includes("aviation") || lower.includes("turbine") || lower.includes("a-1") || lower.includes("kerosene")) {
+        return "/Aviation Turbine Fuel (Jet A-1).jpg";
+    }
+    if (lower.includes("marine") || lower.includes("bunker") || lower.includes("hfo") || lower.includes("heavy") || lower.includes("fuel oil")) {
+        return "/Heavy Marine Fuel Oil (HFO).jpg";
+    }
+    if (lower.includes("crude") || lower.includes("brent") || lower.includes("wti") || lower.includes("raw")) {
+        return "/Brent Crude Oil.jpg";
+    }
+    if (id !== undefined && id !== null) {
+        const numId = Number(id);
+        if (!isNaN(numId) && PRODUCT_IMAGE_MAP[numId]) {
+            return PRODUCT_IMAGE_MAP[numId];
+        }
+        if (!isNaN(numId) && numId > 0) {
+            const fallbackImages = [
+                "/Brent Crude Oil.jpg",
+                "/Ultra-Low Sulfur Diesel.jpg",
+                "/Premium Unleaded Gasoline.jpg",
+                "/Aviation Turbine Fuel (Jet A-1).jpg",
+                "/images.jpg",
+                "/Heavy Marine Fuel Oil (HFO).jpg",
+            ];
+            return fallbackImages[(numId - 1) % fallbackImages.length];
+        }
+    }
+    if (img && (img.startsWith("/") || img.startsWith("http"))) {
+        return img;
+    }
     return "/Brent Crude Oil.jpg";
 };
+
 
 export default function Dashboard() {
     const router = useRouter();
@@ -310,7 +360,7 @@ export default function Dashboard() {
                         stockLevel: typeof p.quantity === "number"
                             ? (p.quantity <= 0 ? "Out of Stock" : p.quantity < 1000 ? "Low Stock" : "In Stock")
                             : p.stockLevel || "In Stock",
-                        image: getProductImage(p.name, p.image),
+                        image: getProductImage(p.name, p.image, p.id),
                     }));
                 setProducts(mapped);
             }
@@ -589,7 +639,20 @@ export default function Dashboard() {
                 validateStatus: (status) => status < 500,
             });
             if (res.status === 200 && Array.isArray(res.data)) {
-                setCustomInventory(res.data);
+                const mapped: Product[] = res.data.map((p: any) => ({
+                    ...p,
+                    name: p.name || `Product #${p.id}`,
+                    category: p.category || (p.categories?.[0]?.name) || "Petroleum Grade",
+                    price: typeof p.price === "number" ? `$${p.price.toFixed(2)}` : p.price || "$0.00",
+                    numericPrice: typeof p.price === "number" ? p.price : typeof p.numericPrice === "number" ? p.numericPrice : parseFloat(String(p.price).replace(/[^0-9.]/g, "")) || 0,
+                    description: p.description || "High-grade petroleum product sourced from certified national pipelines.",
+                    inStock: typeof p.quantity === "number" ? p.quantity > 0 : p.inStock !== false,
+                    stockLevel: typeof p.quantity === "number"
+                        ? (p.quantity <= 0 ? "Out of Stock" : p.quantity < 1000 ? "Low Stock" : "In Stock")
+                        : p.stockLevel || "In Stock",
+                    image: getProductImage(p.name, p.image, p.id),
+                }));
+                setCustomInventory(mapped);
             }
         } catch (err) {
             console.warn("Failed to fetch inventory:", err);
@@ -660,6 +723,12 @@ export default function Dashboard() {
             );
 
             const createdProduct = createRes.data;
+            if (createdProduct && createdProduct.id && newProductImage) {
+                try {
+                    localStorage.setItem(`product_img_${createdProduct.id}`, newProductImage);
+                } catch {
+                }
+            }
 
             if (user && user.id && (isDealer || isSupplier)) {
                 const role = getRolePath(user.title);
@@ -1475,11 +1544,11 @@ export default function Dashboard() {
                                 >
                                     <figure className="h-48 w-full overflow-hidden bg-[#F5F7FA]">
                                         <img
-                                            src={product.image}
+                                            src={product.image || getProductImage(product.name, product.image, product.id)}
                                             alt={product.name}
                                             className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                                             onError={(e) => {
-                                                e.currentTarget.src = "/Brent Crude Oil.jpg";
+                                                e.currentTarget.src = getProductImage(product.name, undefined, product.id);
                                             }}
                                         />
                                     </figure>
@@ -1611,11 +1680,11 @@ export default function Dashboard() {
                                 >
                                     <figure className="h-48 w-full overflow-hidden bg-[#F5F7FA] border-b border-[#E2E8F0]">
                                         <img
-                                            src={item.image || "/Brent Crude Oil.jpg"}
+                                            src={item.image || getProductImage(item.name, item.image, item.id)}
                                             alt={item.name}
                                             className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                                             onError={(e) => {
-                                                e.currentTarget.src = "/Brent Crude Oil.jpg";
+                                                e.currentTarget.src = getProductImage(item.name, undefined, item.id);
                                             }}
                                         />
                                     </figure>
@@ -2433,9 +2502,19 @@ export default function Dashboard() {
                             </button>
                         </div>
 
-                        <div className="bg-[#FAFBFD] p-4 rounded-lg border border-[#E2E8F0] mb-5">
-                            <h3 className="text-base font-bold text-dark-slate">{wholesaleProduct.name}</h3>
-                            <p className="text-xs text-secondary-gray">{wholesaleProduct.category} | {wholesaleProduct.price}</p>
+                        <div className="bg-[#FAFBFD] p-4 rounded-lg border border-[#E2E8F0] mb-5 flex gap-3 items-center">
+                            <img
+                                src={wholesaleProduct.image || getProductImage(wholesaleProduct.name, wholesaleProduct.image, wholesaleProduct.id)}
+                                alt={wholesaleProduct.name}
+                                className="w-16 h-16 rounded-lg object-cover border border-[#CBD5E1] shrink-0"
+                                onError={(e) => {
+                                    e.currentTarget.src = getProductImage(wholesaleProduct.name, undefined, wholesaleProduct.id);
+                                }}
+                            />
+                            <div>
+                                <h3 className="text-base font-bold text-dark-slate">{wholesaleProduct.name}</h3>
+                                <p className="text-xs text-secondary-gray">{wholesaleProduct.category} | {wholesaleProduct.price}</p>
+                            </div>
                         </div>
 
                         <div className="space-y-4 mb-6">
@@ -2511,30 +2590,40 @@ export default function Dashboard() {
                             </button>
                         </div>
 
-                        <div className="bg-[#FAFBFD] p-4 rounded-lg border border-[#E2E8F0] mb-6">
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <span className="text-xs font-bold text-secondary-gray uppercase">{checkoutProduct.category}</span>
-                                    <h3 className="text-base font-bold text-dark-slate">{checkoutProduct.name}</h3>
-                                    <p className="text-xs text-secondary-gray">{checkoutProduct.price}</p>
+                        <div className="bg-[#FAFBFD] p-4 rounded-lg border border-[#E2E8F0] mb-6 flex gap-4 items-center">
+                            <img
+                                src={checkoutProduct.image || getProductImage(checkoutProduct.name, checkoutProduct.image, checkoutProduct.id)}
+                                alt={checkoutProduct.name}
+                                className="w-16 h-16 rounded-lg object-cover border border-[#CBD5E1] shrink-0"
+                                onError={(e) => {
+                                    e.currentTarget.src = getProductImage(checkoutProduct.name, undefined, checkoutProduct.id);
+                                }}
+                            />
+                            <div className="flex-1">
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <span className="text-xs font-bold text-secondary-gray uppercase">{checkoutProduct.category}</span>
+                                        <h3 className="text-base font-bold text-dark-slate">{checkoutProduct.name}</h3>
+                                        <p className="text-xs text-secondary-gray">{checkoutProduct.price}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <label className="block text-xs font-bold text-dark-slate mb-1">Quantity</label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="100"
+                                            value={orderQuantity}
+                                            onChange={(e) => setOrderQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                                            className="w-20 p-1.5 border border-secondary-gray rounded text-center font-bold bg-white text-dark-slate outline-none"
+                                        />
+                                    </div>
                                 </div>
-                                <div className="text-right">
-                                    <label className="block text-xs font-bold text-dark-slate mb-1">Quantity</label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="100"
-                                        value={orderQuantity}
-                                        onChange={(e) => setOrderQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                                        className="w-20 p-1.5 border border-secondary-gray rounded text-center font-bold bg-white text-dark-slate outline-none"
-                                    />
+                                <div className="border-t border-gray-200 mt-3 pt-2 flex justify-between items-center">
+                                    <span className="text-xs font-semibold text-dark-slate">Subtotal:</span>
+                                    <span className="text-base font-extrabold text-primary">
+                                        ${(checkoutProduct.numericPrice * orderQuantity).toFixed(2)}
+                                    </span>
                                 </div>
-                            </div>
-                            <div className="border-t border-gray-200 mt-3 pt-3 flex justify-between items-center">
-                                <span className="text-sm font-semibold text-dark-slate">Subtotal:</span>
-                                <span className="text-lg font-extrabold text-primary">
-                                    ${(checkoutProduct.numericPrice * orderQuantity).toFixed(2)}
-                                </span>
                             </div>
                         </div>
 

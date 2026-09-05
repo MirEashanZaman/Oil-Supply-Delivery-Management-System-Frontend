@@ -2,27 +2,36 @@ import Image from "next/image";
 
 export default function MyHeader(props: { name: string; message: string }) {
     return (
-        <div className="w-full flex flex-col items-center justify-center my-6 text-center animate-fadeIn">
-            <div className="relative mb-3 group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-primary to-secondary rounded-2xl blur-sm opacity-25 group-hover:opacity-40 transition-opacity"></div>
-                <div className="relative bg-white p-2.5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-center">
-                    <Image src="/LOGO.png" alt="Logo" width={100} height={100} priority className="object-contain" />
+        <header className="w-full flex flex-col items-center justify-center pt-2 pb-6 text-center">
+            {/* Logo and Project Identity */}
+            <div className="flex items-center gap-3 mb-2">
+                <Image
+                    src="/LOGO.png"
+                    alt="Oil Supply & Delivery Management System Logo"
+                    width={56}
+                    height={56}
+                    priority
+                    className="object-contain drop-shadow-sm"
+                />
+                <div className="text-left">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#F59E0B] block">
+                        Enterprise Portal
+                    </span>
+                    <h2 className="text-lg sm:text-xl font-black text-[#0F2747] leading-tight">
+                        Oil Supply & Delivery Management System
+                    </h2>
                 </div>
             </div>
-            <div className="inline-flex items-center gap-2 mb-1">
-                <span className="badge badge-primary badge-sm font-bold uppercase tracking-wider text-[10px] px-2.5 py-1">
+
+            {/* Page Section Indicator */}
+            <div className="mt-2">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1E293B]">
                     {props.name}
-                </span>
-                <span className="text-xs text-secondary-gray font-medium tracking-wide">
-                    Energy Logistics Network
-                </span>
+                </h1>
+                <p className="text-xs sm:text-sm text-[#64748B] max-w-lg mt-1">
+                    {props.message}
+                </p>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-dark-slate tracking-tight">
-                {props.name} Portal
-            </h1>
-            <p className="text-sm text-secondary-gray max-w-md mt-1">
-                {props.message}
-            </p>
-        </div>
+        </header>
     );
 }

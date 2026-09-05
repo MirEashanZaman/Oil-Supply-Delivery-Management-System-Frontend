@@ -1556,10 +1556,10 @@ export default function Dashboard() {
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
                         <div>
-                            <h1 className="text-2xl font-extrabold text-dark-slate">
+                            <h1 className="text-2xl font-extrabold text-[#1E293B]">
                                 {isSupplier ? "My Supply Portfolio" : "My Stock Inventory"}
                             </h1>
-                            <p className="text-sm text-secondary-gray">
+                            <p className="text-sm text-[#64748B]">
                                 {isSupplier
                                     ? "Manage petroleum products you actively distribute to Dealers and direct Customers."
                                     : "Manage products actively linked to your Dealer stock catalog."
@@ -1568,18 +1568,18 @@ export default function Dashboard() {
                         </div>
                         <button
                             onClick={() => setIsPostProductModalOpen(true)}
-                            className="flex items-center justify-center gap-2 bg-primary text-white font-bold px-5 py-2.5 rounded-lg text-sm hover:bg-primary/90 transition-all shadow-md cursor-pointer whitespace-nowrap self-start sm:self-auto"
+                            className="flex items-center justify-center gap-2 bg-[#0F2747] hover:bg-[#163860] text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-sm cursor-pointer whitespace-nowrap self-start sm:self-auto"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
                             </svg>
-                            <span> Post New Product</span>
+                            <span>Post New Product</span>
                         </button>
                     </div>
 
                     {customInventory.length === 0 ? (
-                        <div className="bg-card-white p-8 rounded-lg border border-[#E2E8F0] text-center shadow-sm">
-                            <p className="text-secondary-gray mb-4">
+                        <div className="bg-[#FFFFFF] p-8 rounded-2xl border border-[#E2E8F0] text-center shadow-sm max-w-xl mx-auto">
+                            <p className="text-[#64748B] mb-4">
                                 {isSupplier
                                     ? "You have not published any products to your supply portfolio yet. As a Supplier, you can only post new petroleum products to distribute to dealers and customers."
                                     : "You have not linked or sourced any products for your stock inventory yet. As a Dealer, you can post new products or source directly from refinery suppliers."
@@ -1589,14 +1589,14 @@ export default function Dashboard() {
                                 {isDealer && (
                                     <button
                                         onClick={() => setActiveTab("products")}
-                                        className="border border-[#E2E8F0] text-dark-slate px-5 py-2 rounded-lg text-sm font-semibold cursor-pointer hover:bg-slate-50 transition-colors"
+                                        className="border border-[#CBD5E1] text-[#1E293B] px-5 py-2 rounded-xl text-sm font-semibold cursor-pointer hover:bg-[#F5F7FA] transition-colors"
                                     >
                                         Browse Catalog to Source
                                     </button>
                                 )}
                                 <button
                                     onClick={() => setIsPostProductModalOpen(true)}
-                                    className="bg-primary text-white px-5 py-2 rounded-lg text-sm font-semibold cursor-pointer hover:bg-primary/90 transition-colors"
+                                    className="bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold px-5 py-2 rounded-xl text-sm cursor-pointer transition-colors shadow-sm"
                                 >
                                     Post Product Now
                                 </button>
@@ -1607,9 +1607,9 @@ export default function Dashboard() {
                             {customInventory.map((item) => (
                                 <div
                                     key={item.id}
-                                    className="card bg-base-100 w-96 max-w-full shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-shadow"
+                                    className="card bg-[#FFFFFF] w-96 max-w-full shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-all rounded-2xl flex flex-col justify-between"
                                 >
-                                    <figure className="h-48 w-full overflow-hidden bg-slate-100">
+                                    <figure className="h-48 w-full overflow-hidden bg-[#F5F7FA] border-b border-[#E2E8F0]">
                                         <img
                                             src={item.image || "/Brent Crude Oil.jpg"}
                                             alt={item.name}
@@ -1622,21 +1622,21 @@ export default function Dashboard() {
                                     <div className="card-body p-5 flex flex-col justify-between">
                                         <div>
                                             <div className="flex items-center justify-between mb-2">
-                                                <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200">
+                                                <span className="text-xs font-bold text-[#16A34A] bg-[#16A34A]/10 px-2.5 py-1 rounded-full border border-[#16A34A]/25">
                                                     {isSupplier ? "Active Portfolio Item" : "Active Stock Item"}
                                                 </span>
-                                                <span className="text-xs text-secondary-gray">Product ID: #{item.id}</span>
+                                                <span className="text-xs font-semibold text-[#64748B]">Product ID: #{item.id}</span>
                                             </div>
-                                            <h2 className="card-title text-lg font-bold text-dark-slate mb-1">{item.name}</h2>
-                                            <p className="text-sm text-secondary-gray">{item.description || "Petroleum Grade Oil Product"}</p>
+                                            <h2 className="text-lg font-bold text-[#1E293B] mb-1">{item.name}</h2>
+                                            <p className="text-xs text-[#64748B] leading-relaxed line-clamp-2">{item.description || "Petroleum Grade Oil Product"}</p>
                                         </div>
 
-                                        <div className="pt-4 mt-2 border-t border-[#F1F5F9] flex items-center justify-between">
-                                            <span className="text-xs text-secondary-gray font-medium">Linked Record #{item.id}</span>
+                                        <div className="pt-4 mt-3 border-t border-[#F1F5F9] flex items-center justify-between">
+                                            <span className="text-xs text-[#64748B] font-medium">Linked Record #{item.id}</span>
                                             <div className="card-actions justify-end">
                                                 <button
                                                     onClick={() => handleRemoveProductFromStock(item.id)}
-                                                    className="btn btn-sm bg-error-red hover:bg-error-red/90 text-white border-none"
+                                                    className="btn btn-sm bg-[#DC2626] hover:bg-[#B91C1C] text-white border-none rounded-xl font-semibold px-4 cursor-pointer shadow-sm transition-colors"
                                                 >
                                                     {isSupplier ? "Remove from Portfolio" : "Remove from Stock"}
                                                 </button>

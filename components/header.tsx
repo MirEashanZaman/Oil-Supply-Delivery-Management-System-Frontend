@@ -3,7 +3,6 @@ import Image from "next/image";
 export default function MyHeader(props: { name: string; message: string }) {
     return (
         <header className="w-full flex flex-col items-center justify-center pt-2 pb-6 text-center">
-            {/* Logo and Project Identity */}
             <div className="flex items-center gap-3 mb-2">
                 <Image
                     src="/LOGO.png"
@@ -23,7 +22,6 @@ export default function MyHeader(props: { name: string; message: string }) {
                 </div>
             </div>
 
-            {/* Page Section Indicator */}
             <div className="mt-2">
                 <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1E293B]">
                     {props.name}

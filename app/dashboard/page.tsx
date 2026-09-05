@@ -1333,7 +1333,7 @@ export default function Dashboard() {
                                 {isAdmin
                                     ? "Global Products Catalog Management"
                                     : isSupplier 
-                                    ? "Oil Products Catalog & Supply Portfolio"
+                                    ? "Oil Products Catalog & Refinery Network"
                                     : isDealer 
                                     ? "Oil Products & Wholesale Sourcing" 
                                     : "Oil Products Catalog"
@@ -1343,9 +1343,9 @@ export default function Dashboard() {
                                 {isAdmin
                                     ? "Oversee product inventory, unit pricing, and stock metrics physically linked to Admin control."
                                     : isSupplier
-                                    ? "Add petroleum products to your active supply portfolio for distribution to Dealers and Customers."
+                                    ? "Refinery catalog overview. Suppliers can only post new petroleum batches using the '+ Post New Product' button."
                                     : isDealer
-                                    ? "Assign products to your stock catalog or order bulk wholesale supplies directly from Refinery Suppliers."
+                                    ? "Dealers can both post new products and take/source wholesale stock directly from Refinery Suppliers."
                                     : "Browse available oil grades and place retail orders with direct supplier or dealer sourcing."
                                 }
                             </p>
@@ -1414,12 +1414,15 @@ export default function Dashboard() {
                                                         ✓ Admin Linked Catalog
                                                     </span>
                                                 ) : isSupplier ? (
-                                                    <button
-                                                        onClick={() => handleAssignProduct(product)}
-                                                        className="btn btn-primary btn-sm text-white"
-                                                    >
-                                                        + Add to Portfolio
-                                                    </button>
+                                                    customInventory.some((item) => item.id === product.id) ? (
+                                                        <span className="text-xs bg-green-50 text-success-green font-bold px-3 py-1.5 rounded border border-green-200">
+                                                            ✓ In Your Portfolio
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-xs bg-slate-100 text-secondary-gray font-medium px-3 py-1.5 rounded">
+                                                            Refinery Listed
+                                                        </span>
+                                                    )
                                                 ) : isDealer ? (
                                                     <div className="flex gap-2">
                                                         <button
@@ -1486,15 +1489,20 @@ export default function Dashboard() {
                     {customInventory.length === 0 ? (
                         <div className="bg-card-white p-8 rounded-lg border border-[#E2E8F0] text-center shadow-sm">
                             <p className="text-secondary-gray mb-4">
-                                You have not linked any products to your {isSupplier ? "supply portfolio" : "stock inventory"} yet.
+                                {isSupplier 
+                                    ? "You have not published any products to your supply portfolio yet. As a Supplier, you can only post new petroleum products to distribute to dealers and customers."
+                                    : "You have not linked or sourced any products for your stock inventory yet. As a Dealer, you can post new products or source directly from refinery suppliers."
+                                }
                             </p>
                             <div className="flex flex-wrap justify-center gap-3">
-                                <button
-                                    onClick={() => setActiveTab("products")}
-                                    className="border border-[#E2E8F0] text-dark-slate px-5 py-2 rounded-lg text-sm font-semibold cursor-pointer hover:bg-slate-50 transition-colors"
-                                >
-                                    Browse Catalog
-                                </button>
+                                {isDealer && (
+                                    <button
+                                        onClick={() => setActiveTab("products")}
+                                        className="border border-[#E2E8F0] text-dark-slate px-5 py-2 rounded-lg text-sm font-semibold cursor-pointer hover:bg-slate-50 transition-colors"
+                                    >
+                                        Browse Catalog to Source
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => setIsPostProductModalOpen(true)}
                                     className="bg-primary text-white px-5 py-2 rounded-lg text-sm font-semibold cursor-pointer hover:bg-primary/90 transition-colors"
@@ -2421,8 +2429,12 @@ export default function Dashboard() {
                                 <strong className="font-semibold text-primary">
                                     Posting as {isSupplier ? "Refinery Supplier" : isDealer ? "Authorized Dealer" : "System Admin"}:
                                 </strong>{" "}
-                                This product will be created in the central database
-                                {(isSupplier || isDealer) && " and automatically linked to your active supply portfolio so customers and wholesale partners can source directly from you."}
+                                {isSupplier 
+                                    ? "As a Supplier, you can only post new petroleum grades to supply to dealers and customers across the network." 
+                                    : isDealer 
+                                    ? "As a Dealer, you can post your own specialized products as well as take/source wholesale supply from Suppliers."
+                                    : "This product will be created in the central database."
+                                }
                             </div>
                         </div>
 

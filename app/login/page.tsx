@@ -212,21 +212,14 @@ export default function Login() {
                                 <label className="label pb-1" htmlFor="email">
                                     <span className="label-text font-semibold text-[#1E293B]">Email Address</span>
                                 </label>
-                                <div className="relative">
-                                    <input
-                                        id="email"
-                                        type="email"
-                                        value={email}
-                                        placeholder="user@example.com"
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] pr-10 focus:border-[#0F2747] focus:outline-none transition rounded-xl ${errors.email ? "border-[#DC2626]" : ""}`}
-                                    />
-                                    <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-[#64748B]">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                                        </svg>
-                                    </span>
-                                </div>
+                                <input
+                                    id="email"
+                                    type="email"
+                                    value={email}
+                                    placeholder="user@example.com"
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none transition rounded-xl ${errors.email ? "border-[#DC2626]" : ""}`}
+                                />
                                 {errors.email && (
                                     <span className="text-[#DC2626] text-xs font-medium mt-1">{errors.email}</span>
                                 )}
@@ -236,22 +229,14 @@ export default function Login() {
                                 <label className="label pb-1" htmlFor="password">
                                     <span className="label-text font-semibold text-[#1E293B]">Password</span>
                                 </label>
-                                <div className="relative">
-                                    <input
-                                        id="password"
-                                        type="password"
-                                        value={password}
-                                        placeholder="Enter password"
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] pr-10 focus:border-[#0F2747] focus:outline-none transition rounded-xl ${errors.password ? "border-[#DC2626]" : ""}`}
-                                    />
-                                    <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-[#64748B]">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                        </svg>
-                                    </span>
-                                </div>
+                                <input
+                                    id="password"
+                                    type="password"
+                                    value={password}
+                                    placeholder="Enter password"
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none transition rounded-xl ${errors.password ? "border-[#DC2626]" : ""}`}
+                                />
                                 {errors.password && (
                                     <span className="text-[#DC2626] text-xs font-medium mt-1">{errors.password}</span>
                                 )}

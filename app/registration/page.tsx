@@ -119,7 +119,6 @@ export default function Registration() {
 
         setIsSubmitting(true);
 
-        // Enforce strict email uniqueness across all 4 database tables (Customers, Admins, Dealers, Suppliers)
         const emailCheck = await checkEmailUniqueness(result.data.email);
         if (!emailCheck.isUnique) {
             setIsSubmitting(false);

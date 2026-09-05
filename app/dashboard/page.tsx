@@ -1019,61 +1019,64 @@ export default function Dashboard() {
 
     return (
         <>
-            <MyHeader name="Dashboard" message="system control & operations center!" />
+            <MyHeader name="Dashboard" message="Enterprise operations control and resource distribution center" />
             <MyNavigation />
 
             {/* Profile Overview & Navigation Bar */}
-            <div className="w-full max-w-[1200px] bg-card-white border border-[#E2E8F0] shadow-sm rounded-xl p-5 mb-6 text-left">
+            <div className="w-full max-w-[1200px] card bg-base-100 border border-base-300 shadow-xl rounded-2xl p-6 mb-8 text-left">
                 {/* Top Section: User Info & Logout Button */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#F1F5F9]">
-                    <div className="flex items-center gap-3.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-base-300">
+                    <div className="flex items-center gap-4">
                         {user.photoUrl ? (
                             <img
                                 src={user.photoUrl}
                                 alt="Profile"
-                                className="w-12 h-12 rounded-full object-cover border border-[#E2E8F0] shadow-xs"
+                                className="w-14 h-14 rounded-2xl object-cover border-2 border-primary/20 shadow-md"
                                 onError={(e) => {
                                     e.currentTarget.style.display = 'none';
                                 }}
                             />
                         ) : (
-                            <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg shadow-xs">
+                            <div className="w-14 h-14 rounded-2xl bg-primary text-white flex items-center justify-center font-black text-xl shadow-md">
                                 {(user.userName || user.email)[0].toUpperCase()}
                             </div>
                         )}
                         <div>
                             <div className="flex items-center gap-2 flex-wrap">
-                                <h2 className="text-xl font-bold text-dark-slate">
-                                    Welcome back, {user.userName || user.email}!
+                                <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                                    Welcome, {user.userName || user.email}
                                 </h2>
-                                <span className="text-xs px-2.5 py-0.5 rounded-full font-bold uppercase bg-blue-100 text-primary border border-blue-200">
+                                <span className="badge badge-primary font-bold uppercase text-xs text-white">
                                     Role: {user.title || "User"}
                                 </span>
                                 {isSupplier && (
-                                    <span className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase ${supplierOperationalStatus === "active"
-                                            ? "bg-green-100 text-success-green border border-green-200"
-                                            : "bg-red-100 text-error-red border border-red-200"
-                                        }`}>
+                                    <span className={`badge font-bold uppercase text-xs text-white ${
+                                        supplierOperationalStatus === "active" ? "badge-success" : "badge-error"
+                                    }`}>
                                         Status: {supplierOperationalStatus}
                                     </span>
                                 )}
                             </div>
-                            <p className="text-xs sm:text-sm text-secondary-gray mt-0.5">
-                                Email: <span className="font-medium text-dark-slate">{user.email}</span> &bull; Hub: <span className="font-medium text-dark-slate">{user.address || "Main Operational HQ"}</span>
+                            <p className="text-xs sm:text-sm text-slate-500 mt-1 flex items-center gap-3 flex-wrap">
+                                <span>Email: <strong className="text-slate-800">{user.email}</strong></span>
+                                <span>Hub: <strong className="text-slate-800">{user.address || "Main Operational HQ"}</strong></span>
                             </p>
                         </div>
                     </div>
 
                     <button
                         onClick={handleLogout}
-                        className="bg-error-red text-white py-2 px-5 rounded-lg cursor-pointer font-semibold text-xs sm:text-sm hover:bg-error-red/90 transition-all shadow-xs self-start sm:self-center shrink-0"
+                        className="btn btn-error btn-sm text-white font-semibold shadow-md flex items-center gap-1.5 self-start sm:self-center shrink-0"
                     >
-                        Logout
+                        <span>Sign Out</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
                     </button>
                 </div>
 
                 {/* Bottom Section: Dedicated Full-Width Navigation Tabs */}
-                <div className="flex items-center gap-2 pt-3.5 overflow-x-auto flex-wrap">
+                <div className="flex items-center gap-2 pt-4 overflow-x-auto flex-wrap">
                     {isAdmin && (
                         <>
                             <button
@@ -1081,9 +1084,9 @@ export default function Dashboard() {
                                     setActiveTab("monitoring");
                                     fetchAdminMonitoringData();
                                 }}
-                                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "monitoring"
-                                        ? "bg-primary text-white shadow-xs"
-                                        : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
+                                className={`btn btn-sm font-semibold transition-all cursor-pointer ${activeTab === "monitoring"
+                                        ? "btn-primary text-white shadow-md"
+                                        : "btn-ghost text-slate-600 hover:bg-base-200 border border-base-300"
                                     }`}
                             >
                                 System Health (Monitor)
@@ -1093,9 +1096,9 @@ export default function Dashboard() {
                                     setActiveTab("users_crud");
                                     fetchAllMergedUsers();
                                 }}
-                                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "users_crud"
-                                        ? "bg-primary text-white shadow-xs"
-                                        : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
+                                className={`btn btn-sm font-semibold transition-all cursor-pointer ${activeTab === "users_crud"
+                                        ? "btn-primary text-white shadow-md"
+                                        : "btn-ghost text-slate-600 hover:bg-base-200 border border-base-300"
                                     }`}
                             >
                                 Global User CRUD
@@ -1105,9 +1108,9 @@ export default function Dashboard() {
 
                     <button
                         onClick={() => setActiveTab("products")}
-                        className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "products"
-                                ? "bg-primary text-white shadow-xs"
-                                : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
+                        className={`btn btn-sm font-semibold transition-all cursor-pointer ${activeTab === "products"
+                                ? "btn-primary text-white shadow-md"
+                                : "btn-ghost text-slate-600 hover:bg-base-200 border border-base-300"
                             }`}
                     >
                         Products Catalog
@@ -1119,9 +1122,9 @@ export default function Dashboard() {
                                 setActiveTab("inventory");
                                 if (user.id) fetchCustomInventory(user.id, user.title);
                             }}
-                            className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "inventory"
-                                    ? "bg-primary text-white shadow-xs"
-                                    : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
+                            className={`btn btn-sm font-semibold transition-all cursor-pointer ${activeTab === "inventory"
+                                    ? "btn-primary text-white shadow-md"
+                                    : "btn-ghost text-slate-600 hover:bg-base-200 border border-base-300"
                                 }`}
                         >
                             {isSupplier ? "Supply Portfolio" : "Stock Inventory"}
@@ -1133,9 +1136,9 @@ export default function Dashboard() {
                             setActiveTab("orders");
                             if (user.id) fetchOrders(user.id, user.title);
                         }}
-                        className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "orders"
-                                ? "bg-primary text-white shadow-xs"
-                                : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
+                        className={`btn btn-sm font-semibold transition-all cursor-pointer ${activeTab === "orders"
+                                ? "btn-primary text-white shadow-md"
+                                : "btn-ghost text-slate-600 hover:bg-base-200 border border-base-300"
                             }`}
                     >
                         {isCustomer ? "My Orders & Tracking" : isAdmin ? "Global Order Control" : "Fulfill Orders & Logistics"}
@@ -1146,9 +1149,9 @@ export default function Dashboard() {
                             setActiveTab("profile");
                             if (user.email) fetchFullProfile(user.email, user.title);
                         }}
-                        className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "profile"
-                                ? "bg-primary text-white shadow-xs"
-                                : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
+                        className={`btn btn-sm font-semibold transition-all cursor-pointer ${activeTab === "profile"
+                                ? "btn-primary text-white shadow-md"
+                                : "btn-ghost text-slate-600 hover:bg-base-200 border border-base-300"
                             }`}
                     >
                         Profile Settings
@@ -1157,9 +1160,9 @@ export default function Dashboard() {
                     {!isAdmin && (
                         <button
                             onClick={() => setActiveTab("directory")}
-                            className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "directory"
-                                    ? "bg-primary text-white shadow-xs"
-                                    : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
+                            className={`btn btn-sm font-semibold transition-all cursor-pointer ${activeTab === "directory"
+                                    ? "btn-primary text-white shadow-md"
+                                    : "btn-ghost text-slate-600 hover:bg-base-200 border border-base-300"
                                 }`}
                         >
                             Directory Search

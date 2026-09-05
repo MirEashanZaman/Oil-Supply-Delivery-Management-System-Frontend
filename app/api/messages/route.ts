@@ -24,7 +24,6 @@ export async function POST(request: Request) {
             channel,
         };
 
-        // If configured with active Pusher credentials, trigger the Pusher event
         const pusherServer = getPusherServer();
         if (pusherServer) {
             try {

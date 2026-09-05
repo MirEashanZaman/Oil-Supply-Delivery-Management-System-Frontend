@@ -133,45 +133,51 @@ export default function Home() {
 
     return (
         <div className="w-full max-w-[1240px] flex flex-col items-center">
-            <MyHeader name="Home" message="Welcome to our home page!" />
+            <MyHeader name="Home" message="Enterprise petroleum logistics and multi-tier energy supply management" />
             <MyNavigation />
 
             {/* Welcome Greeting Banner */}
-            <div className="w-full bg-gradient-to-r from-primary to-[#1A3A60] text-white rounded-xl p-6 shadow-md mb-8 flex flex-col md:flex-row items-center justify-between gap-4 text-left">
+            <div className="w-full bg-gradient-to-r from-primary via-[#163860] to-[#0d213a] text-white rounded-2xl p-6 sm:p-8 shadow-xl mb-8 flex flex-col md:flex-row items-center justify-between gap-6 text-left border border-primary/30">
                 <div>
-                    <span className="text-xs uppercase font-extrabold tracking-wider bg-secondary/20 text-secondary px-3 py-1 rounded border border-secondary/30">
+                    <span className="text-xs uppercase font-extrabold tracking-wider bg-secondary/20 text-secondary px-3 py-1 rounded-full border border-secondary/30">
                         Oil Supply & Delivery Platform
                     </span>
-                    <h1 className="text-2xl md:text-3xl font-extrabold mt-2">
-                        {user ? `Welcome back, ${user.userName || user.email}!` : "Enterprise Petroleum Logistics"}
+                    <h1 className="text-2xl md:text-3xl font-black mt-3 tracking-tight">
+                        {user ? `Welcome back, ${user.userName || user.email}` : "Enterprise Petroleum Logistics"}
                     </h1>
-                    <p className="text-sm text-slate-300 mt-1 max-w-xl">
+                    <p className="text-xs sm:text-sm text-slate-300 mt-1.5 max-w-xl leading-relaxed">
                         Streamlining international fuel trade with direct sourcing from refinery suppliers and certified dealer distribution.
                     </p>
                 </div>
-                <div className="flex gap-3 items-center flex-wrap">
+                <div className="flex gap-3 items-center flex-wrap shrink-0">
                     {user ? (
                         <>
                             <Link
                                 href="/dashboard"
-                                className="btn btn-primary bg-secondary hover:bg-secondary/90 text-dark-slate font-bold border-none shadow-md px-6"
+                                className="btn btn-secondary text-slate-900 font-bold shadow-md px-6 flex items-center gap-2"
                             >
-                                Go to Dashboard →
+                                <span>Go to Dashboard</span>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                </svg>
                             </Link>
                             <button
                                 onClick={handleLogout}
                                 className="btn btn-outline text-white border-white/40 hover:bg-white/10 cursor-pointer"
                             >
-                                Logout
+                                Sign Out
                             </button>
                         </>
                     ) : (
                         <>
                             <Link
                                 href="/login"
-                                className="btn btn-primary bg-secondary hover:bg-secondary/90 text-dark-slate font-bold border-none shadow-md px-6"
+                                className="btn btn-secondary text-slate-900 font-bold shadow-md px-6 flex items-center gap-2"
                             >
-                                Sign In
+                                <span>Sign In</span>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                </svg>
                             </Link>
                             <Link
                                 href="/registration"
@@ -188,23 +194,23 @@ export default function Home() {
             <div className="w-full mb-12">
                 <div className="flex items-center justify-between mb-3 px-1 text-left">
                     <div>
-                        <h2 className="text-xl font-extrabold text-dark-slate flex items-center gap-2">
+                        <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                             <span>Operations Showcase</span>
-                            <span className="badge badge-primary badge-sm text-[11px] font-bold">Auto-Slides Right to Left</span>
+                            <span className="badge badge-primary badge-sm text-[11px] font-bold text-white">Auto-Slides Right to Left</span>
                         </h2>
-                        <p className="text-xs text-secondary-gray">DaisyUI Full-Width Interactive Hero Carousel</p>
+                        <p className="text-xs text-slate-500">DaisyUI Full-Width Interactive Hero Carousel</p>
                     </div>
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => setIsAutoPlay(!isAutoPlay)}
-                            className="btn btn-xs btn-ghost text-xs text-secondary-gray cursor-pointer"
+                            className="btn btn-xs btn-ghost text-xs text-slate-500 cursor-pointer"
                         >
                             {isAutoPlay ? "Pause Auto-Slide" : "Resume Auto-Slide"}
                         </button>
                     </div>
                 </div>
 
-                <div className="carousel w-full rounded-2xl shadow-xl overflow-hidden relative bg-black h-[360px] md:h-[420px]">
+                <div className="carousel w-full rounded-2xl shadow-xl overflow-hidden relative bg-black h-[360px] md:h-[420px] border border-base-300">
                     {HERO_SLIDES.map((slide, idx) => (
                         <div
                             key={slide.id}
@@ -221,18 +227,18 @@ export default function Home() {
                                 alt={slide.title}
                                 className="w-full h-full object-cover brightness-50"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-6 md:p-12 text-left text-white">
-                                <span className="text-xs font-bold uppercase tracking-wider text-secondary mb-2 bg-secondary/10 w-fit px-3 py-1 rounded border border-secondary/20">
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent flex flex-col justify-end p-6 md:p-12 text-left text-white">
+                                <span className="text-xs font-bold uppercase tracking-wider text-secondary mb-2 bg-secondary/15 w-fit px-3 py-1 rounded-full border border-secondary/30">
                                     {slide.badge}
                                 </span>
-                                <h3 className="text-2xl md:text-4xl font-extrabold max-w-2xl leading-tight">
+                                <h3 className="text-2xl md:text-4xl font-extrabold max-w-2xl leading-tight tracking-tight">
                                     {slide.title}
                                 </h3>
-                                <p className="text-sm md:text-base text-slate-200 mt-2 max-w-xl">
+                                <p className="text-xs md:text-sm text-slate-200 mt-2 max-w-xl leading-relaxed">
                                     {slide.tagline}
                                 </p>
-                                <div className="mt-4 flex gap-3">
-                                    <Link href="/dashboard" className="btn btn-primary btn-sm md:btn-md shadow-lg">
+                                <div className="mt-5 flex gap-3">
+                                    <Link href="/dashboard" className="btn btn-primary btn-sm md:btn-md shadow-lg text-white font-semibold">
                                         Explore Products
                                     </Link>
                                     <Link href="/about" className="btn btn-outline btn-sm md:btn-md text-white border-white/50 hover:bg-white/20">
@@ -250,14 +256,18 @@ export default function Home() {
                             className="btn btn-circle btn-sm md:btn-md bg-black/60 hover:bg-black text-white border-none pointer-events-auto shadow-md cursor-pointer"
                             aria-label="Previous Slide"
                         >
-                            ❮
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
+                            </svg>
                         </button>
                         <button
                             onClick={() => setCurrentHeroSlide((prev) => (prev + 1) % HERO_SLIDES.length)}
                             className="btn btn-circle btn-sm md:btn-md bg-black/60 hover:bg-black text-white border-none pointer-events-auto shadow-md cursor-pointer"
                             aria-label="Next Slide"
                         >
-                            ❯
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
+                            </svg>
                         </button>
                     </div>
 
@@ -267,8 +277,8 @@ export default function Home() {
                             <button
                                 key={idx}
                                 onClick={() => setCurrentHeroSlide(idx)}
-                                className={`w-3 h-3 rounded-full transition-all cursor-pointer ${
-                                    idx === currentHeroSlide ? "bg-secondary w-8" : "bg-white/50 hover:bg-white"
+                                className={`w-2.5 h-2.5 rounded-full transition-all cursor-pointer ${
+                                    idx === currentHeroSlide ? "bg-secondary w-7" : "bg-white/50 hover:bg-white"
                                 }`}
                                 aria-label={`Slide ${idx + 1}`}
                             />
@@ -282,14 +292,14 @@ export default function Home() {
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 px-1 text-left gap-2">
                     <div>
                         <div className="flex items-center gap-2">
-                            <h2 className="text-xl md:text-2xl font-extrabold text-dark-slate">
+                            <h2 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
                                 Featured Oil Products & Energy Grades
                             </h2>
-                            <span className="badge badge-success badge-sm text-white text-[11px] font-bold">
-                                Right → Left Stream
+                            <span className="badge badge-success text-white text-[11px] font-bold">
+                                Right to Left Stream
                             </span>
                         </div>
-                        <p className="text-xs text-secondary-gray mt-0.5">
+                        <p className="text-xs text-slate-500 mt-0.5">
                             Items stream from right to left. Hover over any product card to pause and inspect details.
                         </p>
                     </div>
@@ -297,25 +307,29 @@ export default function Home() {
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => setIsMarqueeMode(!isMarqueeMode)}
-                            className="btn btn-xs rounded-md border border-[#E2E8F0] bg-white text-dark-slate hover:bg-slate-100 cursor-pointer text-xs"
+                            className="btn btn-xs rounded-lg border border-base-300 bg-base-100 text-slate-700 hover:bg-base-200 cursor-pointer text-xs"
                         >
-                            {isMarqueeMode ? "Switch to Manual Mode" : "Switch to Auto Stream (RTL)"}
+                            {isMarqueeMode ? "Switch to Manual Mode" : "Switch to Auto Stream"}
                         </button>
                         {!isMarqueeMode && (
                             <div className="flex gap-1">
                                 <button
                                     onClick={() => handleScroll("left")}
-                                    className="btn btn-circle btn-xs bg-white border border-[#E2E8F0] hover:bg-slate-100 text-dark-slate cursor-pointer"
+                                    className="btn btn-circle btn-xs bg-base-100 border border-base-300 hover:bg-base-200 text-slate-700 cursor-pointer"
                                     title="Scroll Left"
                                 >
-                                    ❮
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
+                                    </svg>
                                 </button>
                                 <button
                                     onClick={() => handleScroll("right")}
-                                    className="btn btn-circle btn-xs bg-white border border-[#E2E8F0] hover:bg-slate-100 text-dark-slate cursor-pointer"
+                                    className="btn btn-circle btn-xs bg-base-100 border border-base-300 hover:bg-base-200 text-slate-700 cursor-pointer"
                                     title="Scroll Right"
                                 >
-                                    ❯
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
+                                    </svg>
                                 </button>
                             </div>
                         )}
@@ -323,14 +337,14 @@ export default function Home() {
                 </div>
 
                 {/* Right-to-Left DaisyUI Carousel Container */}
-                <div className="w-full bg-[#FAFBFD] border border-[#E2E8F0] rounded-2xl p-4 md:p-6 shadow-sm overflow-hidden">
+                <div className="w-full bg-base-200/40 border border-base-300 rounded-2xl p-4 md:p-6 shadow-sm overflow-hidden">
                     {loadingProducts ? (
                         <div className="flex flex-col justify-center items-center py-16">
                             <span className="loading loading-spinner loading-lg text-primary mb-3"></span>
-                            <p className="text-sm text-secondary-gray">Loading live petroleum catalog...</p>
+                            <p className="text-sm text-slate-500 font-medium">Loading live petroleum catalog...</p>
                         </div>
                     ) : products.length === 0 ? (
-                        <div className="text-center py-12 text-secondary-gray">
+                        <div className="text-center py-12 text-slate-500">
                             <p className="font-semibold text-base mb-1">No products currently available in the catalog.</p>
                             <p className="text-xs">Certified oil products will appear here once registered.</p>
                         </div>
@@ -341,7 +355,7 @@ export default function Home() {
                                 {/* First set of products */}
                                 {products.map((product) => (
                                     <div key={`prod-1-${product.id}`} className="carousel-item">
-                                        <div className="card bg-base-100 w-80 sm:w-96 shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-all text-left">
+                                        <div className="card bg-base-100 w-80 sm:w-96 shadow-md border border-base-300 overflow-hidden hover:shadow-lg transition-all text-left rounded-2xl">
                                             <figure className="h-48 w-full overflow-hidden bg-slate-100">
                                                 <img
                                                     src={product.image}
@@ -355,33 +369,33 @@ export default function Home() {
                                             <div className="card-body p-5 flex flex-col justify-between">
                                                 <div>
                                                     <div className="flex items-center justify-between mb-2">
-                                                        <span className="text-xs font-bold text-secondary-gray bg-[#F1F5F9] px-2.5 py-1 rounded">
+                                                        <span className="badge badge-ghost text-xs font-bold text-slate-600">
                                                             {product.category}
                                                         </span>
-                                                        <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
-                                                            product.stockLevel === "In Stock" ? "bg-green-100 text-success-green" : "bg-amber-100 text-secondary"
+                                                        <span className={`badge text-xs font-semibold ${
+                                                            product.stockLevel === "In Stock" ? "badge-success text-white" : "badge-warning text-slate-900"
                                                         }`}>
                                                             {product.stockLevel}
                                                         </span>
                                                     </div>
-                                                    <h2 className="card-title text-base sm:text-lg font-bold text-dark-slate mb-1">
+                                                    <h3 className="card-title text-base sm:text-lg font-bold text-slate-900 mb-1">
                                                         {product.name}
-                                                    </h2>
-                                                    <p className="text-xs sm:text-sm text-secondary-gray line-clamp-2">
+                                                    </h3>
+                                                    <p className="text-xs sm:text-sm text-slate-600 line-clamp-2">
                                                         {product.description}
                                                     </p>
                                                 </div>
 
-                                                <div className="pt-3 mt-2 border-t border-[#F1F5F9] flex items-center justify-between gap-2">
-                                                    <span className="text-sm sm:text-base font-extrabold text-primary">
+                                                <div className="pt-3 mt-2 border-t border-base-200 flex items-center justify-between gap-2">
+                                                    <span className="text-base font-black text-primary">
                                                         {product.price}
                                                     </span>
                                                     <div className="card-actions justify-end">
                                                         <Link
-                                                            href="/dashboard"
-                                                            className="btn btn-primary btn-sm"
+                                                            href={`/products/${product.id}`}
+                                                            className="btn btn-primary btn-sm text-white font-semibold"
                                                         >
-                                                            Buy Now
+                                                            Inspect Specs
                                                         </Link>
                                                     </div>
                                                 </div>
@@ -393,7 +407,7 @@ export default function Home() {
                                 {/* Duplicate set to ensure seamless infinite looping right-to-left */}
                                 {products.map((product) => (
                                     <div key={`prod-2-${product.id}`} className="carousel-item">
-                                        <div className="card bg-base-100 w-80 sm:w-96 shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-all text-left">
+                                        <div className="card bg-base-100 w-80 sm:w-96 shadow-md border border-base-300 overflow-hidden hover:shadow-lg transition-all text-left rounded-2xl">
                                             <figure className="h-48 w-full overflow-hidden bg-slate-100">
                                                 <img
                                                     src={product.image}
@@ -407,33 +421,33 @@ export default function Home() {
                                             <div className="card-body p-5 flex flex-col justify-between">
                                                 <div>
                                                     <div className="flex items-center justify-between mb-2">
-                                                        <span className="text-xs font-bold text-secondary-gray bg-[#F1F5F9] px-2.5 py-1 rounded">
+                                                        <span className="badge badge-ghost text-xs font-bold text-slate-600">
                                                             {product.category}
                                                         </span>
-                                                        <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
-                                                            product.stockLevel === "In Stock" ? "bg-green-100 text-success-green" : "bg-amber-100 text-secondary"
+                                                        <span className={`badge text-xs font-semibold ${
+                                                            product.stockLevel === "In Stock" ? "badge-success text-white" : "badge-warning text-slate-900"
                                                         }`}>
                                                             {product.stockLevel}
                                                         </span>
                                                     </div>
-                                                    <h2 className="card-title text-base sm:text-lg font-bold text-dark-slate mb-1">
+                                                    <h3 className="card-title text-base sm:text-lg font-bold text-slate-900 mb-1">
                                                         {product.name}
-                                                    </h2>
-                                                    <p className="text-xs sm:text-sm text-secondary-gray line-clamp-2">
+                                                    </h3>
+                                                    <p className="text-xs sm:text-sm text-slate-600 line-clamp-2">
                                                         {product.description}
                                                     </p>
                                                 </div>
 
-                                                <div className="pt-3 mt-2 border-t border-[#F1F5F9] flex items-center justify-between gap-2">
-                                                    <span className="text-sm sm:text-base font-extrabold text-primary">
+                                                <div className="pt-3 mt-2 border-t border-base-200 flex items-center justify-between gap-2">
+                                                    <span className="text-base font-black text-primary">
                                                         {product.price}
                                                     </span>
                                                     <div className="card-actions justify-end">
                                                         <Link
-                                                            href="/dashboard"
-                                                            className="btn btn-primary btn-sm"
+                                                            href={`/products/${product.id}`}
+                                                            className="btn btn-primary btn-sm text-white font-semibold"
                                                         >
-                                                            Buy Now
+                                                            Inspect Specs
                                                         </Link>
                                                     </div>
                                                 </div>
@@ -451,7 +465,7 @@ export default function Home() {
                         >
                             {products.map((product) => (
                                 <div key={product.id} className="carousel-item">
-                                    <div className="card bg-base-100 w-80 sm:w-96 shadow-sm border border-[#E2E8F0] overflow-hidden text-left">
+                                    <div className="card bg-base-100 w-80 sm:w-96 shadow-md border border-base-300 overflow-hidden text-left rounded-2xl">
                                         <figure className="h-48 w-full overflow-hidden bg-slate-100">
                                             <img
                                                 src={product.image}
@@ -465,33 +479,33 @@ export default function Home() {
                                         <div className="card-body p-5 flex flex-col justify-between">
                                             <div>
                                                 <div className="flex items-center justify-between mb-2">
-                                                    <span className="text-xs font-bold text-secondary-gray bg-[#F1F5F9] px-2.5 py-1 rounded">
+                                                    <span className="badge badge-ghost text-xs font-bold text-slate-600">
                                                         {product.category}
                                                     </span>
-                                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
-                                                        product.stockLevel === "In Stock" ? "bg-green-100 text-success-green" : "bg-amber-100 text-secondary"
+                                                    <span className={`badge text-xs font-semibold ${
+                                                        product.stockLevel === "In Stock" ? "badge-success text-white" : "badge-warning text-slate-900"
                                                     }`}>
                                                         {product.stockLevel}
                                                     </span>
                                                 </div>
-                                                <h2 className="card-title text-base sm:text-lg font-bold text-dark-slate mb-1">
+                                                <h3 className="card-title text-base sm:text-lg font-bold text-slate-900 mb-1">
                                                     {product.name}
-                                                </h2>
-                                                <p className="text-xs sm:text-sm text-secondary-gray line-clamp-2">
+                                                </h3>
+                                                <p className="text-xs sm:text-sm text-slate-600 line-clamp-2">
                                                     {product.description}
                                                 </p>
                                             </div>
 
-                                            <div className="pt-3 mt-2 border-t border-[#F1F5F9] flex items-center justify-between gap-2">
-                                                <span className="text-sm sm:text-base font-extrabold text-primary">
+                                            <div className="pt-3 mt-2 border-t border-base-200 flex items-center justify-between gap-2">
+                                                <span className="text-base font-black text-primary">
                                                     {product.price}
                                                 </span>
                                                 <div className="card-actions justify-end">
                                                     <Link
-                                                        href="/dashboard"
-                                                        className="btn btn-primary btn-sm"
+                                                        href={`/products/${product.id}`}
+                                                        className="btn btn-primary btn-sm text-white font-semibold"
                                                     >
-                                                        Buy Now
+                                                        Inspect Specs
                                                     </Link>
                                                 </div>
                                             </div>
@@ -505,40 +519,40 @@ export default function Home() {
             </div>
 
             {/* PLATFORM PILLARS & ROLES GRID */}
-            <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 text-left">
-                <div className="bg-card-white p-6 rounded-xl border border-[#E2E8F0] shadow-sm hover:border-primary/30 transition-all">
-                    <div className="w-10 h-10 rounded-lg bg-blue-50 text-primary flex items-center justify-center mb-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 text-left">
+                <div className="card bg-base-100 p-6 rounded-2xl border border-base-300 shadow-md hover:border-primary/40 transition-all">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
                     </div>
-                    <h3 className="font-bold text-lg text-dark-slate mb-1">Direct Refinery Sourcing</h3>
-                    <p className="text-xs text-secondary-gray">
+                    <h3 className="font-bold text-base text-slate-900 mb-1">Direct Refinery Sourcing</h3>
+                    <p className="text-xs text-slate-600 leading-relaxed">
                         Customers can bypass middle intermediaries and order crude and refined fuels directly from authorized refinery suppliers.
                     </p>
                 </div>
 
-                <div className="bg-card-white p-6 rounded-xl border border-[#E2E8F0] shadow-sm hover:border-primary/30 transition-all">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="card bg-base-100 p-6 rounded-2xl border border-base-300 shadow-md hover:border-primary/40 transition-all">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
                         </svg>
                     </div>
-                    <h3 className="font-bold text-lg text-dark-slate mb-1">Regional Dealer Network</h3>
-                    <p className="text-xs text-secondary-gray">
+                    <h3 className="font-bold text-base text-slate-900 mb-1">Regional Dealer Network</h3>
+                    <p className="text-xs text-slate-600 leading-relaxed">
                         Licensed dealers manage localized fuel stock, source wholesale petroleum supplies in bulk, and fulfill commercial delivery orders.
                     </p>
                 </div>
 
-                <div className="bg-card-white p-6 rounded-xl border border-[#E2E8F0] shadow-sm hover:border-primary/30 transition-all">
-                    <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center mb-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="card bg-base-100 p-6 rounded-2xl border border-base-300 shadow-md hover:border-primary/40 transition-all">
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                         </svg>
                     </div>
-                    <h3 className="font-bold text-lg text-dark-slate mb-1">Centralized Admin Oversight</h3>
-                    <p className="text-xs text-secondary-gray">
+                    <h3 className="font-bold text-base text-slate-900 mb-1">Centralized Admin Oversight</h3>
+                    <p className="text-xs text-slate-600 leading-relaxed">
                         Full administrative monitoring of database entities, order status transitions, delivery schedules, and system health.
                     </p>
                 </div>

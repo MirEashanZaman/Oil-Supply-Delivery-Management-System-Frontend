@@ -16,18 +16,68 @@ type CarouselProduct = {
     image: string;
 };
 
-const getProductImage = (name?: string, img?: string) => {
-    if (img && (img.startsWith("/") || img.startsWith("http"))) return img;
-    if (!name) return "/Brent Crude Oil.jpg";
-    const lower = name.toLowerCase();
-    if (lower.includes("crude") || lower.includes("brent")) return "/Brent Crude Oil.jpg";
-    if (lower.includes("diesel")) return "/Ultra-Low Sulfur Diesel.jpg";
-    if (lower.includes("gasoline") || lower.includes("petrol") || lower.includes("octane")) return "/Premium Unleaded Gasoline.jpg";
-    if (lower.includes("jet") || lower.includes("aviation") || lower.includes("turbine")) return "/Aviation Turbine Fuel (Jet A-1).jpg";
-    if (lower.includes("lpg") || lower.includes("gas") || lower.includes("cylinder")) return "/images.jpg";
-    if (lower.includes("heavy") || lower.includes("marine") || lower.includes("bunker") || lower.includes("hfo")) return "/Heavy Marine Fuel Oil (HFO).jpg";
+const PRODUCT_IMAGE_MAP: Record<number, string> = {
+    1: "/Brent Crude Oil.jpg",
+    2: "/Ultra-Low Sulfur Diesel.jpg",
+    3: "/Premium Unleaded Gasoline.jpg",
+    4: "/Aviation Turbine Fuel (Jet A-1).jpg",
+    5: "/images.jpg",
+    6: "/Heavy Marine Fuel Oil (HFO).jpg",
+};
+
+const getProductImage = (name?: string, img?: string, id?: number | string) => {
+    if (typeof window !== "undefined" && id) {
+        try {
+            const customStored = localStorage.getItem(`product_img_${id}`);
+            if (customStored) return customStored;
+        } catch {
+        }
+    }
+    if (img && (img.startsWith("/") || img.startsWith("http")) && img !== "/Brent Crude Oil.jpg") {
+        return img;
+    }
+    const lower = (name || "").toLowerCase();
+    if (lower.includes("lpg") || lower.includes("liquefied") || lower.includes("cylinder") || lower.includes("propane") || lower.includes("butane")) {
+        return "/images.jpg";
+    }
+    if (lower.includes("diesel") || lower.includes("sulfur") || lower.includes("ulsd") || lower.includes("gasoil")) {
+        return "/Ultra-Low Sulfur Diesel.jpg";
+    }
+    if (lower.includes("gasoline") || lower.includes("petrol") || lower.includes("octane") || lower.includes("unleaded") || lower.includes("mogas")) {
+        return "/Premium Unleaded Gasoline.jpg";
+    }
+    if (lower.includes("jet") || lower.includes("aviation") || lower.includes("turbine") || lower.includes("a-1") || lower.includes("kerosene")) {
+        return "/Aviation Turbine Fuel (Jet A-1).jpg";
+    }
+    if (lower.includes("marine") || lower.includes("bunker") || lower.includes("hfo") || lower.includes("heavy") || lower.includes("fuel oil")) {
+        return "/Heavy Marine Fuel Oil (HFO).jpg";
+    }
+    if (lower.includes("crude") || lower.includes("brent") || lower.includes("wti") || lower.includes("raw")) {
+        return "/Brent Crude Oil.jpg";
+    }
+    if (id !== undefined && id !== null) {
+        const numId = Number(id);
+        if (!isNaN(numId) && PRODUCT_IMAGE_MAP[numId]) {
+            return PRODUCT_IMAGE_MAP[numId];
+        }
+        if (!isNaN(numId) && numId > 0) {
+            const fallbackImages = [
+                "/Brent Crude Oil.jpg",
+                "/Ultra-Low Sulfur Diesel.jpg",
+                "/Premium Unleaded Gasoline.jpg",
+                "/Aviation Turbine Fuel (Jet A-1).jpg",
+                "/images.jpg",
+                "/Heavy Marine Fuel Oil (HFO).jpg",
+            ];
+            return fallbackImages[(numId - 1) % fallbackImages.length];
+        }
+    }
+    if (img && (img.startsWith("/") || img.startsWith("http"))) {
+        return img;
+    }
     return "/Brent Crude Oil.jpg";
 };
+
 
 const HERO_SLIDES = [
     {
@@ -98,7 +148,7 @@ export default function Home() {
                             stockLevel: typeof p.quantity === "number" 
                                 ? (p.quantity <= 0 ? "Out of Stock" : p.quantity < 1000 ? "Low Stock" : "In Stock") 
                                 : p.stockLevel || "In Stock",
-                            image: getProductImage(p.name, p.image),
+                            image: getProductImage(p.name, p.image, p.id),
                         }));
                     setProducts(mapped);
                 }
@@ -352,7 +402,7 @@ export default function Home() {
                                                     alt={product.name}
                                                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                                                     onError={(e) => {
-                                                        e.currentTarget.src = "/Brent Crude Oil.jpg";
+                                                        e.currentTarget.src = getProductImage(product.name, undefined, product.id);
                                                     }}
                                                 />
                                             </figure>
@@ -403,7 +453,7 @@ export default function Home() {
                                                     alt={product.name}
                                                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                                                     onError={(e) => {
-                                                        e.currentTarget.src = "/Brent Crude Oil.jpg";
+                                                        e.currentTarget.src = getProductImage(product.name, undefined, product.id);
                                                     }}
                                                 />
                                             </figure>
@@ -460,7 +510,7 @@ export default function Home() {
                                                 alt={product.name}
                                                 className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                                                 onError={(e) => {
-                                                    e.currentTarget.src = "/Brent Crude Oil.jpg";
+                                                    e.currentTarget.src = getProductImage(product.name, undefined, product.id);
                                                 }}
                                             />
                                         </figure>

@@ -1,15 +1,12 @@
 export default function Loading() {
     return (
         <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
-            {/* Spinning Indicator */}
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
             
-            {/* Loading text with loading pulse */}
             <div className="text-primary font-bold text-lg tracking-wide animate-pulse">
                 Loading system data...
             </div>
             
-            {/* Skeleton Card Elements */}
             <div className="w-full max-w-[500px] border border-gray-100 rounded-lg p-5 space-y-3 bg-white/50 shadow-sm animate-pulse">
                 <div className="h-4 bg-gray-200 rounded w-1/3"></div>
                 <div className="h-3 bg-gray-200 rounded w-3/4"></div>

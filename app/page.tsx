@@ -23,7 +23,7 @@ const FEATURED_PRODUCTS: CarouselProduct[] = [
         price: "$82.50 / Barrel",
         description: "High-quality sweet light crude oil sourced from international marine drillings.",
         stockLevel: "In Stock",
-        image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80",
+        image: "/Brent Crude Oil.jpg",
     },
     {
         id: 2,
@@ -32,7 +32,7 @@ const FEATURED_PRODUCTS: CarouselProduct[] = [
         price: "$3.20 / Gallon",
         description: "Clean-burning commercial diesel fuel with high thermal output properties.",
         stockLevel: "In Stock",
-        image: "https://images.unsplash.com/photo-1582560475093-ba66accbc424?auto=format&fit=crop&w=800&q=80",
+        image: "/Ultra-Low Sulfur Diesel.jpg",
     },
     {
         id: 3,
@@ -41,7 +41,7 @@ const FEATURED_PRODUCTS: CarouselProduct[] = [
         price: "$3.85 / Gallon",
         description: "High-octane gasoline suitable for high-performance automotive engines.",
         stockLevel: "Low Stock",
-        image: "https://images.unsplash.com/photo-1545459720-aac8509eb02c?auto=format&fit=crop&w=800&q=80",
+        image: "/Premium Unleaded Gasoline.jpg",
     },
     {
         id: 4,
@@ -50,7 +50,7 @@ const FEATURED_PRODUCTS: CarouselProduct[] = [
         price: "$2.95 / Litre",
         description: "Kerosene-type jet fuel manufactured to rigorous international safety standards.",
         stockLevel: "In Stock",
-        image: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=800&q=80",
+        image: "/Aviation Turbine Fuel (Jet A-1).jpg",
     },
     {
         id: 5,
@@ -59,7 +59,7 @@ const FEATURED_PRODUCTS: CarouselProduct[] = [
         price: "$1.80 / kg",
         description: "Clean flammable hydrocarbon gas mixture utilized as heating and cooking fuel.",
         stockLevel: "In Stock",
-        image: "https://images.unsplash.com/photo-1508873696983-2df5703bc20d?auto=format&fit=crop&w=800&q=80",
+        image: "/images.jpg",
     },
     {
         id: 6,
@@ -68,7 +68,7 @@ const FEATURED_PRODUCTS: CarouselProduct[] = [
         price: "$620.00 / Ton",
         description: "Residual fuel oil blended for international ocean freight and industrial boiler usage.",
         stockLevel: "In Stock",
-        image: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?auto=format&fit=crop&w=800&q=80",
+        image: "/Heavy Marine Fuel Oil (HFO).jpg",
     },
 ];
 
@@ -77,21 +77,21 @@ const HERO_SLIDES = [
         id: 1,
         title: "Enterprise Petroleum & Oil Delivery Network",
         tagline: "Direct refinery sourcing, certified pipeline distribution, and automated logistics tracking.",
-        image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1400&q=80",
+        image: "/Brent Crude Oil.jpg",
         badge: "Direct Sourcing Channel",
     },
     {
         id: 2,
         title: "Wholesale & Fleet Tanker Dispatch System",
         tagline: "Connecting refinery suppliers, licensed regional dealers, and industrial consumers seamlessly.",
-        image: "https://images.unsplash.com/photo-1582560475093-ba66accbc424?auto=format&fit=crop&w=1400&q=80",
+        image: "/Ultra-Low Sulfur Diesel.jpg",
         badge: "Real-time Telemetry",
     },
     {
         id: 3,
         title: "Instant Invoicing & Integrated Checkout",
         tagline: "Pay with secure card processing, choose dealer or supplier origin, and track deliveries 24/7.",
-        image: "https://images.unsplash.com/photo-1545459720-aac8509eb02c?auto=format&fit=crop&w=1400&q=80",
+        image: "/Heavy Marine Fuel Oil (HFO).jpg",
         badge: "Zero Intermediary Fees",
     },
 ];
@@ -308,7 +308,7 @@ export default function Home() {
                                                     alt={product.name}
                                                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                                                     onError={(e) => {
-                                                        e.currentTarget.src = "https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp";
+                                                        e.currentTarget.src = "/Brent Crude Oil.jpg";
                                                     }}
                                                 />
                                             </figure>
@@ -360,7 +360,7 @@ export default function Home() {
                                                     alt={product.name}
                                                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                                                     onError={(e) => {
-                                                        e.currentTarget.src = "https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp";
+                                                        e.currentTarget.src = "/Brent Crude Oil.jpg";
                                                     }}
                                                 />
                                             </figure>
@@ -418,7 +418,7 @@ export default function Home() {
                                                 alt={product.name}
                                                 className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                                                 onError={(e) => {
-                                                    e.currentTarget.src = "https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp";
+                                                    e.currentTarget.src = "/Brent Crude Oil.jpg";
                                                 }}
                                             />
                                         </figure>

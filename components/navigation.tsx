@@ -29,37 +29,46 @@ export default function Navigation() {
     const isActive = (path: string) => pathname === path;
 
     return (
-        <nav className="navbar bg-base-100 shadow-md border border-slate-200/80 rounded-2xl px-4 py-2 my-4 w-full max-w-[1240px] flex items-center justify-between gap-4 transition-all">
-            <div className="flex items-center gap-3">
-                <Link href="/" className="flex items-center gap-2 text-dark-slate font-extrabold text-base tracking-tight hover:opacity-90 transition-opacity">
-                    <span className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center font-black text-sm shadow-sm">
+        <nav className="navbar bg-[#0F2747] text-white shadow-lg rounded-2xl px-4 py-2.5 my-3 w-full max-w-[1240px] flex items-center justify-between gap-3 border border-[#163860] transition-all">
+            {/* Brand / Project Name */}
+            <div className="flex items-center gap-2.5">
+                <Link href="/" className="flex items-center gap-2 text-white font-black text-sm sm:text-base tracking-tight hover:opacity-95 transition-opacity">
+                    <span className="w-8 h-8 rounded-lg bg-[#F59E0B] text-[#1E293B] flex items-center justify-center font-black text-xs shadow-sm">
                         OS
                     </span>
-                    <span className="hidden sm:inline">PetroLogistics</span>
+                    <span className="hidden sm:inline font-bold">Oil Supply & Delivery Management System</span>
+                    <span className="sm:hidden font-bold">OSDMS</span>
                 </Link>
             </div>
 
+            {/* Navigation Links */}
             <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-center">
                 <Link
                     href="/"
-                    className={`btn btn-sm rounded-xl font-semibold text-xs sm:text-sm border-none transition-all ${
-                        isActive("/") ? "btn-primary shadow-sm" : "btn-ghost text-dark-slate hover:bg-slate-100"
+                    className={`btn btn-sm rounded-lg text-xs sm:text-sm font-semibold border-none transition-all ${
+                        isActive("/")
+                            ? "bg-[#163860] text-[#F59E0B] font-bold shadow-sm"
+                            : "btn-ghost text-slate-200 hover:bg-[#163860]/70 hover:text-white"
                     }`}
                 >
                     Home
                 </Link>
                 <Link
                     href="/about"
-                    className={`btn btn-sm rounded-xl font-semibold text-xs sm:text-sm border-none transition-all ${
-                        isActive("/about") ? "btn-primary shadow-sm" : "btn-ghost text-dark-slate hover:bg-slate-100"
+                    className={`btn btn-sm rounded-lg text-xs sm:text-sm font-semibold border-none transition-all ${
+                        isActive("/about")
+                            ? "bg-[#163860] text-[#F59E0B] font-bold shadow-sm"
+                            : "btn-ghost text-slate-200 hover:bg-[#163860]/70 hover:text-white"
                     }`}
                 >
                     About Us
                 </Link>
                 <Link
                     href="/contact"
-                    className={`btn btn-sm rounded-xl font-semibold text-xs sm:text-sm border-none transition-all ${
-                        isActive("/contact") ? "btn-primary shadow-sm" : "btn-ghost text-dark-slate hover:bg-slate-100"
+                    className={`btn btn-sm rounded-lg text-xs sm:text-sm font-semibold border-none transition-all ${
+                        isActive("/contact")
+                            ? "bg-[#163860] text-[#F59E0B] font-bold shadow-sm"
+                            : "btn-ghost text-slate-200 hover:bg-[#163860]/70 hover:text-white"
                     }`}
                 >
                     Contact
@@ -68,8 +77,10 @@ export default function Navigation() {
                 {user && (
                     <Link
                         href="/dashboard"
-                        className={`btn btn-sm rounded-xl font-semibold text-xs sm:text-sm border-none transition-all ${
-                            isActive("/dashboard") ? "btn-primary shadow-sm" : "btn-ghost text-dark-slate hover:bg-slate-100"
+                        className={`btn btn-sm rounded-lg text-xs sm:text-sm font-semibold border-none transition-all ${
+                            isActive("/dashboard")
+                                ? "bg-[#F59E0B] text-[#1E293B] font-bold shadow-sm"
+                                : "btn-ghost text-slate-200 hover:bg-[#163860]/70 hover:text-white"
                         }`}
                     >
                         Dashboard
@@ -77,34 +88,33 @@ export default function Navigation() {
                 )}
             </div>
 
+            {/* Auth Actions */}
             <div className="flex items-center gap-2">
                 {!user ? (
                     <div className="flex items-center gap-2">
                         <Link
                             href="/login"
-                            className={`btn btn-sm rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                                isActive("/login") ? "btn-primary" : "btn-outline border-slate-300 text-dark-slate hover:bg-slate-100"
-                            }`}
+                            className="btn btn-sm bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold rounded-lg border-none shadow-sm text-xs sm:text-sm"
                         >
                             Sign In
                         </Link>
                         <Link
                             href="/registration"
-                            className="btn btn-sm btn-secondary text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm hover:shadow transition-all"
+                            className="btn btn-sm btn-outline text-white border-slate-400 hover:bg-white/10 hover:border-white rounded-lg text-xs sm:text-sm font-semibold"
                         >
                             Register
                         </Link>
                     </div>
                 ) : (
                     <div className="flex items-center gap-2">
-                        <span className="badge badge-primary badge-sm font-bold text-[11px] hidden md:inline-flex">
+                        <span className="badge bg-[#163860] text-[#F59E0B] border border-[#F59E0B]/30 font-bold text-xs px-2.5 py-1 hidden md:inline-flex">
                             {user.title || "User"}
                         </span>
                         <button
                             onClick={handleLogout}
-                            className="btn btn-sm btn-ghost text-error-red hover:bg-red-50 rounded-xl font-bold text-xs sm:text-sm cursor-pointer"
+                            className="btn btn-sm btn-ghost text-red-300 hover:bg-red-950/40 hover:text-red-200 rounded-lg font-bold text-xs sm:text-sm cursor-pointer"
                         >
-                            Logout
+                            Sign Out
                         </button>
                     </div>
                 )}

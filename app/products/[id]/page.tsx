@@ -72,75 +72,119 @@ export default function ProductDetails({
     }, [productId]);
 
     return (
-        <div className="w-full max-w-[800px] flex flex-col items-center">
+        <div className="w-full flex flex-col items-center">
             <MyHeader
-                name="Product Details"
-                message={`Live inventory record for item #${productId}`}
+                name="Product Inventory"
+                message={`Live certified petroleum specification for item #${productId}`}
             />
             <MyNavigation />
 
-            {loading ? (
-                <div className="p-8 text-center animate-pulse text-dark-slate font-medium">
-                    Loading product details...
+            <div className="w-full max-w-4xl mt-8">
+                {/* Breadcrumbs */}
+                <div className="breadcrumbs text-xs text-slate-500 mb-4 px-1">
+                    <ul>
+                        <li><Link href="/" className="hover:text-primary">Home</Link></li>
+                        <li><Link href="/dashboard" className="hover:text-primary">Catalog</Link></li>
+                        <li className="font-semibold text-slate-800">Product #{productId}</li>
+                    </ul>
                 </div>
-            ) : product ? (
-                <div className="card bg-base-100 w-full shadow-lg border border-[#E2E8F0] overflow-hidden mt-4 text-left">
-                    <figure className="h-64 w-full overflow-hidden bg-slate-100">
-                        <img
-                            src={product.image || "/Brent Crude Oil.jpg"}
-                            alt={product.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                                e.currentTarget.src = "/Brent Crude Oil.jpg";
-                            }}
-                        />
-                    </figure>
-                    <div className="card-body p-6">
-                        <div className="flex items-center justify-between">
-                            <span className="badge badge-outline text-xs font-semibold px-2.5 py-1 rounded bg-[#F1F5F9] text-secondary-gray">
-                                {product.category || "Petroleum Grade"}
-                            </span>
-                            <span className="badge badge-success text-white text-xs font-semibold px-2 py-0.5 rounded">
-                                {product.stockLevel || "In Stock"}
-                            </span>
+
+                {loading ? (
+                    <div className="card bg-base-100 border border-base-300 shadow-md p-12 text-center">
+                        <div className="flex flex-col items-center justify-center gap-3">
+                            <span className="loading loading-spinner loading-lg text-primary"></span>
+                            <span className="text-slate-600 font-medium text-sm">Querying refinery inventory database...</span>
                         </div>
-                        <h1 className="card-title text-2xl font-bold text-dark-slate mt-2">{product.name}</h1>
-                        <p className="text-secondary-gray mt-2 text-sm leading-relaxed">
-                            {product.description || "Petroleum fuel product sourced via certified refinery pipelines."}
-                        </p>
-                        
-                        <div className="mt-6 pt-4 border-t border-[#F1F5F9] flex items-center justify-between">
-                            <div>
-                                <span className="text-xs text-secondary-gray block font-semibold">Unit Price</span>
-                                <span className="text-2xl font-extrabold text-primary">
-                                    {typeof product.price === "number" ? `$${product.price.toFixed(2)}` : product.price || "$0.00"}
+                    </div>
+                ) : product ? (
+                    <div className="card lg:card-side bg-base-100 shadow-xl border border-base-300 overflow-hidden">
+                        <figure className="lg:w-1/2 h-72 lg:h-auto bg-slate-100 relative">
+                            <img
+                                src={product.image || "/Brent Crude Oil.jpg"}
+                                alt={product.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                    e.currentTarget.src = "/Brent Crude Oil.jpg";
+                                }}
+                            />
+                            <div className="absolute top-4 left-4">
+                                <span className="badge badge-primary font-bold shadow-md text-xs">
+                                    Certified Spec
                                 </span>
                             </div>
-                            <div className="card-actions justify-end gap-3">
-                                <Link href="/dashboard" className="btn btn-primary">
-                                    Order via Dashboard
-                                </Link>
-                                <Link href="/" className="btn btn-outline">
-                                    Back to Home
-                                </Link>
+                        </figure>
+
+                        <div className="card-body p-6 sm:p-8 lg:w-1/2 justify-between">
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="badge badge-ghost border-slate-300 text-slate-700 text-xs font-semibold">
+                                        {product.category || "Petroleum Grade"}
+                                    </span>
+                                    <span className={`badge text-xs font-semibold ${product.stockLevel === "Out of Stock" ? "badge-error text-white" : product.stockLevel === "Low Stock" ? "badge-warning text-slate-900" : "badge-success text-white"}`}>
+                                        {product.stockLevel || "In Stock"}
+                                    </span>
+                                </div>
+
+                                <h1 className="card-title text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                                    {product.name}
+                                </h1>
+
+                                <p className="text-slate-600 text-xs sm:text-sm leading-relaxed mt-3">
+                                    {product.description || "Petroleum fuel product sourced via certified refinery pipelines with standardized viscosity and flash point testing."}
+                                </p>
+
+                                {/* Quick Spec Sheet */}
+                                <div className="mt-5 pt-4 border-t border-base-300 space-y-2 text-xs">
+                                    <div className="flex justify-between py-1 border-b border-base-200">
+                                        <span className="text-slate-500">Registry Identifier</span>
+                                        <span className="font-mono font-semibold text-slate-800">PETRO-SKU-{product.id}</span>
+                                    </div>
+                                    <div className="flex justify-between py-1 border-b border-base-200">
+                                        <span className="text-slate-500">Handling Certification</span>
+                                        <span className="font-semibold text-slate-800">ISO 8217 / ASTM D975</span>
+                                    </div>
+                                    <div className="flex justify-between py-1">
+                                        <span className="text-slate-500">Transit Mode</span>
+                                        <span className="font-semibold text-slate-800">Pipeline / Dedicated Tanker</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-6 pt-4 border-t border-base-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div>
+                                    <span className="text-[11px] uppercase tracking-wider text-slate-400 block font-bold">Base Benchmark</span>
+                                    <span className="text-3xl font-black text-primary">
+                                        {typeof product.price === "number" ? `$${product.price.toFixed(2)}` : product.price || "$0.00"}
+                                    </span>
+                                    <span className="text-xs text-slate-500 block">per metric barrel / unit</span>
+                                </div>
+
+                                <div className="card-actions flex-nowrap gap-2">
+                                    <Link href="/dashboard" className="btn btn-primary text-white shadow-md font-semibold text-xs sm:text-sm">
+                                        Procure in Dashboard
+                                    </Link>
+                                    <Link href="/" className="btn btn-outline border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900 text-xs sm:text-sm">
+                                        Back
+                                    </Link>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            ) : (
-                <div className="bg-card-white p-8 rounded-lg border border-[#E2E8F0] text-center shadow-sm w-full mt-4">
-                    <h2 className="text-lg font-bold text-dark-slate mb-2">Product #{productId}</h2>
-                    <p className="text-secondary-gray text-sm mb-4">No database record found for this product identifier.</p>
-                    <div className="flex justify-center gap-3">
-                        <Link href="/dashboard" className="btn btn-primary btn-sm">
-                            View All Catalog Products
-                        </Link>
-                        <Link href="/" className="btn btn-outline btn-sm">
-                            Back to Home
-                        </Link>
+                ) : (
+                    <div className="card bg-base-100 border border-base-300 p-8 text-center shadow-md">
+                        <h2 className="text-lg font-bold text-slate-900 mb-1">Product #{productId} Not Found</h2>
+                        <p className="text-slate-500 text-xs mb-4">No active refinery inventory record corresponds to this ID.</p>
+                        <div className="flex justify-center gap-3">
+                            <Link href="/dashboard" className="btn btn-primary btn-sm text-white">
+                                View Full Catalog
+                            </Link>
+                            <Link href="/" className="btn btn-outline btn-sm">
+                                Back to Home
+                            </Link>
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 }

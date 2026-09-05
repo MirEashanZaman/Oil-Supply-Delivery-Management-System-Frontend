@@ -170,65 +170,129 @@ export default function Login() {
     };
 
     return (
-        <>
-            <MyHeader name="Login" message="access your account!" />
+        <div className="w-full flex flex-col items-center">
+            <MyHeader name="Login" message="Secure access to your enterprise oil supply account" />
             <MyNavigation />
 
-            <div className="mt-5 w-full max-w-[500px] bg-card-white p-6 rounded-lg border border-[#E2E8F0] shadow-md text-left">
-                <h1 className="mt-0 text-dark-slate mb-5 text-2xl font-bold">Login</h1>
+            <div className="mt-8 w-full max-w-md">
+                <div className="card bg-base-100 shadow-xl border border-base-300">
+                    <div className="card-body p-6 sm:p-8">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-3 bg-primary/10 text-primary rounded-xl">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Portal Sign In</h1>
+                                <p className="text-xs text-slate-500 font-medium">Enter your credentials to continue</p>
+                            </div>
+                        </div>
 
-                {successMessage && (
-                    <p className="text-success-green font-bold mb-4">{successMessage}</p>
-                )}
-
-                {errors.form && (
-                    <p className="text-error-red font-bold mb-4">{errors.form}</p>
-                )}
-
-                <form onSubmit={handleSubmit} noValidate>
-                    <div className="mb-4">
-                        <label htmlFor="email" className="block mb-1 font-medium text-dark-slate">
-                            Email Address:
-                        </label>
-                        <input
-                            id="email"
-                            type="email"
-                            value={email}
-                            placeholder="Enter your email"
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
-                        />
-                        {errors.email && (
-                            <span className="text-error-red text-sm block mt-1">{errors.email}</span>
+                        {successMessage && (
+                            <div role="alert" className="alert alert-success shadow-sm mb-5 text-sm py-3">
+                                <svg className="w-5 h-5 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>{successMessage}</span>
+                            </div>
                         )}
-                    </div>
 
-                    <div className="mb-5">
-                        <label htmlFor="password" className="block mb-1 font-medium text-dark-slate">
-                            Password:
-                        </label>
-                        <input
-                            id="password"
-                            type="password"
-                            value={password}
-                            placeholder="Enter your password"
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
-                        />
-                        {errors.password && (
-                            <span className="text-error-red text-sm block mt-1">{errors.password}</span>
+                        {errors.form && (
+                            <div role="alert" className="alert alert-error shadow-sm mb-5 text-sm py-3 text-white bg-error">
+                                <svg className="w-5 h-5 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>{errors.form}</span>
+                            </div>
                         )}
-                    </div>
 
-                    <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="w-full bg-primary text-white border-none py-3 px-4 rounded text-base font-semibold cursor-pointer transition hover:bg-primary/95 shadow-sm disabled:bg-primary/50"
-                    >
-                        {isSubmitting ? "Logging in..." : "Login"}
-                    </button>
-                </form>
+                        <form onSubmit={handleSubmit} noValidate className="space-y-4">
+                            <div className="form-control w-full">
+                                <label className="label pb-1.5" htmlFor="email">
+                                    <span className="label-text font-semibold text-slate-700">Email Address</span>
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        id="email"
+                                        type="email"
+                                        value={email}
+                                        placeholder="name@company.com"
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className={`input input-bordered w-full pr-10 focus:outline-primary transition ${errors.email ? "input-error" : ""}`}
+                                    />
+                                    <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                                        </svg>
+                                    </span>
+                                </div>
+                                {errors.email && (
+                                    <span className="text-error text-xs font-medium mt-1.5">{errors.email}</span>
+                                )}
+                            </div>
+
+                            <div className="form-control w-full">
+                                <label className="label pb-1.5" htmlFor="password">
+                                    <span className="label-text font-semibold text-slate-700">Password</span>
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        id="password"
+                                        type="password"
+                                        value={password}
+                                        placeholder="••••••••"
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className={`input input-bordered w-full pr-10 focus:outline-primary transition ${errors.password ? "input-error" : ""}`}
+                                    />
+                                    <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                    </span>
+                                </div>
+                                {errors.password && (
+                                    <span className="text-error text-xs font-medium mt-1.5">{errors.password}</span>
+                                )}
+                            </div>
+
+                            <div className="pt-2">
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="btn btn-primary w-full shadow-md text-white font-semibold flex items-center justify-center gap-2"
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <span className="loading loading-spinner loading-sm"></span>
+                                            Authenticating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>Sign In</span>
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                            </svg>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+
+                        <div className="divider text-xs text-slate-400 my-4">OR</div>
+
+                        <div className="text-center">
+                            <p className="text-xs text-slate-500">
+                                Don&apos;t have an account yet?{" "}
+                                <a href="/registration" className="link link-primary font-semibold hover:underline">
+                                    Create new account
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </>
+        </div>
     );
 }

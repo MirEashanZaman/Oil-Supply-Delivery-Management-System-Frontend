@@ -3,12 +3,15 @@
 
 @theme {
   --color-primary: #0F2747;
-  --color-secondary: #D99A1E;
-  --color-soft-gray: #F5F7FA;
-  --color-dark-slate: #1F2937;
+  --color-primary-hover: #1A3A60;
+  --color-secondary: #D97706;
+  --color-secondary-hover: #B45309;
+  --color-accent: #0284C7;
+  --color-soft-gray: #F8FAFC;
+  --color-dark-slate: #0F172A;
   --color-success-green: #16A34A;
   --color-warning-amber: #F59E0B;
-  --color-error-red: #DC2626;
+  --color-error-red: #EF4444;
   --color-card-white: #FFFFFF;
   --color-secondary-gray: #64748B;
 }
@@ -22,6 +25,17 @@
 .btn-primary:hover {
   background-color: #1A3A60 !important;
   border-color: #1A3A60 !important;
+}
+
+.btn-secondary {
+  background-color: #D97706 !important;
+  color: #FFFFFF !important;
+  border-color: #D97706 !important;
+}
+
+.btn-secondary:hover {
+  background-color: #B45309 !important;
+  border-color: #B45309 !important;
 }
 
 @keyframes marquee-rtl {
@@ -41,4 +55,19 @@
 
 .animate-carousel-rtl:hover {
   animation-play-state: paused;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

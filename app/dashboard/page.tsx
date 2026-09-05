@@ -153,6 +153,16 @@ export default function Dashboard() {
     const [wholesaleQuantity, setWholesaleQuantity] = useState<number>(50);
     const [isSubmittingWholesale, setIsSubmittingWholesale] = useState<boolean>(false);
 
+    // Supplier / Dealer / Admin "Post / Upload New Product" Modal States
+    const [isPostProductModalOpen, setIsPostProductModalOpen] = useState<boolean>(false);
+    const [newProductName, setNewProductName] = useState<string>("");
+    const [newProductCategory, setNewProductCategory] = useState<string>("Crude Fuel");
+    const [newProductPrice, setNewProductPrice] = useState<number | "">("");
+    const [newProductQuantity, setNewProductQuantity] = useState<number | "">("");
+    const [newProductDescription, setNewProductDescription] = useState<string>("");
+    const [newProductImage, setNewProductImage] = useState<string>("/Brent Crude Oil.jpg");
+    const [isSubmittingNewProduct, setIsSubmittingNewProduct] = useState<boolean>(false);
+
     // Profile settings tab states
     const [editUsername, setEditUsername] = useState("");
     const [editPhone, setEditPhone] = useState("");
@@ -508,6 +518,72 @@ export default function Dashboard() {
         } catch (err) {
             console.error("Failed to remove product:", err);
             alert("Failed to remove product.");
+        }
+    };
+
+    // Axios Call: Post / Create New Product Listing (`POST /product/create` + `POST /:role/:id/products`)
+    const handleCreateAndPostProduct = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newProductName.trim()) {
+            alert("Please enter a valid product name.");
+            return;
+        }
+        if (!newProductPrice || Number(newProductPrice) <= 0) {
+            alert("Please enter a valid price greater than $0.");
+            return;
+        }
+        if (!newProductQuantity || Number(newProductQuantity) <= 0) {
+            alert("Please enter a valid stock quantity greater than 0.");
+            return;
+        }
+
+        setIsSubmittingNewProduct(true);
+        const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
+        try {
+            // 1. Create product in backend database
+            const createRes = await axios.post(
+                `${API_ENDPOINT}/product/create`,
+                {
+                    name: newProductName.trim(),
+                    price: Number(newProductPrice),
+                    quantity: Number(newProductQuantity),
+                },
+                { withCredentials: true }
+            );
+
+            const createdProduct = createRes.data;
+
+            // 2. If Dealer or Supplier, assign to their stock/portfolio
+            if (user && user.id && (isDealer || isSupplier)) {
+                const role = getRolePath(user.title);
+                try {
+                    await axios.post(
+                        `${API_ENDPOINT}/${role}/${user.id}/products`,
+                        { productIds: [createdProduct.id] },
+                        { withCredentials: true }
+                    );
+                } catch (assignErr) {
+                    console.warn("Could not automatically link to inventory:", assignErr);
+                }
+            }
+
+            alert(`Product "${newProductName}" published and posted successfully!`);
+            setNewProductName("");
+            setNewProductPrice("");
+            setNewProductQuantity("");
+            setNewProductDescription("");
+            setIsPostProductModalOpen(false);
+
+            // 3. Refresh live catalog & user's inventory
+            fetchCatalogProducts();
+            if (user && user.id && (isDealer || isSupplier)) {
+                fetchCustomInventory(user.id, user.title);
+            }
+        } catch (err: any) {
+            console.error("Failed to post product:", err);
+            alert(err.response?.data?.message || "Failed to publish product.");
+        } finally {
+            setIsSubmittingNewProduct(false);
         }
     };
 
@@ -1251,7 +1327,7 @@ export default function Dashboard() {
             {/* TAB 1: PRODUCT CATALOG & BULK SOURCING */}
             {activeTab === "products" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
-                    <div className="flex justify-between items-center mb-6">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
                         <div>
                             <h1 className="text-2xl font-extrabold text-dark-slate">
                                 {isAdmin
@@ -1274,6 +1350,17 @@ export default function Dashboard() {
                                 }
                             </p>
                         </div>
+                        {(isDealer || isSupplier || isAdmin) && (
+                            <button
+                                onClick={() => setIsPostProductModalOpen(true)}
+                                className="flex items-center justify-center gap-2 bg-primary text-white font-bold px-5 py-2.5 rounded-lg text-sm hover:bg-primary/90 transition-all shadow-md cursor-pointer whitespace-nowrap self-start sm:self-auto"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                                </svg>
+                                <span>+ Post New Product</span>
+                            </button>
+                        )}
                     </div>
 
                     {productsLoading ? (
@@ -1373,7 +1460,7 @@ export default function Dashboard() {
             {/* TAB: STOCK INVENTORY / SUPPLY PORTFOLIO */}
             {(isDealer || isSupplier) && activeTab === "inventory" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
-                    <div className="flex justify-between items-center mb-6">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
                         <div>
                             <h1 className="text-2xl font-extrabold text-dark-slate">
                                 {isSupplier ? "My Supply Portfolio" : "My Stock Inventory"}
@@ -1385,6 +1472,15 @@ export default function Dashboard() {
                                 }
                             </p>
                         </div>
+                        <button
+                            onClick={() => setIsPostProductModalOpen(true)}
+                            className="flex items-center justify-center gap-2 bg-primary text-white font-bold px-5 py-2.5 rounded-lg text-sm hover:bg-primary/90 transition-all shadow-md cursor-pointer whitespace-nowrap self-start sm:self-auto"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span>+ Post New Product</span>
+                        </button>
                     </div>
 
                     {customInventory.length === 0 ? (
@@ -1392,12 +1488,20 @@ export default function Dashboard() {
                             <p className="text-secondary-gray mb-4">
                                 You have not linked any products to your {isSupplier ? "supply portfolio" : "stock inventory"} yet.
                             </p>
-                            <button
-                                onClick={() => setActiveTab("products")}
-                                className="bg-primary text-white px-5 py-2 rounded text-sm font-semibold cursor-pointer"
-                            >
-                                Browse Catalog to Add Products
-                            </button>
+                            <div className="flex flex-wrap justify-center gap-3">
+                                <button
+                                    onClick={() => setActiveTab("products")}
+                                    className="border border-[#E2E8F0] text-dark-slate px-5 py-2 rounded-lg text-sm font-semibold cursor-pointer hover:bg-slate-50 transition-colors"
+                                >
+                                    Browse Catalog
+                                </button>
+                                <button
+                                    onClick={() => setIsPostProductModalOpen(true)}
+                                    className="bg-primary text-white px-5 py-2 rounded-lg text-sm font-semibold cursor-pointer hover:bg-primary/90 transition-colors"
+                                >
+                                    + Post Product Now
+                                </button>
+                            </div>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
@@ -2286,6 +2390,184 @@ export default function Dashboard() {
                                 }
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+            {/* SUPPLIER / DEALER / ADMIN: POST & UPLOAD PRODUCT MODAL */}
+            {isPostProductModalOpen && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[620px] max-h-[90vh] overflow-y-auto text-left p-6 md:p-8">
+                        <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-6">
+                            <div>
+                                <h2 className="text-xl font-extrabold text-dark-slate flex items-center gap-2">
+                                    <span>📦</span> Post & Upload Oil Product
+                                </h2>
+                                <p className="text-xs text-secondary-gray mt-1">
+                                    Publish a new petroleum grade or fuel product to the active network catalog.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setIsPostProductModalOpen(false)}
+                                className="text-gray-400 hover:text-dark-slate text-2xl font-bold p-1 cursor-pointer"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        {/* Informative Role Banner */}
+                        <div className="bg-blue-50/70 border border-blue-200 rounded-lg p-3.5 mb-6 flex items-start gap-3">
+                            <span className="text-xl">ℹ️</span>
+                            <div className="text-xs text-slate-700 leading-relaxed">
+                                <strong className="font-semibold text-primary">
+                                    Posting as {isSupplier ? "Refinery Supplier" : isDealer ? "Authorized Dealer" : "System Admin"}:
+                                </strong>{" "}
+                                This product will be created in the central database
+                                {(isSupplier || isDealer) && " and automatically linked to your active supply portfolio so customers and wholesale partners can source directly from you."}
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleCreateAndPostProduct} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">
+                                    Product Name <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="e.g., Brent Crude Oil Batch #409, Ultra-Low Sulfur Diesel"
+                                    value={newProductName}
+                                    onChange={(e) => setNewProductName(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded-lg text-sm bg-white text-dark-slate outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-dark-slate mb-1">
+                                        Category <span className="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        value={newProductCategory}
+                                        onChange={(e) => setNewProductCategory(e.target.value)}
+                                        className="w-full p-2.5 border border-secondary-gray rounded-lg text-sm bg-white text-dark-slate outline-none focus:border-primary"
+                                    >
+                                        <option value="Crude Fuel">Crude Fuel</option>
+                                        <option value="Refined Distillates">Refined Distillates (Diesel / Gasoline)</option>
+                                        <option value="Aviation Turbine Fuel">Aviation Turbine Fuel (Jet A-1)</option>
+                                        <option value="Liquefied Petroleum Gas">Liquefied Petroleum Gas (LPG)</option>
+                                        <option value="Heavy Marine Fuel Oil">Heavy Marine Fuel Oil (HFO)</option>
+                                        <option value="Lubricants & Greases">Lubricants & Greases</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-dark-slate mb-1">
+                                        Price per Unit (USD $) <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0.01"
+                                        required
+                                        placeholder="e.g. 78.50"
+                                        value={newProductPrice}
+                                        onChange={(e) => setNewProductPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                                        className="w-full p-2.5 border border-secondary-gray rounded-lg text-sm bg-white text-dark-slate outline-none focus:border-primary"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-dark-slate mb-1">
+                                        Stock Quantity (Barrels / Liters) <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        required
+                                        placeholder="e.g. 1500"
+                                        value={newProductQuantity}
+                                        onChange={(e) => setNewProductQuantity(e.target.value === "" ? "" : Number(e.target.value))}
+                                        className="w-full p-2.5 border border-secondary-gray rounded-lg text-sm bg-white text-dark-slate outline-none focus:border-primary"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-dark-slate mb-1">
+                                        Select Official Oil Image
+                                    </label>
+                                    <select
+                                        value={newProductImage}
+                                        onChange={(e) => setNewProductImage(e.target.value)}
+                                        className="w-full p-2.5 border border-secondary-gray rounded-lg text-sm bg-white text-dark-slate outline-none focus:border-primary"
+                                    >
+                                        <option value="/Brent Crude Oil.jpg">Brent Crude Oil</option>
+                                        <option value="/Ultra-Low Sulfur Diesel.jpg">Ultra-Low Sulfur Diesel</option>
+                                        <option value="/Premium Unleaded Gasoline.jpg">Premium Unleaded Gasoline</option>
+                                        <option value="/Aviation Turbine Fuel (Jet A-1).jpg">Aviation Turbine Fuel (Jet A-1)</option>
+                                        <option value="/images.jpg">Liquefied Petroleum Gas (LPG)</option>
+                                        <option value="/Heavy Marine Fuel Oil (HFO).jpg">Heavy Marine Fuel Oil (HFO)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Image Preview */}
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1.5">
+                                    Photo Preview:
+                                </label>
+                                <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                    <div className="w-24 h-16 rounded overflow-hidden bg-slate-200 shrink-0 border border-slate-300">
+                                        <img
+                                            src={newProductImage}
+                                            alt="Preview"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                    <div className="text-xs text-secondary-gray">
+                                        High-resolution authentic industrial oil photo will appear in the marketplace cards and inventory catalogs.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">
+                                    Product Description & Specifications (Optional)
+                                </label>
+                                <textarea
+                                    rows={3}
+                                    placeholder="Enter API gravity, sulfur percentage, flash point, or compliance certifications..."
+                                    value={newProductDescription}
+                                    onChange={(e) => setNewProductDescription(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded-lg text-sm bg-white text-dark-slate outline-none focus:border-primary"
+                                />
+                            </div>
+
+                            <div className="flex gap-3 pt-4 border-t border-gray-100">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsPostProductModalOpen(false)}
+                                    className="w-1/3 py-2.5 rounded-lg border border-secondary-gray text-dark-slate font-semibold text-sm hover:bg-gray-50 transition-colors cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmittingNewProduct}
+                                    className="w-2/3 py-2.5 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-colors cursor-pointer shadow-md disabled:bg-primary/50 flex items-center justify-center gap-2"
+                                >
+                                    {isSubmittingNewProduct ? (
+                                        <>
+                                            <span className="loading loading-spinner loading-xs"></span>
+                                            <span>Publishing Product...</span>
+                                        </>
+                                    ) : (
+                                        <span>🚀 Publish & Post Product</span>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

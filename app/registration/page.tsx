@@ -89,35 +89,47 @@ export default function Registration() {
         const rolePath = result.data.title.toLowerCase();
 
         try {
-            await axios.post(
+            const res = await axios.post(
                 `http://localhost:8000/${rolePath}/auth/register`,
                 formData,
                 {
                     headers: {
                         "Content-Type": "multipart/form-data",
                     },
+                    validateStatus: (status) => status < 500,
                 }
             );
 
-            setSuccessMessage("Registration successful! Redirecting to login page...");
+            if (res.status === 200 || res.status === 201) {
+                setSuccessMessage("Registration successful! Redirecting to login page...");
 
-            setUsername("");
-            setEmail("");
-            setPhoneNumber("");
-            setAddress("");
-            setTitle("");
-            setPhoto(null);
-            setPassword("");
-            setConfirmPassword("");
+                setUsername("");
+                setEmail("");
+                setPhoneNumber("");
+                setAddress("");
+                setTitle("");
+                setPhoto(null);
+                setPassword("");
+                setConfirmPassword("");
 
-            setTimeout(() => {
-                router.push("/login");
-            }, 2000);
+                setTimeout(() => {
+                    router.push("/login");
+                }, 2000);
+            } else if (res.status === 409) {
+                setErrors({
+                    form: `An account with this email (${result.data.email}) already exists as a ${result.data.title}. Please sign in with this email or use a different email to register.`,
+                });
+            } else {
+                const apiMessage = res.data?.message || "Registration failed. Please check your backend connection.";
+                setErrors({
+                    form: Array.isArray(apiMessage) ? apiMessage.join(", ") : apiMessage,
+                });
+            }
         } catch (error: any) {
-            console.error("Registration request error:", error);
+            console.warn("Registration request error:", error);
             const apiMessage = error.response?.data?.message || "Registration failed. Please check your backend connection.";
             setErrors({
-                form: Array.isArray(apiMessage) ? apiMessage.join(", ") : apiMessage
+                form: Array.isArray(apiMessage) ? apiMessage.join(", ") : apiMessage,
             });
         } finally {
             setIsSubmitting(false);

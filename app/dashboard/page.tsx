@@ -153,6 +153,16 @@ export default function Dashboard() {
     const [wholesaleQuantity, setWholesaleQuantity] = useState<number>(50);
     const [isSubmittingWholesale, setIsSubmittingWholesale] = useState<boolean>(false);
 
+    // Supplier / Dealer / Admin "Post / Upload New Product" Modal States
+    const [isPostProductModalOpen, setIsPostProductModalOpen] = useState<boolean>(false);
+    const [newProductName, setNewProductName] = useState<string>("");
+    const [newProductCategory, setNewProductCategory] = useState<string>("Crude Fuel");
+    const [newProductPrice, setNewProductPrice] = useState<number | "">("");
+    const [newProductQuantity, setNewProductQuantity] = useState<number | "">("");
+    const [newProductDescription, setNewProductDescription] = useState<string>("");
+    const [newProductImage, setNewProductImage] = useState<string>("/Brent Crude Oil.jpg");
+    const [isSubmittingNewProduct, setIsSubmittingNewProduct] = useState<boolean>(false);
+
     // Profile settings tab states
     const [editUsername, setEditUsername] = useState("");
     const [editPhone, setEditPhone] = useState("");
@@ -179,20 +189,25 @@ export default function Dashboard() {
     // Load initial user details
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-            try {
-                const parsed = JSON.parse(storedUser);
-                setUser(parsed);
-                setDeliveryAddress(parsed.address || "Dhaka, Bangladesh");
-                setCardHolder(parsed.userName || parsed.email.split("@")[0]);
-                if (parsed.status) setSupplierOperationalStatus(parsed.status);
-                fetchFullProfile(parsed.email, parsed.title);
-            } catch (e) {
-                console.error("Error parsing user data:", e);
-            }
+        if (!storedUser) {
+            router.push("/login");
+            return;
+        }
+
+        try {
+            const parsed = JSON.parse(storedUser);
+            setUser(parsed);
+            setDeliveryAddress(parsed.address || "Dhaka, Bangladesh");
+            setCardHolder(parsed.userName || parsed.email?.split("@")[0]);
+            if (parsed.status) setSupplierOperationalStatus(parsed.status);
+            fetchFullProfile(parsed.email, parsed.title);
+            fetchSourcingParties();
+        } catch (e) {
+            console.error("Error parsing user data:", e);
+            router.push("/login");
+            return;
         }
         setLoading(false);
-        fetchSourcingParties();
         fetchCatalogProducts();
     }, []);
 
@@ -215,8 +230,8 @@ export default function Dashboard() {
                         numericPrice: typeof p.price === "number" ? p.price : typeof p.numericPrice === "number" ? p.numericPrice : parseFloat(String(p.price).replace(/[^0-9.]/g, "")) || 0,
                         description: p.description || "High-grade petroleum product sourced from certified national pipelines.",
                         inStock: typeof p.quantity === "number" ? p.quantity > 0 : p.inStock !== false,
-                        stockLevel: typeof p.quantity === "number" 
-                            ? (p.quantity <= 0 ? "Out of Stock" : p.quantity < 1000 ? "Low Stock" : "In Stock") 
+                        stockLevel: typeof p.quantity === "number"
+                            ? (p.quantity <= 0 ? "Out of Stock" : p.quantity < 1000 ? "Low Stock" : "In Stock")
                             : p.stockLevel || "In Stock",
                         image: getProductImage(p.name, p.image),
                     }));
@@ -233,18 +248,24 @@ export default function Dashboard() {
     const fetchSourcingParties = async () => {
         try {
             const [suppliersRes, dealersRes] = await Promise.allSettled([
-                axios.get("http://localhost:8000/supplier/getallsupplier", { withCredentials: true }),
-                axios.get("http://localhost:8000/dealer/all", { withCredentials: true }),
+                axios.get("http://localhost:8000/supplier/getallsupplier", {
+                    withCredentials: true,
+                    validateStatus: (status) => status < 500,
+                }),
+                axios.get("http://localhost:8000/dealer/all", {
+                    withCredentials: true,
+                    validateStatus: (status) => status < 500,
+                }),
             ]);
 
-            if (suppliersRes.status === "fulfilled" && Array.isArray(suppliersRes.value.data)) {
+            if (suppliersRes.status === "fulfilled" && suppliersRes.value.status === 200 && Array.isArray(suppliersRes.value.data)) {
                 setAvailableSuppliers(suppliersRes.value.data);
             }
-            if (dealersRes.status === "fulfilled" && Array.isArray(dealersRes.value.data)) {
+            if (dealersRes.status === "fulfilled" && dealersRes.value.status === 200 && Array.isArray(dealersRes.value.data)) {
                 setAvailableDealers(dealersRes.value.data);
             }
         } catch (err) {
-            console.error("Failed to load sourcing partners:", err);
+            console.warn("Failed to load sourcing partners:", err);
         }
     };
 
@@ -252,8 +273,17 @@ export default function Dashboard() {
     const fetchFullProfile = async (email: string, title?: string) => {
         const url = getAllUsersUrl(title);
         try {
-            const res = await axios.get(url, { withCredentials: true });
-            if (Array.isArray(res.data)) {
+            const res = await axios.get(url, {
+                withCredentials: true,
+                validateStatus: (status) => status < 500,
+            });
+            if (res.status === 401) {
+                console.warn("Session expired or unauthorized. Please sign in again.");
+                localStorage.removeItem("user");
+                router.push("/login");
+                return;
+            }
+            if (res.status === 200 && Array.isArray(res.data)) {
                 const match = res.data.find((c: any) => c.email === email);
                 if (match) {
                     const fullUser: UserData = {
@@ -269,7 +299,7 @@ export default function Dashboard() {
                     setUser(fullUser);
                     if (match.status) setSupplierOperationalStatus(match.status);
                     localStorage.setItem("user", JSON.stringify(fullUser));
-                    
+
                     setEditUsername(match.username || match.userName || "");
                     setEditPhone(match.phoneNumber || "");
                     setEditAddress(match.address || "");
@@ -285,29 +315,37 @@ export default function Dashboard() {
                 }
             }
         } catch (err) {
-            console.error("Failed to load user profile list:", err);
+            console.warn("Failed to load user profile list:", err);
         }
     };
 
     // Axios Call (Admin): Monitor System Health Metrics (`GET /admin/monitor-data`)
     const fetchAdminMonitoringData = async () => {
         try {
-            const res = await axios.get("http://localhost:8000/admin/monitor-data", { withCredentials: true });
-            setMonitorMetrics(res.data);
+            const res = await axios.get("http://localhost:8000/admin/monitor-data", {
+                withCredentials: true,
+                validateStatus: (status) => status < 500,
+            });
+            if (res.status === 200) {
+                setMonitorMetrics(res.data);
+            }
         } catch (err) {
-            console.error("Failed to fetch monitoring data:", err);
+            console.warn("Failed to fetch monitoring data:", err);
         }
     };
 
     // Axios Call (Admin): Merged User Directory (`GET /admin/getallusers`)
     const fetchAllMergedUsers = async () => {
         try {
-            const res = await axios.get("http://localhost:8000/admin/getallusers", { withCredentials: true });
-            if (Array.isArray(res.data)) {
+            const res = await axios.get("http://localhost:8000/admin/getallusers", {
+                withCredentials: true,
+                validateStatus: (status) => status < 500,
+            });
+            if (res.status === 200 && Array.isArray(res.data)) {
                 setAllMergedUsers(res.data);
             }
         } catch (err) {
-            console.error("Failed to fetch merged users:", err);
+            console.warn("Failed to fetch merged users:", err);
         }
     };
 
@@ -465,12 +503,13 @@ export default function Dashboard() {
         try {
             const res = await axios.get(`http://localhost:8000/${r}/${partyId}/products`, {
                 withCredentials: true,
+                validateStatus: (status) => status < 500,
             });
-            if (Array.isArray(res.data)) {
+            if (res.status === 200 && Array.isArray(res.data)) {
                 setCustomInventory(res.data);
             }
         } catch (err) {
-            console.error("Failed to fetch inventory:", err);
+            console.warn("Failed to fetch inventory:", err);
         }
     };
 
@@ -508,6 +547,72 @@ export default function Dashboard() {
         } catch (err) {
             console.error("Failed to remove product:", err);
             alert("Failed to remove product.");
+        }
+    };
+
+    // Axios Call: Post / Create New Product Listing (`POST /product/create` + `POST /:role/:id/products`)
+    const handleCreateAndPostProduct = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newProductName.trim()) {
+            alert("Please enter a valid product name.");
+            return;
+        }
+        if (!newProductPrice || Number(newProductPrice) <= 0) {
+            alert("Please enter a valid price greater than $0.");
+            return;
+        }
+        if (!newProductQuantity || Number(newProductQuantity) <= 0) {
+            alert("Please enter a valid stock quantity greater than 0.");
+            return;
+        }
+
+        setIsSubmittingNewProduct(true);
+        const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
+        try {
+            // 1. Create product in backend database
+            const createRes = await axios.post(
+                `${API_ENDPOINT}/product/create`,
+                {
+                    name: newProductName.trim(),
+                    price: Number(newProductPrice),
+                    quantity: Number(newProductQuantity),
+                },
+                { withCredentials: true }
+            );
+
+            const createdProduct = createRes.data;
+
+            // 2. If Dealer or Supplier, assign to their stock/portfolio
+            if (user && user.id && (isDealer || isSupplier)) {
+                const role = getRolePath(user.title);
+                try {
+                    await axios.post(
+                        `${API_ENDPOINT}/${role}/${user.id}/products`,
+                        { productIds: [createdProduct.id] },
+                        { withCredentials: true }
+                    );
+                } catch (assignErr) {
+                    console.warn("Could not automatically link to inventory:", assignErr);
+                }
+            }
+
+            alert(`Product "${newProductName}" published and posted successfully!`);
+            setNewProductName("");
+            setNewProductPrice("");
+            setNewProductQuantity("");
+            setNewProductDescription("");
+            setIsPostProductModalOpen(false);
+
+            // 3. Refresh live catalog & user's inventory
+            fetchCatalogProducts();
+            if (user && user.id && (isDealer || isSupplier)) {
+                fetchCustomInventory(user.id, user.title);
+            }
+        } catch (err: any) {
+            console.error("Failed to post product:", err);
+            alert(err.response?.data?.message || "Failed to publish product.");
+        } finally {
+            setIsSubmittingNewProduct(false);
         }
     };
 
@@ -570,17 +675,21 @@ export default function Dashboard() {
             try {
                 const res = await axios.get(`http://localhost:8000/customer/${id}/orders`, {
                     withCredentials: true,
+                    validateStatus: (status) => status < 500,
                 });
-                setOrders(Array.isArray(res.data) ? res.data : []);
+                if (res.status === 200 && Array.isArray(res.data)) {
+                    setOrders(res.data);
+                }
             } catch (err) {
-                console.error("Failed to fetch customer orders history:", err);
+                console.warn("Failed to fetch customer orders history:", err);
             }
         } else {
             try {
                 const res = await axios.get("http://localhost:8000/customer/getallcustomer", {
                     withCredentials: true,
+                    validateStatus: (status) => status < 500,
                 });
-                if (Array.isArray(res.data)) {
+                if (res.status === 200 && Array.isArray(res.data)) {
                     const allOrders: Order[] = [];
                     res.data.forEach((cust: any) => {
                         if (Array.isArray(cust.orders)) {
@@ -603,7 +712,7 @@ export default function Dashboard() {
                     setOrders(allOrders);
                 }
             } catch (err) {
-                console.error("Failed to load global orders:", err);
+                console.warn("Failed to load global orders:", err);
             }
         }
     };
@@ -670,7 +779,7 @@ export default function Dashboard() {
             );
 
             try {
-                const partnerName = sourcingChoice === "supplier" 
+                const partnerName = sourcingChoice === "supplier"
                     ? (availableSuppliers.find(s => s.id === Number(selectedPartyId))?.userName || "Direct Refinery Supplier")
                     : (availableDealers.find(d => d.id === Number(selectedPartyId))?.userName || "Authorized Local Dealer");
 
@@ -941,11 +1050,10 @@ export default function Dashboard() {
                                     Role: {user.title || "User"}
                                 </span>
                                 {isSupplier && (
-                                    <span className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase ${
-                                        supplierOperationalStatus === "active" 
-                                            ? "bg-green-100 text-success-green border border-green-200" 
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase ${supplierOperationalStatus === "active"
+                                            ? "bg-green-100 text-success-green border border-green-200"
                                             : "bg-red-100 text-error-red border border-red-200"
-                                    }`}>
+                                        }`}>
                                         Status: {supplierOperationalStatus}
                                     </span>
                                 )}
@@ -973,11 +1081,10 @@ export default function Dashboard() {
                                     setActiveTab("monitoring");
                                     fetchAdminMonitoringData();
                                 }}
-                                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                                    activeTab === "monitoring" 
-                                        ? "bg-primary text-white shadow-xs" 
+                                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "monitoring"
+                                        ? "bg-primary text-white shadow-xs"
                                         : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
-                                }`}
+                                    }`}
                             >
                                 System Health (Monitor)
                             </button>
@@ -986,11 +1093,10 @@ export default function Dashboard() {
                                     setActiveTab("users_crud");
                                     fetchAllMergedUsers();
                                 }}
-                                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                                    activeTab === "users_crud" 
-                                        ? "bg-primary text-white shadow-xs" 
+                                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "users_crud"
+                                        ? "bg-primary text-white shadow-xs"
                                         : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
-                                }`}
+                                    }`}
                             >
                                 Global User CRUD
                             </button>
@@ -999,11 +1105,10 @@ export default function Dashboard() {
 
                     <button
                         onClick={() => setActiveTab("products")}
-                        className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                            activeTab === "products" 
-                                ? "bg-primary text-white shadow-xs" 
+                        className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "products"
+                                ? "bg-primary text-white shadow-xs"
                                 : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
-                        }`}
+                            }`}
                     >
                         Products Catalog
                     </button>
@@ -1014,11 +1119,10 @@ export default function Dashboard() {
                                 setActiveTab("inventory");
                                 if (user.id) fetchCustomInventory(user.id, user.title);
                             }}
-                            className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                                activeTab === "inventory" 
-                                    ? "bg-primary text-white shadow-xs" 
+                            className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "inventory"
+                                    ? "bg-primary text-white shadow-xs"
                                     : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
-                            }`}
+                                }`}
                         >
                             {isSupplier ? "Supply Portfolio" : "Stock Inventory"}
                         </button>
@@ -1029,25 +1133,23 @@ export default function Dashboard() {
                             setActiveTab("orders");
                             if (user.id) fetchOrders(user.id, user.title);
                         }}
-                        className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                            activeTab === "orders" 
-                                ? "bg-primary text-white shadow-xs" 
+                        className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "orders"
+                                ? "bg-primary text-white shadow-xs"
                                 : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
-                        }`}
+                            }`}
                     >
                         {isCustomer ? "My Orders & Tracking" : isAdmin ? "Global Order Control" : "Fulfill Orders & Logistics"}
                     </button>
-                    
+
                     <button
                         onClick={() => {
                             setActiveTab("profile");
                             if (user.email) fetchFullProfile(user.email, user.title);
                         }}
-                        className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                            activeTab === "profile" 
-                                ? "bg-primary text-white shadow-xs" 
+                        className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "profile"
+                                ? "bg-primary text-white shadow-xs"
                                 : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
-                        }`}
+                            }`}
                     >
                         Profile Settings
                     </button>
@@ -1055,11 +1157,10 @@ export default function Dashboard() {
                     {!isAdmin && (
                         <button
                             onClick={() => setActiveTab("directory")}
-                            className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                                activeTab === "directory" 
-                                    ? "bg-primary text-white shadow-xs" 
+                            className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeTab === "directory"
+                                    ? "bg-primary text-white shadow-xs"
                                     : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
-                            }`}
+                                }`}
                         >
                             Directory Search
                         </button>
@@ -1199,15 +1300,14 @@ export default function Dashboard() {
                                             <td className="p-4 font-mono font-bold text-xs text-secondary-gray">#{u.id}</td>
                                             <td className="p-4 font-bold text-dark-slate">{u.userName || u.username || u.email.split("@")[0]}</td>
                                             <td className="p-4">
-                                                <span className={`text-xs px-2.5 py-0.5 rounded font-bold uppercase ${
-                                                    role === "admin"
+                                                <span className={`text-xs px-2.5 py-0.5 rounded font-bold uppercase ${role === "admin"
                                                         ? "bg-purple-100 text-purple-800 border border-purple-200"
                                                         : role === "dealer"
-                                                        ? "bg-amber-100 text-amber-800 border border-amber-200"
-                                                        : role === "supplier"
-                                                        ? "bg-blue-100 text-primary border border-blue-200"
-                                                        : "bg-green-100 text-success-green border border-green-200"
-                                                }`}>
+                                                            ? "bg-amber-100 text-amber-800 border border-amber-200"
+                                                            : role === "supplier"
+                                                                ? "bg-blue-100 text-primary border border-blue-200"
+                                                                : "bg-green-100 text-success-green border border-green-200"
+                                                    }`}>
                                                     {role}
                                                 </span>
                                             </td>
@@ -1251,29 +1351,40 @@ export default function Dashboard() {
             {/* TAB 1: PRODUCT CATALOG & BULK SOURCING */}
             {activeTab === "products" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
-                    <div className="flex justify-between items-center mb-6">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
                         <div>
                             <h1 className="text-2xl font-extrabold text-dark-slate">
                                 {isAdmin
                                     ? "Global Products Catalog Management"
-                                    : isSupplier 
-                                    ? "Oil Products Catalog & Supply Portfolio"
-                                    : isDealer 
-                                    ? "Oil Products & Wholesale Sourcing" 
-                                    : "Oil Products Catalog"
+                                    : isSupplier
+                                        ? "Oil Products Catalog & Refinery Network"
+                                        : isDealer
+                                            ? "Oil Products & Wholesale Sourcing"
+                                            : "Oil Products Catalog"
                                 }
                             </h1>
                             <p className="text-sm text-secondary-gray">
                                 {isAdmin
                                     ? "Oversee product inventory, unit pricing, and stock metrics physically linked to Admin control."
                                     : isSupplier
-                                    ? "Add petroleum products to your active supply portfolio for distribution to Dealers and Customers."
-                                    : isDealer
-                                    ? "Assign products to your stock catalog or order bulk wholesale supplies directly from Refinery Suppliers."
-                                    : "Browse available oil grades and place retail orders with direct supplier or dealer sourcing."
+                                        ? "Refinery catalog overview. Suppliers can only post new petroleum batches using the '+ Post New Product' button."
+                                        : isDealer
+                                            ? "Dealers can both post new products and take/source wholesale stock directly from Refinery Suppliers."
+                                            : "Browse available oil grades and place retail orders with direct supplier or dealer sourcing."
                                 }
                             </p>
                         </div>
+                        {(isDealer || isSupplier || isAdmin) && (
+                            <button
+                                onClick={() => setIsPostProductModalOpen(true)}
+                                className="flex items-center justify-center gap-2 bg-primary text-white font-bold px-5 py-2.5 rounded-lg text-sm hover:bg-primary/90 transition-all shadow-md cursor-pointer whitespace-nowrap self-start sm:self-auto"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                                </svg>
+                                <span> Post New Product</span>
+                            </button>
+                        )}
                     </div>
 
                     {productsLoading ? (
@@ -1309,9 +1420,8 @@ export default function Dashboard() {
                                                 <span className="text-xs font-bold text-secondary-gray bg-[#F1F5F9] px-2.5 py-1 rounded">
                                                     {product.category}
                                                 </span>
-                                                <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
-                                                    product.stockLevel === "In Stock" ? "bg-green-100 text-success-green" : "bg-amber-100 text-secondary"
-                                                }`}>
+                                                <span className={`text-xs font-semibold px-2 py-0.5 rounded ${product.stockLevel === "In Stock" ? "bg-green-100 text-success-green" : "bg-amber-100 text-secondary"
+                                                    }`}>
                                                     {product.stockLevel}
                                                 </span>
                                             </div>
@@ -1327,12 +1437,15 @@ export default function Dashboard() {
                                                         ✓ Admin Linked Catalog
                                                     </span>
                                                 ) : isSupplier ? (
-                                                    <button
-                                                        onClick={() => handleAssignProduct(product)}
-                                                        className="btn btn-primary btn-sm text-white"
-                                                    >
-                                                        + Add to Portfolio
-                                                    </button>
+                                                    customInventory.some((item) => item.id === product.id) ? (
+                                                        <span className="text-xs bg-green-50 text-success-green font-bold px-3 py-1.5 rounded border border-green-200">
+                                                            ✓ In Your Portfolio
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-xs bg-slate-100 text-secondary-gray font-medium px-3 py-1.5 rounded">
+                                                            Refinery Listed
+                                                        </span>
+                                                    )
                                                 ) : isDealer ? (
                                                     <div className="flex gap-2">
                                                         <button
@@ -1373,31 +1486,53 @@ export default function Dashboard() {
             {/* TAB: STOCK INVENTORY / SUPPLY PORTFOLIO */}
             {(isDealer || isSupplier) && activeTab === "inventory" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
-                    <div className="flex justify-between items-center mb-6">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
                         <div>
                             <h1 className="text-2xl font-extrabold text-dark-slate">
                                 {isSupplier ? "My Supply Portfolio" : "My Stock Inventory"}
                             </h1>
                             <p className="text-sm text-secondary-gray">
-                                {isSupplier 
+                                {isSupplier
                                     ? "Manage petroleum products you actively distribute to Dealers and direct Customers."
                                     : "Manage products actively linked to your Dealer stock catalog."
                                 }
                             </p>
                         </div>
+                        <button
+                            onClick={() => setIsPostProductModalOpen(true)}
+                            className="flex items-center justify-center gap-2 bg-primary text-white font-bold px-5 py-2.5 rounded-lg text-sm hover:bg-primary/90 transition-all shadow-md cursor-pointer whitespace-nowrap self-start sm:self-auto"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span> Post New Product</span>
+                        </button>
                     </div>
 
                     {customInventory.length === 0 ? (
                         <div className="bg-card-white p-8 rounded-lg border border-[#E2E8F0] text-center shadow-sm">
                             <p className="text-secondary-gray mb-4">
-                                You have not linked any products to your {isSupplier ? "supply portfolio" : "stock inventory"} yet.
+                                {isSupplier
+                                    ? "You have not published any products to your supply portfolio yet. As a Supplier, you can only post new petroleum products to distribute to dealers and customers."
+                                    : "You have not linked or sourced any products for your stock inventory yet. As a Dealer, you can post new products or source directly from refinery suppliers."
+                                }
                             </p>
-                            <button
-                                onClick={() => setActiveTab("products")}
-                                className="bg-primary text-white px-5 py-2 rounded text-sm font-semibold cursor-pointer"
-                            >
-                                Browse Catalog to Add Products
-                            </button>
+                            <div className="flex flex-wrap justify-center gap-3">
+                                {isDealer && (
+                                    <button
+                                        onClick={() => setActiveTab("products")}
+                                        className="border border-[#E2E8F0] text-dark-slate px-5 py-2 rounded-lg text-sm font-semibold cursor-pointer hover:bg-slate-50 transition-colors"
+                                    >
+                                        Browse Catalog to Source
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => setIsPostProductModalOpen(true)}
+                                    className="bg-primary text-white px-5 py-2 rounded-lg text-sm font-semibold cursor-pointer hover:bg-primary/90 transition-colors"
+                                >
+                                    Post Product Now
+                                </button>
+                            </div>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
@@ -1451,19 +1586,19 @@ export default function Dashboard() {
             {activeTab === "orders" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <h1 className="text-2xl font-extrabold text-dark-slate mb-2">
-                        {isCustomer 
-                            ? "My Order History & Live Tracking" 
-                            : isAdmin 
-                            ? "Global Order Control & Modification" 
-                            : "Fulfill Customer & Dealer Orders"
+                        {isCustomer
+                            ? "My Order History & Live Tracking"
+                            : isAdmin
+                                ? "Global Order Control & Modification"
+                                : "Fulfill Customer & Dealer Orders"
                         }
                     </h1>
                     <p className="text-sm text-secondary-gray mb-6">
-                        {isCustomer 
+                        {isCustomer
                             ? "View past orders, delivery channel selections, payment invoices, and real-time status updates."
                             : isAdmin
-                            ? "Global authority to edit order details or delete orders (with automatic cascade clean-up of OrderDetails, Payments, and Deliveries)."
-                            : "Confirm or reject retail/wholesale orders, schedule deliveries, and dispatch email updates to buyers."
+                                ? "Global authority to edit order details or delete orders (with automatic cascade clean-up of OrderDetails, Payments, and Deliveries)."
+                                : "Confirm or reject retail/wholesale orders, schedule deliveries, and dispatch email updates to buyers."
                         }
                     </p>
 
@@ -1483,13 +1618,12 @@ export default function Dashboard() {
                                             <h3 className="text-base font-bold text-dark-slate">
                                                 Order #{item.id}
                                             </h3>
-                                            <span className={`text-xs px-2 py-0.5 rounded font-bold ${
-                                                item.status === "confirmed" 
-                                                    ? "bg-green-100 text-success-green border border-green-200" 
+                                            <span className={`text-xs px-2 py-0.5 rounded font-bold ${item.status === "confirmed"
+                                                    ? "bg-green-100 text-success-green border border-green-200"
                                                     : item.status === "rejected"
-                                                    ? "bg-red-100 text-error-red border border-red-200"
-                                                    : "bg-blue-50 text-primary border border-blue-100"
-                                            }`}>
+                                                        ? "bg-red-100 text-error-red border border-red-200"
+                                                        : "bg-blue-50 text-primary border border-blue-100"
+                                                }`}>
                                                 {item.status ? item.status.toUpperCase() : "PENDING"}
                                             </span>
                                         </div>
@@ -1567,7 +1701,7 @@ export default function Dashboard() {
                                                 >
                                                     Reject (PUT)
                                                 </button>
-                                                
+
                                                 <div className="flex items-center border border-secondary-gray rounded overflow-hidden">
                                                     <input
                                                         type="date"
@@ -1606,7 +1740,7 @@ export default function Dashboard() {
             {activeTab === "profile" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <h1 className="text-2xl font-extrabold text-dark-slate mb-6">Profile & Account Settings</h1>
-                    
+
                     <div className="bg-card-white p-6 rounded-lg border border-[#E2E8F0] shadow-sm max-w-[600px]">
                         {profileStatus && (
                             <p className="text-success-green font-bold mb-4">{profileStatus}</p>
@@ -1625,11 +1759,10 @@ export default function Dashboard() {
                                     <button
                                         type="button"
                                         onClick={handleToggleSupplierStatus}
-                                        className={`px-4 py-2 rounded font-bold text-xs cursor-pointer transition-colors ${
-                                            supplierOperationalStatus === "active"
+                                        className={`px-4 py-2 rounded font-bold text-xs cursor-pointer transition-colors ${supplierOperationalStatus === "active"
                                                 ? "bg-green-600 text-white hover:bg-green-700"
                                                 : "bg-gray-400 text-white hover:bg-gray-500"
-                                        }`}
+                                            }`}
                                     >
                                         Status: {supplierOperationalStatus.toUpperCase()} (Click to Switch)
                                     </button>
@@ -2129,11 +2262,10 @@ export default function Dashboard() {
                                         setSourcingChoice("supplier");
                                         if (availableSuppliers.length > 0) setSelectedPartyId(availableSuppliers[0].id);
                                     }}
-                                    className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${
-                                        sourcingChoice === "supplier"
+                                    className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${sourcingChoice === "supplier"
                                             ? "border-primary bg-blue-50/50 ring-2 ring-primary/20"
                                             : "border-[#E2E8F0] bg-white hover:bg-gray-50"
-                                    }`}
+                                        }`}
                                 >
                                     <span className="block font-bold text-sm text-dark-slate">Direct from Supplier</span>
                                     <span className="block text-xs text-secondary-gray">Refinery direct wholesale</span>
@@ -2145,11 +2277,10 @@ export default function Dashboard() {
                                         setSourcingChoice("dealer");
                                         if (availableDealers.length > 0) setSelectedPartyId(availableDealers[0].id);
                                     }}
-                                    className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${
-                                        sourcingChoice === "dealer"
+                                    className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${sourcingChoice === "dealer"
                                             ? "border-primary bg-blue-50/50 ring-2 ring-primary/20"
                                             : "border-[#E2E8F0] bg-white hover:bg-gray-50"
-                                    }`}
+                                        }`}
                                 >
                                     <span className="block font-bold text-sm text-dark-slate">Via Local Dealer</span>
                                     <span className="block text-xs text-secondary-gray">Regional distributor hub</span>
@@ -2280,12 +2411,196 @@ export default function Dashboard() {
                                 onClick={handleCompleteOrder}
                                 className="w-2/3 py-3 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/95 transition-colors cursor-pointer shadow-md disabled:bg-primary/50"
                             >
-                                {isSubmittingOrder 
-                                    ? "Processing Order..." 
+                                {isSubmittingOrder
+                                    ? "Processing Order..."
                                     : `Pay $${(checkoutProduct.numericPrice * orderQuantity).toFixed(2)} & Confirm Order`
                                 }
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+            {/* SUPPLIER / DEALER / ADMIN: POST & UPLOAD PRODUCT MODAL */}
+            {isPostProductModalOpen && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[620px] max-h-[90vh] overflow-y-auto text-left p-6 md:p-8">
+                        <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-6">
+                            <div>
+                                <h2 className="text-xl font-extrabold text-dark-slate">
+                                    Post & Upload Oil Product
+                                </h2>
+                                <p className="text-xs text-secondary-gray mt-1">
+                                    Publish a new petroleum grade or fuel product to the active network catalog.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setIsPostProductModalOpen(false)}
+                                className="text-gray-400 hover:text-dark-slate text-2xl font-bold p-1 cursor-pointer"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        {/* Informative Role Banner */}
+                        <div className="bg-blue-50/70 border border-blue-200 rounded-lg p-3.5 mb-6 flex items-start gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <div className="text-xs text-slate-700 leading-relaxed">
+                                <strong className="font-semibold text-primary">
+                                    Posting as {isSupplier ? "Refinery Supplier" : isDealer ? "Authorized Dealer" : "System Admin"}:
+                                </strong>{" "}
+                                {isSupplier
+                                    ? "As a Supplier, you can only post new petroleum grades to supply to dealers and customers across the network."
+                                    : isDealer
+                                        ? "As a Dealer, you can post your own specialized products as well as take/source wholesale supply from Suppliers."
+                                        : "This product will be created in the central database."
+                                }
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleCreateAndPostProduct} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">
+                                    Product Name <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="e.g., Brent Crude Oil Batch #409, Ultra-Low Sulfur Diesel"
+                                    value={newProductName}
+                                    onChange={(e) => setNewProductName(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded-lg text-sm bg-white text-dark-slate outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-dark-slate mb-1">
+                                        Category <span className="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        value={newProductCategory}
+                                        onChange={(e) => setNewProductCategory(e.target.value)}
+                                        className="w-full p-2.5 border border-secondary-gray rounded-lg text-sm bg-white text-dark-slate outline-none focus:border-primary"
+                                    >
+                                        <option value="Crude Fuel">Crude Fuel</option>
+                                        <option value="Refined Distillates">Refined Distillates (Diesel / Gasoline)</option>
+                                        <option value="Aviation Turbine Fuel">Aviation Turbine Fuel (Jet A-1)</option>
+                                        <option value="Liquefied Petroleum Gas">Liquefied Petroleum Gas (LPG)</option>
+                                        <option value="Heavy Marine Fuel Oil">Heavy Marine Fuel Oil (HFO)</option>
+                                        <option value="Lubricants & Greases">Lubricants & Greases</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-dark-slate mb-1">
+                                        Price per Unit (USD $) <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0.01"
+                                        required
+                                        placeholder="e.g. 78.50"
+                                        value={newProductPrice}
+                                        onChange={(e) => setNewProductPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                                        className="w-full p-2.5 border border-secondary-gray rounded-lg text-sm bg-white text-dark-slate outline-none focus:border-primary"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-dark-slate mb-1">
+                                        Stock Quantity (Barrels / Liters) <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        required
+                                        placeholder="e.g. 1500"
+                                        value={newProductQuantity}
+                                        onChange={(e) => setNewProductQuantity(e.target.value === "" ? "" : Number(e.target.value))}
+                                        className="w-full p-2.5 border border-secondary-gray rounded-lg text-sm bg-white text-dark-slate outline-none focus:border-primary"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-dark-slate mb-1">
+                                        Select Official Oil Image
+                                    </label>
+                                    <select
+                                        value={newProductImage}
+                                        onChange={(e) => setNewProductImage(e.target.value)}
+                                        className="w-full p-2.5 border border-secondary-gray rounded-lg text-sm bg-white text-dark-slate outline-none focus:border-primary"
+                                    >
+                                        <option value="/Brent Crude Oil.jpg">Brent Crude Oil</option>
+                                        <option value="/Ultra-Low Sulfur Diesel.jpg">Ultra-Low Sulfur Diesel</option>
+                                        <option value="/Premium Unleaded Gasoline.jpg">Premium Unleaded Gasoline</option>
+                                        <option value="/Aviation Turbine Fuel (Jet A-1).jpg">Aviation Turbine Fuel (Jet A-1)</option>
+                                        <option value="/images.jpg">Liquefied Petroleum Gas (LPG)</option>
+                                        <option value="/Heavy Marine Fuel Oil (HFO).jpg">Heavy Marine Fuel Oil (HFO)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Image Preview */}
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1.5">
+                                    Photo Preview:
+                                </label>
+                                <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                    <div className="w-24 h-16 rounded overflow-hidden bg-slate-200 shrink-0 border border-slate-300">
+                                        <img
+                                            src={newProductImage}
+                                            alt="Preview"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                    <div className="text-xs text-secondary-gray">
+                                        High-resolution authentic industrial oil photo will appear in the marketplace cards and inventory catalogs.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">
+                                    Product Description & Specifications (Optional)
+                                </label>
+                                <textarea
+                                    rows={3}
+                                    placeholder="Enter API gravity, sulfur percentage, flash point, or compliance certifications..."
+                                    value={newProductDescription}
+                                    onChange={(e) => setNewProductDescription(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded-lg text-sm bg-white text-dark-slate outline-none focus:border-primary"
+                                />
+                            </div>
+
+                            <div className="flex gap-3 pt-4 border-t border-gray-100">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsPostProductModalOpen(false)}
+                                    className="w-1/3 py-2.5 rounded-lg border border-secondary-gray text-dark-slate font-semibold text-sm hover:bg-gray-50 transition-colors cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmittingNewProduct}
+                                    className="w-2/3 py-2.5 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-colors cursor-pointer shadow-md disabled:bg-primary/50 flex items-center justify-center gap-2"
+                                >
+                                    {isSubmittingNewProduct ? (
+                                        <>
+                                            <span className="loading loading-spinner loading-xs"></span>
+                                            <span>Publishing Product...</span>
+                                        </>
+                                    ) : (
+                                        <span>Publish & Post Product</span>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

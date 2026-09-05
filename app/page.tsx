@@ -199,7 +199,7 @@ export default function Home() {
                             onClick={() => setIsAutoPlay(!isAutoPlay)}
                             className="btn btn-xs btn-ghost text-xs text-secondary-gray cursor-pointer"
                         >
-                            {isAutoPlay ? "⏸ Pause Auto-Slide" : "▶ Resume Auto-Slide"}
+                            {isAutoPlay ? "Pause Auto-Slide" : "Resume Auto-Slide"}
                         </button>
                     </div>
                 </div>
@@ -507,8 +507,10 @@ export default function Home() {
             {/* PLATFORM PILLARS & ROLES GRID */}
             <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 text-left">
                 <div className="bg-card-white p-6 rounded-xl border border-[#E2E8F0] shadow-sm hover:border-primary/30 transition-all">
-                    <div className="w-10 h-10 rounded-lg bg-blue-50 text-primary flex items-center justify-center font-bold text-lg mb-3">
-                        ⚡
+                    <div className="w-10 h-10 rounded-lg bg-blue-50 text-primary flex items-center justify-center mb-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
                     </div>
                     <h3 className="font-bold text-lg text-dark-slate mb-1">Direct Refinery Sourcing</h3>
                     <p className="text-xs text-secondary-gray">
@@ -517,8 +519,11 @@ export default function Home() {
                 </div>
 
                 <div className="bg-card-white p-6 rounded-xl border border-[#E2E8F0] shadow-sm hover:border-primary/30 transition-all">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-lg mb-3">
-                        🚛
+                    <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+                        </svg>
                     </div>
                     <h3 className="font-bold text-lg text-dark-slate mb-1">Regional Dealer Network</h3>
                     <p className="text-xs text-secondary-gray">
@@ -527,8 +532,10 @@ export default function Home() {
                 </div>
 
                 <div className="bg-card-white p-6 rounded-xl border border-[#E2E8F0] shadow-sm hover:border-primary/30 transition-all">
-                    <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-lg mb-3">
-                        🛡️
+                    <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center mb-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
                     </div>
                     <h3 className="font-bold text-lg text-dark-slate mb-1">Centralized Admin Oversight</h3>
                     <p className="text-xs text-secondary-gray">

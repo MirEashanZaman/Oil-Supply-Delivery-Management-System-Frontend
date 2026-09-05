@@ -57,43 +57,41 @@ export default function Login() {
 
             // Automatically check against the 4 backend auth controllers
             for (const r of roles) {
-                const candidateUrls = [
-                    `${API_ENDPOINT}/${r}/signin/`,
-                    `${API_ENDPOINT}/${r}/signin`,
-                    `${API_ENDPOINT}/${r}/auth/signIn`,
-                ];
-
-                for (const url of candidateUrls) {
-                    try {
-                        const response = await axios.post(
-                            url,
-                            {
-                                email: result.data.email,
-                                password: result.data.password,
-                            },
-                            {
-                                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                                withCredentials: true,
-                            }
-                        );
-                        if (response.data) {
-                            loginSuccess = true;
-                            matchedRole = r.charAt(0).toUpperCase() + r.slice(1);
-                            apiUserData = response.data;
-                            break;
+                try {
+                    const response = await axios.post(
+                        `${API_ENDPOINT}/${r}/auth/signIn`,
+                        {
+                            email: result.data.email,
+                            password: result.data.password,
+                        },
+                        {
+                            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                            withCredentials: true,
+                            validateStatus: (status) => status < 500,
                         }
-                    } catch (err: any) {
-                        if (err.response?.status !== 404) {
-                            lastErrorMessage = err.response?.data?.message || lastErrorMessage;
-                        }
+                    );
+                    if (response.status === 200 && response.data) {
+                        loginSuccess = true;
+                        matchedRole = r.charAt(0).toUpperCase() + r.slice(1);
+                        apiUserData = response.data;
+                        break;
+                    } else if (response.status === 401) {
+                        // NestJS throws UnauthorizedException with { message: "Unauthorized" } on invalid credentials
+                        lastErrorMessage = "Invalid email or password. Please check your credentials or register a new account.";
+                    } else if (response.status === 400 && response.data?.message) {
+                        lastErrorMessage = Array.isArray(response.data.message)
+                            ? response.data.message.join(", ")
+                            : response.data.message;
                     }
+                } catch (err: any) {
+                    console.warn(`Sign-in check for ${r} error:`, err);
                 }
 
                 if (loginSuccess) break;
             }
 
             if (!loginSuccess) {
-                const displayMsg = lastErrorMessage || "Invalid email or password.";
+                const displayMsg = lastErrorMessage || "Invalid email or password. Please verify your credentials or register a new account.";
                 setErrors({
                     form: Array.isArray(displayMsg) ? displayMsg.join(", ") : displayMsg,
                 });

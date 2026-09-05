@@ -196,26 +196,30 @@ export default function Dashboard() {
         fetchCatalogProducts();
     }, []);
 
-    // Axios Call: Fetch catalog products from backend (`GET /customer/products`)
+    // Axios Call: Fetch catalog products from backend (`GET /product/list`)
     const fetchCatalogProducts = async () => {
         setProductsLoading(true);
         const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
         try {
-            const res = await axios.get(`${API_ENDPOINT}/customer/products`, {
+            const res = await axios.get(`${API_ENDPOINT}/product/list`, {
                 withCredentials: true,
             });
             if (Array.isArray(res.data)) {
-                const mapped: Product[] = res.data.map((p: any) => ({
-                    id: p.id,
-                    name: p.name || `Product #${p.id}`,
-                    category: p.category || "Petroleum Grade",
-                    price: typeof p.price === "number" ? `$${p.price.toFixed(2)}` : p.price || "$0.00",
-                    numericPrice: typeof p.numericPrice === "number" ? p.numericPrice : typeof p.price === "number" ? p.price : parseFloat(String(p.price).replace(/[^0-9.]/g, "")) || 0,
-                    description: p.description || "Petroleum Grade Oil Product",
-                    inStock: p.inStock !== false,
-                    stockLevel: p.stockLevel || (p.inStock === false ? "Out of Stock" : "In Stock"),
-                    image: getProductImage(p.name, p.image),
-                }));
+                const mapped: Product[] = res.data
+                    .sort((a: any, b: any) => (a.id || 0) - (b.id || 0))
+                    .map((p: any) => ({
+                        id: p.id,
+                        name: p.name || `Product #${p.id}`,
+                        category: p.category || (p.categories?.[0]?.name) || "Petroleum Grade",
+                        price: typeof p.price === "number" ? `$${p.price.toFixed(2)}` : p.price || "$0.00",
+                        numericPrice: typeof p.price === "number" ? p.price : typeof p.numericPrice === "number" ? p.numericPrice : parseFloat(String(p.price).replace(/[^0-9.]/g, "")) || 0,
+                        description: p.description || "High-grade petroleum product sourced from certified national pipelines.",
+                        inStock: typeof p.quantity === "number" ? p.quantity > 0 : p.inStock !== false,
+                        stockLevel: typeof p.quantity === "number" 
+                            ? (p.quantity <= 0 ? "Out of Stock" : p.quantity < 1000 ? "Low Stock" : "In Stock") 
+                            : p.stockLevel || "In Stock",
+                        image: getProductImage(p.name, p.image),
+                    }));
                 setProducts(mapped);
             }
         } catch (err) {

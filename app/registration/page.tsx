@@ -6,6 +6,7 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import MyNavigation from "@/components/navigation";
 import MyHeader from "@/components/header";
+import { checkEmailUniqueness } from "@/lib/email-checker";
 
 const registrationSchema = z
     .object({
@@ -48,6 +49,47 @@ export default function Registration() {
     const [errors, setErrors] = useState<RegistrationErrors>({});
     const [successMessage, setSuccessMessage] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [emailStatus, setEmailStatus] = useState<{
+        checking: boolean;
+        isUnique: boolean | null;
+        message: string;
+        role?: string;
+    }>({ checking: false, isUnique: null, message: "" });
+
+    const verifyCandidateEmail = async (rawEmail: string) => {
+        const trimmed = rawEmail.trim().toLowerCase();
+        if (!trimmed || !trimmed.includes("@") || !trimmed.includes(".")) {
+            setEmailStatus({ checking: false, isUnique: null, message: "" });
+            return;
+        }
+
+        setEmailStatus({ checking: true, isUnique: null, message: "Verifying email uniqueness across system..." });
+        const check = await checkEmailUniqueness(trimmed);
+
+        if (!check.isUnique) {
+            setEmailStatus({
+                checking: false,
+                isUnique: false,
+                role: check.existingRole,
+                message: `This email is already registered to a ${check.existingRole} account. Only one account per email is allowed.`,
+            });
+            setErrors((prev) => ({
+                ...prev,
+                email: `Email already registered to a ${check.existingRole} account. There can be only one account per email address.`,
+            }));
+        } else {
+            setEmailStatus({
+                checking: false,
+                isUnique: true,
+                message: "Email address is available for registration.",
+            });
+            setErrors((prev) => {
+                const updated = { ...prev };
+                delete updated.email;
+                return updated;
+            });
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -76,6 +118,25 @@ export default function Registration() {
         }
 
         setIsSubmitting(true);
+
+        // Enforce strict email uniqueness across all 4 database tables (Customers, Admins, Dealers, Suppliers)
+        const emailCheck = await checkEmailUniqueness(result.data.email);
+        if (!emailCheck.isUnique) {
+            setIsSubmitting(false);
+            const role = emailCheck.existingRole || "existing";
+            const duplicateMsg = `An account with this email (${result.data.email}) already exists as a ${role}. Only one account per email is allowed.`;
+            setErrors({
+                email: `Email already registered to a ${role} account. Only one account per email is permitted.`,
+                form: duplicateMsg,
+            });
+            setEmailStatus({
+                checking: false,
+                isUnique: false,
+                role: role,
+                message: duplicateMsg,
+            });
+            return;
+        }
 
         const formData = new FormData();
         formData.append("userName", result.data.username);
@@ -111,13 +172,20 @@ export default function Registration() {
                 setPhoto(null);
                 setPassword("");
                 setConfirmPassword("");
+                setEmailStatus({ checking: false, isUnique: null, message: "" });
 
                 setTimeout(() => {
                     router.push("/login");
                 }, 2000);
             } else if (res.status === 409) {
                 setErrors({
-                    form: `An account with this email (${result.data.email}) already exists as a ${result.data.title}. Please sign in with this email or use a different email to register.`,
+                    email: `An account with this email (${result.data.email}) already exists. There can be only one account per email address.`,
+                    form: `An account with this email (${result.data.email}) already exists. Only one account per email address is permitted in the system. Please sign in with this email or use a different email.`,
+                });
+                setEmailStatus({
+                    checking: false,
+                    isUnique: false,
+                    message: "Email already registered.",
                 });
             } else {
                 const apiMessage = res.data?.message || "Registration failed. Please check your backend connection.";
@@ -166,11 +234,21 @@ export default function Registration() {
                         )}
 
                         {errors.form && (
-                            <div role="alert" className="alert bg-[#DC2626] text-white shadow-sm mb-5 text-sm py-2.5 rounded-xl border-none">
-                                <svg className="w-5 h-5 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span>{errors.form}</span>
+                            <div role="alert" className="alert bg-[#DC2626] text-white shadow-sm mb-5 text-sm py-3 rounded-xl border-none flex flex-col items-start gap-1">
+                                <div className="flex items-center gap-2">
+                                    <svg className="w-5 h-5 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span className="font-semibold">{errors.form}</span>
+                                </div>
+                                {(errors.form.includes("already") || errors.form.includes("exists")) && (
+                                    <a
+                                        href="/login"
+                                        className="text-white underline font-bold text-xs mt-1 hover:text-amber-200 transition-colors"
+                                    >
+                                        Click here to sign in with your registered account
+                                    </a>
+                                )}
                             </div>
                         )}
 
@@ -224,10 +302,35 @@ export default function Registration() {
                                         type="email"
                                         value={email}
                                         placeholder="user@example.com"
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none rounded-xl ${errors.email ? "border-[#DC2626]" : ""}`}
+                                        onChange={(e) => {
+                                            setEmail(e.target.value);
+                                            if (emailStatus.isUnique !== null) {
+                                                setEmailStatus({ checking: false, isUnique: null, message: "" });
+                                            }
+                                        }}
+                                        onBlur={(e) => verifyCandidateEmail(e.target.value)}
+                                        className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none rounded-xl ${errors.email || emailStatus.isUnique === false ? "border-[#DC2626]" : emailStatus.isUnique === true ? "border-[#16A34A]" : ""}`}
                                     />
-                                    {errors.email && (
+                                    {emailStatus.checking && (
+                                        <span className="text-[#64748B] text-xs font-medium mt-1 flex items-center gap-1.5">
+                                            <span className="loading loading-spinner loading-xs"></span>
+                                            Verifying email uniqueness across all tables...
+                                        </span>
+                                    )}
+                                    {!emailStatus.checking && emailStatus.isUnique === true && (
+                                        <span className="text-[#16A34A] text-xs font-medium mt-1">
+                                            {emailStatus.message}
+                                        </span>
+                                    )}
+                                    {!emailStatus.checking && emailStatus.isUnique === false && (
+                                        <div className="mt-1 text-xs text-[#DC2626] font-medium flex flex-col gap-0.5">
+                                            <span>{emailStatus.message}</span>
+                                            <a href="/login" className="text-[#0F2747] underline font-bold hover:text-primary">
+                                                Click here to sign in with this email instead
+                                            </a>
+                                        </div>
+                                    )}
+                                    {errors.email && emailStatus.isUnique !== false && (
                                         <span className="text-[#DC2626] text-xs font-medium mt-1">{errors.email}</span>
                                     )}
                                 </div>

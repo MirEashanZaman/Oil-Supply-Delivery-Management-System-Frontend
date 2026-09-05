@@ -83,7 +83,7 @@ const DUMMY_PRODUCTS: Product[] = [
         description: "High-quality sweet light crude oil sourced from international marine drillings.",
         inStock: true,
         stockLevel: "In Stock",
-        image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80",
+        image: "/Brent Crude Oil.jpg",
     },
     {
         id: 2,
@@ -94,7 +94,7 @@ const DUMMY_PRODUCTS: Product[] = [
         description: "Clean-burning commercial diesel fuel with high thermal output properties.",
         inStock: true,
         stockLevel: "In Stock",
-        image: "https://images.unsplash.com/photo-1582560475093-ba66accbc424?auto=format&fit=crop&w=800&q=80",
+        image: "/Ultra-Low Sulfur Diesel.jpg",
     },
     {
         id: 3,
@@ -105,7 +105,7 @@ const DUMMY_PRODUCTS: Product[] = [
         description: "High-octane gasoline suitable for high-performance automotive engines.",
         inStock: true,
         stockLevel: "Low Stock",
-        image: "https://images.unsplash.com/photo-1545459720-aac8509eb02c?auto=format&fit=crop&w=800&q=80",
+        image: "/Premium Unleaded Gasoline.jpg",
     },
     {
         id: 4,
@@ -116,7 +116,7 @@ const DUMMY_PRODUCTS: Product[] = [
         description: "Kerosene-type jet fuel manufactured to rigorous international safety standards.",
         inStock: true,
         stockLevel: "In Stock",
-        image: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=800&q=80",
+        image: "/Aviation Turbine Fuel (Jet A-1).jpg",
     },
     {
         id: 5,
@@ -127,7 +127,7 @@ const DUMMY_PRODUCTS: Product[] = [
         description: "Clean flammable hydrocarbon gas mixture utilized as heating and cooking fuel.",
         inStock: true,
         stockLevel: "In Stock",
-        image: "https://images.unsplash.com/photo-1508873696983-2df5703bc20d?auto=format&fit=crop&w=800&q=80",
+        image: "/images.jpg",
     },
     {
         id: 6,
@@ -138,7 +138,7 @@ const DUMMY_PRODUCTS: Product[] = [
         description: "Residual fuel oil blended for international ocean freight and industrial boiler usage.",
         inStock: true,
         stockLevel: "In Stock",
-        image: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?auto=format&fit=crop&w=800&q=80",
+        image: "/Heavy Marine Fuel Oil (HFO).jpg",
     },
 ];
 
@@ -1270,7 +1270,7 @@ export default function Dashboard() {
                                         alt={product.name}
                                         className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                                         onError={(e) => {
-                                            e.currentTarget.src = "https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp";
+                                            e.currentTarget.src = "/Brent Crude Oil.jpg";
                                         }}
                                     />
                                 </figure>
@@ -1378,11 +1378,11 @@ export default function Dashboard() {
                                 >
                                     <figure className="h-48 w-full overflow-hidden bg-slate-100">
                                         <img
-                                            src={item.image || "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80"}
+                                            src={item.image || "/Brent Crude Oil.jpg"}
                                             alt={item.name}
                                             className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                                             onError={(e) => {
-                                                e.currentTarget.src = "https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp";
+                                                e.currentTarget.src = "/Brent Crude Oil.jpg";
                                             }}
                                         />
                                     </figure>

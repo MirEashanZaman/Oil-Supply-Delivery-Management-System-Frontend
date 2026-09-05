@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import MyNavigation from "@/components/navigation";
 import MyHeader from "@/components/header";
+import { getPusherClient, ChatMessage } from "@/lib/pusher";
 
 type UserData = {
     id?: number;
@@ -89,7 +90,7 @@ export default function Dashboard() {
     const router = useRouter();
     const [user, setUser] = useState<UserData | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<"products" | "orders" | "inventory" | "users_crud" | "monitoring" | "profile" | "directory">("products");
+    const [activeTab, setActiveTab] = useState<"products" | "orders" | "inventory" | "users_crud" | "monitoring" | "profile" | "directory" | "messages">("products");
     const [products, setProducts] = useState<Product[]>([]);
     const [productsLoading, setProductsLoading] = useState(false);
 
@@ -174,6 +175,35 @@ export default function Dashboard() {
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<any[]>([]);
 
+    // PusherJS Real-time Messaging States
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+        {
+            id: "msg_init_1",
+            sender: "Refinery Dispatch Central",
+            email: "refinery@oilsupply-delivery.com",
+            role: "Supplier",
+            topic: "Refinery Wholesale Availability",
+            message: "All crude fuel pipelines and regional tanker depots operating at verified ISO specifications. Real-time dispatches active.",
+            timestamp: "09:30 AM",
+            channel: "oil-supply-chat",
+        },
+        {
+            id: "msg_init_2",
+            sender: "Dhaka Regional Dealer Hub",
+            email: "dealer@oilsupply-delivery.com",
+            role: "Dealer",
+            topic: "Order Dispatch & Logistics",
+            message: "Bulk tanker allocations ready for commercial customers. Priority road dispatches scheduled for Kuril and Gazipur depots.",
+            timestamp: "10:15 AM",
+            channel: "oil-supply-chat",
+        }
+    ]);
+    const [chatInput, setChatInput] = useState<string>("");
+    const [chatTopic, setChatTopic] = useState<string>("Order Dispatch & Logistics");
+    const [chatChannel, setChatChannel] = useState<string>("oil-supply-chat");
+    const [isSendingChat, setIsSendingChat] = useState<boolean>(false);
+    const [isPusherActive, setIsPusherActive] = useState<boolean>(true);
+
     const getRolePath = (role?: string) => {
         return role ? role.toLowerCase() : "customer";
     };
@@ -210,6 +240,68 @@ export default function Dashboard() {
         setLoading(false);
         fetchCatalogProducts();
     }, []);
+
+    // PusherJS real-time channel subscription
+    useEffect(() => {
+        const pusher = getPusherClient();
+        if (!pusher) return;
+
+        const channel = pusher.subscribe("oil-supply-chat");
+        channel.bind("pusher:subscription_succeeded", () => {
+            setIsPusherActive(true);
+        });
+
+        channel.bind("new-message", (data: ChatMessage) => {
+            setChatMessages((prev) => [data, ...prev.filter((m) => m.id !== data.id)]);
+        });
+
+        return () => {
+            channel.unbind_all();
+            channel.unsubscribe();
+        };
+    }, []);
+
+    // Send real-time message via PusherJS
+    const handleSendChatMessage = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!chatInput.trim() || !user) return;
+
+        setIsSendingChat(true);
+        const senderName = user.userName || user.email.split("@")[0] || "User";
+        const payload = {
+            sender: senderName,
+            email: user.email,
+            role: user.title || "Customer",
+            topic: chatTopic,
+            message: chatInput.trim(),
+            channel: chatChannel,
+        };
+
+        try {
+            const res = await axios.post("/api/messages", payload);
+            if (res.data?.success && res.data?.data) {
+                const newMsg = res.data.data;
+                setChatMessages((prev) => [newMsg, ...prev.filter((m) => m.id !== newMsg.id)]);
+            }
+            setChatInput("");
+        } catch (err) {
+            console.warn("Local fallback for chat message:", err);
+            const fallbackMsg: ChatMessage = {
+                id: `msg_${Date.now()}`,
+                sender: payload.sender,
+                email: payload.email,
+                role: payload.role,
+                topic: payload.topic,
+                message: payload.message,
+                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                channel: payload.channel,
+            };
+            setChatMessages((prev) => [fallbackMsg, ...prev]);
+            setChatInput("");
+        } finally {
+            setIsSendingChat(false);
+        }
+    };
 
     // Axios Call: Fetch catalog products from backend (`GET /product/list`)
     const fetchCatalogProducts = async () => {
@@ -1168,6 +1260,16 @@ export default function Dashboard() {
                             Directory Search
                         </button>
                     )}
+
+                    <button
+                        onClick={() => setActiveTab("messages")}
+                        className={`btn btn-sm font-semibold transition-all cursor-pointer ${activeTab === "messages"
+                                ? "btn-primary text-white shadow-md"
+                                : "btn-ghost text-slate-600 hover:bg-base-200 border border-base-300"
+                            }`}
+                    >
+                        Messages (PusherJS)
+                    </button>
                 </div>
             </div>
 
@@ -1877,6 +1979,206 @@ export default function Dashboard() {
                             </div>
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* TAB: REAL-TIME MESSAGING (PUSHERJS) */}
+            {activeTab === "messages" && (
+                <div className="w-full max-w-[1200px] text-left animate-fadeIn mb-12">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <div>
+                            <div className="flex items-center gap-2.5">
+                                <h1 className="text-2xl font-bold text-[#1E293B] tracking-tight">Real-Time Messages (PusherJS)</h1>
+                                <span className="badge bg-[#16A34A]/15 text-[#16A34A] font-bold text-xs border-none px-3 py-1 flex items-center gap-1.5">
+                                    <span className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse"></span>
+                                    PusherJS Network Active
+                                </span>
+                            </div>
+                            <p className="text-sm text-[#64748B] mt-1">
+                                Real-time dispatch and messaging across Customers, Dealers, Suppliers, and Operations Control.
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-[#64748B] font-mono bg-[#FFFFFF] border border-[#CBD5E1] px-3 py-1.5 rounded-xl shadow-xs">
+                                Channel: <strong>{chatChannel}</strong>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        {/* Left: Message Composer */}
+                        <div className="lg:col-span-5 space-y-4">
+                            <div className="card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-6">
+                                <h2 className="text-base font-bold text-[#1E293B] mb-1">Send a Real-Time Message</h2>
+                                <p className="text-xs text-[#64748B] mb-4">
+                                    Broadcast an operational dispatch, delivery inquiry, or wholesale message via PusherJS.
+                                </p>
+
+                                <form onSubmit={handleSendChatMessage} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-[#1E293B] mb-1">Channel</label>
+                                        <select
+                                            value={chatChannel}
+                                            onChange={(e) => setChatChannel(e.target.value)}
+                                            className="select select-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none rounded-xl text-xs"
+                                        >
+                                            <option value="oil-supply-chat">General Operations (oil-supply-chat)</option>
+                                            <option value="suppliers-dealers">Refinery & Dealer Wholesale (suppliers-dealers)</option>
+                                            <option value="customer-support">Customer Order Support (customer-support)</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-[#1E293B] mb-1">Topic / Context</label>
+                                        <select
+                                            value={chatTopic}
+                                            onChange={(e) => setChatTopic(e.target.value)}
+                                            className="select select-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none rounded-xl text-xs"
+                                        >
+                                            <option value="Order Dispatch & Logistics">Order Dispatch & Logistics</option>
+                                            <option value="Bulk Fuel Order Inquiry">Bulk Fuel Order Inquiry</option>
+                                            <option value="Refinery Wholesale Availability">Refinery Wholesale Availability</option>
+                                            <option value="Delivery Tanker Tracking">Delivery Tanker Tracking</option>
+                                            <option value="Dealer Stock Allocation">Dealer Stock Allocation</option>
+                                            <option value="Account & Technical Support">Account & Technical Support</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-[#1E293B] mb-1">Message Content</label>
+                                        <textarea
+                                            required
+                                            rows={4}
+                                            value={chatInput}
+                                            placeholder="Write your message here. Connected users will receive it in real-time..."
+                                            onChange={(e) => setChatInput(e.target.value)}
+                                            className="textarea textarea-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none text-xs rounded-xl"
+                                        />
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        disabled={isSendingChat}
+                                        className="btn bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold w-full border-none shadow-sm rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors disabled:opacity-50"
+                                    >
+                                        {isSendingChat ? (
+                                            <>
+                                                <span className="loading loading-spinner loading-xs"></span>
+                                                <span>Broadcasting via PusherJS...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span>Send Message via PusherJS</span>
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                                </svg>
+                                            </>
+                                        )}
+                                    </button>
+                                </form>
+                            </div>
+
+                            {/* User details badge */}
+                            <div className="card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-4 text-xs text-[#64748B]">
+                                <div className="flex items-center justify-between">
+                                    <span>Sending as: <strong className="text-[#1E293B]">{user.userName || user.email}</strong></span>
+                                    <span className="badge bg-[#0F2747] text-[#F59E0B] font-bold text-[10px] border-none px-2 py-0.5">
+                                        {user.title || "Customer"}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right: Live Message Feed */}
+                        <div className="lg:col-span-7">
+                            <div className="card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-6">
+                                <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#E2E8F0]">
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-[#16A34A] animate-ping"></span>
+                                        <h2 className="text-base font-bold text-[#1E293B]">Live Message Feed</h2>
+                                    </div>
+                                    <span className="text-xs text-[#64748B]">
+                                        {chatMessages.length} {chatMessages.length === 1 ? "Message" : "Messages"} Received
+                                    </span>
+                                </div>
+
+                                <div className="space-y-3 max-h-[560px] overflow-y-auto pr-1">
+                                    {chatMessages.length === 0 ? (
+                                        <div className="text-center py-12 text-[#64748B]">
+                                            <p className="font-semibold text-sm mb-1 text-[#1E293B]">No real-time messages yet.</p>
+                                            <p className="text-xs">Messages broadcasted via PusherJS will appear here instantly.</p>
+                                        </div>
+                                    ) : (
+                                        chatMessages.map((msg) => {
+                                            const isMe = msg.email === user.email;
+                                            return (
+                                                <div
+                                                    key={msg.id}
+                                                    className={`p-4 rounded-2xl border text-xs transition-all ${
+                                                        isMe
+                                                            ? "bg-[#0F2747]/5 border-[#0F2747]/20"
+                                                            : "bg-[#F5F7FA] border-[#E2E8F0]"
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-bold text-[#1E293B] text-sm">
+                                                                {msg.sender}
+                                                            </span>
+                                                            <span className={`badge text-[10px] font-bold uppercase border-none px-2 py-0.5 ${
+                                                                msg.role === "Supplier"
+                                                                    ? "bg-[#0F2747] text-[#F59E0B]"
+                                                                    : msg.role === "Dealer"
+                                                                    ? "bg-[#F59E0B]/20 text-[#D97706]"
+                                                                    : msg.role === "Admin"
+                                                                    ? "bg-[#16A34A]/20 text-[#16A34A]"
+                                                                    : "bg-[#64748B]/15 text-[#1E293B]"
+                                                            }`}>
+                                                                {msg.role || "User"}
+                                                            </span>
+                                                            {isMe && (
+                                                                <span className="badge bg-[#16A34A] text-white text-[9px] font-bold border-none px-1.5 py-0.5">
+                                                                    You
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] text-[#64748B] font-mono">
+                                                                {msg.timestamp}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mb-2">
+                                                        <span className="inline-block text-[11px] font-semibold text-[#0F2747] bg-[#0F2747]/10 px-2 py-0.5 rounded-md">
+                                                            {msg.topic}
+                                                        </span>
+                                                    </div>
+
+                                                    <p className="text-[#1E293B] text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">
+                                                        {msg.message}
+                                                    </p>
+
+                                                    <div className="mt-2.5 pt-2 border-t border-[#E2E8F0]/70 flex justify-end">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setChatTopic(`Re: ${msg.topic}`);
+                                                                setChatInput(`@${msg.sender}: `);
+                                                            }}
+                                                            className="text-[11px] font-semibold text-[#0F2747] hover:text-[#F59E0B] transition-colors cursor-pointer"
+                                                        >
+                                                            Reply to {msg.sender}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 

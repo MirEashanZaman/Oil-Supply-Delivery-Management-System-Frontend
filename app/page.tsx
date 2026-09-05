@@ -60,6 +60,24 @@ export default function Home() {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [products, setProducts] = useState<CarouselProduct[]>([]);
     const [loadingProducts, setLoadingProducts] = useState(true);
+    const [user, setUser] = useState<{ userName?: string; email?: string; title?: string } | null>(null);
+
+    useEffect(() => {
+        const stored = localStorage.getItem("user");
+        if (stored) {
+            try {
+                setUser(JSON.parse(stored));
+            } catch (err) {
+                console.error("Failed to parse user session:", err);
+            }
+        }
+    }, []);
+
+    const handleLogout = () => {
+        localStorage.removeItem("user");
+        setUser(null);
+        window.location.reload();
+    };
 
     useEffect(() => {
         const fetchHomeProducts = async () => {
@@ -124,24 +142,45 @@ export default function Home() {
                     <span className="text-xs uppercase font-extrabold tracking-wider bg-secondary/20 text-secondary px-3 py-1 rounded border border-secondary/30">
                         Oil Supply & Delivery Platform
                     </span>
-                    <h1 className="text-2xl md:text-3xl font-extrabold mt-2">Welcome Eshu!</h1>
+                    <h1 className="text-2xl md:text-3xl font-extrabold mt-2">
+                        {user ? `Welcome back, ${user.userName || user.email}!` : "Enterprise Petroleum Logistics"}
+                    </h1>
                     <p className="text-sm text-slate-300 mt-1 max-w-xl">
                         Streamlining international fuel trade with direct sourcing from refinery suppliers and certified dealer distribution.
                     </p>
                 </div>
-                <div className="flex gap-3">
-                    <Link
-                        href="/dashboard"
-                        className="btn btn-primary bg-secondary hover:bg-secondary/90 text-dark-slate font-bold border-none shadow-md px-6"
-                    >
-                        Go to Dashboard →
-                    </Link>
-                    <Link
-                        href="/login"
-                        className="btn btn-outline text-white border-white/40 hover:bg-white/10"
-                    >
-                        Sign In
-                    </Link>
+                <div className="flex gap-3 items-center flex-wrap">
+                    {user ? (
+                        <>
+                            <Link
+                                href="/dashboard"
+                                className="btn btn-primary bg-secondary hover:bg-secondary/90 text-dark-slate font-bold border-none shadow-md px-6"
+                            >
+                                Go to Dashboard →
+                            </Link>
+                            <button
+                                onClick={handleLogout}
+                                className="btn btn-outline text-white border-white/40 hover:bg-white/10 cursor-pointer"
+                            >
+                                Logout
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <Link
+                                href="/login"
+                                className="btn btn-primary bg-secondary hover:bg-secondary/90 text-dark-slate font-bold border-none shadow-md px-6"
+                            >
+                                Sign In
+                            </Link>
+                            <Link
+                                href="/registration"
+                                className="btn btn-outline text-white border-white/40 hover:bg-white/10"
+                            >
+                                Register
+                            </Link>
+                        </>
+                    )}
                 </div>
             </div>
 

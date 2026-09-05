@@ -70,7 +70,7 @@ export default function Login() {
                             validateStatus: (status) => status < 500,
                         }
                     );
-                    if (response.status === 200 && response.data) {
+                    if ((response.status === 200 || response.status === 201) && response.data) {
                         loginSuccess = true;
                         matchedRole = r.charAt(0).toUpperCase() + r.slice(1);
                         apiUserData = response.data;

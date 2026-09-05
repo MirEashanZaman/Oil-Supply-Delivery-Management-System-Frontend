@@ -55,7 +55,6 @@ export default function Login() {
 
             const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
 
-            // Automatically check against the 4 backend auth controllers
             for (const r of roles) {
                 try {
                     const response = await axios.post(
@@ -76,7 +75,6 @@ export default function Login() {
                         apiUserData = response.data;
                         break;
                     } else if (response.status === 401) {
-                        // NestJS throws UnauthorizedException with { message: "Unauthorized" } on invalid credentials
                         lastErrorMessage = "Invalid email or password. Please check your credentials or register a new account.";
                     } else if (response.status === 400 && response.data?.message) {
                         lastErrorMessage = Array.isArray(response.data.message)
@@ -116,7 +114,6 @@ export default function Login() {
                 photoUrl: apiUserData?.photoUrl || apiUserData?.photo,
             };
 
-            // Fetch profile data if needed based on automatically detected role
             try {
                 const rolePath = matchedRole.toLowerCase();
                 let fetchUrl = `${API_ENDPOINT}/${rolePath}/getallcustomer`;

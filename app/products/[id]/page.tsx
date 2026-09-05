@@ -16,6 +16,19 @@ type Product = {
     image?: string;
 };
 
+const getProductImage = (name?: string, img?: string) => {
+    if (img && (img.startsWith("/") || img.startsWith("http"))) return img;
+    if (!name) return "/Brent Crude Oil.jpg";
+    const lower = name.toLowerCase();
+    if (lower.includes("crude") || lower.includes("brent")) return "/Brent Crude Oil.jpg";
+    if (lower.includes("diesel")) return "/Ultra-Low Sulfur Diesel.jpg";
+    if (lower.includes("gasoline") || lower.includes("petrol") || lower.includes("octane")) return "/Premium Unleaded Gasoline.jpg";
+    if (lower.includes("jet") || lower.includes("aviation") || lower.includes("turbine")) return "/Aviation Turbine Fuel (Jet A-1).jpg";
+    if (lower.includes("lpg") || lower.includes("gas") || lower.includes("cylinder")) return "/images.jpg";
+    if (lower.includes("heavy") || lower.includes("marine") || lower.includes("bunker") || lower.includes("hfo")) return "/Heavy Marine Fuel Oil (HFO).jpg";
+    return "/Brent Crude Oil.jpg";
+};
+
 export default function ProductDetails({
     params,
 }: {
@@ -30,13 +43,23 @@ export default function ProductDetails({
         const fetchProduct = async () => {
             const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
             try {
-                const res = await axios.get(`${API_ENDPOINT}/customer/products`, {
+                const res = await axios.get(`${API_ENDPOINT}/product/list`, {
                     withCredentials: true,
                 });
                 if (Array.isArray(res.data)) {
                     const match = res.data.find((p: any) => String(p.id) === String(productId));
                     if (match) {
-                        setProduct(match);
+                        setProduct({
+                            id: match.id,
+                            name: match.name || `Product #${match.id}`,
+                            category: match.category || (match.categories?.[0]?.name) || "Petroleum Grade",
+                            price: typeof match.price === "number" ? `$${match.price.toFixed(2)}` : match.price || "$0.00",
+                            description: match.description || "Petroleum fuel product sourced via certified refinery pipelines.",
+                            stockLevel: typeof match.quantity === "number"
+                                ? (match.quantity <= 0 ? "Out of Stock" : match.quantity < 1000 ? "Low Stock" : "In Stock")
+                                : match.stockLevel || "In Stock",
+                            image: getProductImage(match.name, match.image),
+                        });
                     }
                 }
             } catch (err) {

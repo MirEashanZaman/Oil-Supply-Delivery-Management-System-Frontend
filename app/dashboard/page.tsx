@@ -31,8 +31,10 @@ type Order = {
     quantity: number;
     status: string;
     address?: string;
+    customerId?: number;
     customerName?: string;
     customerEmail?: string;
+    deliveryDate?: string;
     product?: {
         id: number;
         name: string;
@@ -653,13 +655,31 @@ export default function Dashboard() {
             const res = await axios.patch(
                 `http://localhost:8000/admin/order/${editingOrder.id}`,
                 {
-                    status: editOrderStatus,
-                    quantity: editOrderQuantity,
-                    address: editOrderAddress,
+                    status: editOrderStatus.toLowerCase(),
+                    quantity: Number(editOrderQuantity) || 1,
                 },
                 { withCredentials: true, validateStatus: (status) => status < 500 }
             );
             if (res.status === 200 || res.status === 204) {
+                if (editOrderAddress && editingOrder.customerId) {
+                    try {
+                        await axios.patch(
+                            `http://localhost:8000/admin/customer/${editingOrder.customerId}`,
+                            { address: editOrderAddress },
+                            { withCredentials: true, validateStatus: (status) => status < 500 }
+                        );
+                    } catch (custErr) {
+                        console.warn("Could not update customer destination address:", custErr);
+                    }
+                }
+
+                setOrders(prev => prev.map(o => o.id === editingOrder.id ? {
+                    ...o,
+                    status: editOrderStatus.toLowerCase(),
+                    quantity: Number(editOrderQuantity) || 1,
+                    address: editOrderAddress || o.address,
+                } : o));
+
                 alert(`Order #${editingOrder.id} successfully updated by Admin!`);
                 setEditingOrder(null);
                 if (user?.id) fetchOrders(user.id, user.title);
@@ -937,6 +957,7 @@ export default function Dashboard() {
                                     quantity: o.quantity || 1,
                                     status: o.status || "pending",
                                     address: o.address || cust.address,
+                                    customerId: cust.id,
                                     customerName: cust.username || cust.userName || cust.email,
                                     customerEmail: cust.email,
                                     product: o.product || { id: 1, name: "Fuel Product" },
@@ -1059,6 +1080,8 @@ export default function Dashboard() {
             );
 
             if (res.status === 200 || res.status === 204) {
+                setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+
                 if (customerEmail) {
                     try {
                         await axios.post(
@@ -1103,6 +1126,8 @@ export default function Dashboard() {
             );
 
             if (res.status === 200 || res.status === 201) {
+                setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: "scheduled", deliveryDate: date } : o));
+
                 if (customerEmail) {
                     try {
                         await axios.post(
@@ -1163,7 +1188,9 @@ export default function Dashboard() {
                 validateStatus: (status) => status < 500,
             });
             if (res.status === 200 && res.data) {
-                setTrackedOrderStatus(res.data.status || res.data.message || "In Transit / Scheduled");
+                const liveStatus = res.data.order?.status || res.data.status || res.data.message || "In Transit / Scheduled";
+                const display = typeof liveStatus === "string" ? (liveStatus.charAt(0).toUpperCase() + liveStatus.slice(1)) : "In Transit / Scheduled";
+                setTrackedOrderStatus(display);
             } else {
                 setTrackedOrderStatus("In Transit / Carrier Processing");
             }
@@ -1949,24 +1976,49 @@ export default function Dashboard() {
                                             </>
                                         ) : (
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <button
-                                                    onClick={() => handleConfirmOrRejectOrder(item.id, "confirmed", item.customerEmail)}
-                                                    className="bg-green-600 text-white text-xs font-semibold px-3 py-2 rounded hover:bg-green-700 transition-colors cursor-pointer"
-                                                >
-                                                    Confirm (PUT)
-                                                </button>
+                                                {item.status?.toLowerCase() === "confirmed" ? (
+                                                    <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-2 rounded border border-green-300">
+                                                        Confirmed
+                                                    </span>
+                                                ) : item.status?.toLowerCase() === "rejected" ? (
+                                                    <span className="bg-red-100 text-red-700 text-xs font-bold px-3 py-2 rounded border border-red-300">
+                                                        Rejected
+                                                    </span>
+                                                ) : item.status?.toLowerCase() === "scheduled" || item.status?.toLowerCase() === "in-transit" ? (
+                                                    <span className="bg-teal-100 text-teal-700 text-xs font-bold px-3 py-2 rounded border border-teal-300">
+                                                        Scheduled
+                                                    </span>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleConfirmOrRejectOrder(item.id, "confirmed", item.customerEmail)}
+                                                        className="bg-green-600 text-white text-xs font-semibold px-3 py-2 rounded hover:bg-green-700 transition-colors cursor-pointer"
+                                                    >
+                                                        Confirm (PUT)
+                                                    </button>
+                                                )}
 
-                                                <button
-                                                    onClick={() => handleConfirmOrRejectOrder(item.id, "rejected", item.customerEmail)}
-                                                    className="bg-red-600 text-white text-xs font-semibold px-3 py-2 rounded hover:bg-red-700 transition-colors cursor-pointer"
-                                                >
-                                                    Reject (PUT)
-                                                </button>
+                                                {item.status?.toLowerCase() !== "rejected" && (
+                                                    <button
+                                                        onClick={() => handleConfirmOrRejectOrder(item.id, "rejected", item.customerEmail)}
+                                                        className="bg-red-600 text-white text-xs font-semibold px-3 py-2 rounded hover:bg-red-700 transition-colors cursor-pointer"
+                                                    >
+                                                        Reject (PUT)
+                                                    </button>
+                                                )}
+
+                                                {item.status?.toLowerCase() === "rejected" && (
+                                                    <button
+                                                        onClick={() => handleConfirmOrRejectOrder(item.id, "confirmed", item.customerEmail)}
+                                                        className="bg-green-600 text-white text-xs font-semibold px-3 py-2 rounded hover:bg-green-700 transition-colors cursor-pointer"
+                                                    >
+                                                        Re-confirm (PUT)
+                                                    </button>
+                                                )}
 
                                                 <div className="flex items-center border border-secondary-gray rounded overflow-hidden">
                                                     <input
                                                         type="date"
-                                                        value={deliveryDates[item.id] || ""}
+                                                        value={deliveryDates[item.id] || item.deliveryDate || ""}
                                                         onChange={(e) => setDeliveryDates({
                                                             ...deliveryDates,
                                                             [item.id]: e.target.value
@@ -1977,7 +2029,7 @@ export default function Dashboard() {
                                                         onClick={() => handleScheduleDelivery(item.id, item.customerEmail)}
                                                         className="bg-teal-600 text-white text-xs font-semibold px-3 py-2 hover:bg-teal-700 transition-colors cursor-pointer"
                                                     >
-                                                        Schedule (POST)
+                                                        {item.status?.toLowerCase() === "scheduled" ? "Reschedule (POST)" : "Schedule (POST)"}
                                                     </button>
                                                 </div>
 

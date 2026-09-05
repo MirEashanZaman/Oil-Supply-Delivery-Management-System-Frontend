@@ -137,169 +137,224 @@ export default function Registration() {
     };
 
     return (
-        <>
-            <MyHeader name="Registration" message="create a new account!" />
+        <div className="w-full flex flex-col items-center">
+            <MyHeader name="Registration" message="Create an enterprise account to join the oil supply network" />
             <MyNavigation />
 
-            <div className="mt-5 w-full max-w-[600px] bg-card-white p-6 rounded-lg border border-[#E2E8F0] shadow-md text-left">
-                <h1 className="mt-0 text-dark-slate mb-5 text-2xl font-bold">Registration</h1>
+            <div className="mt-8 w-full max-w-2xl">
+                <div className="card bg-base-100 shadow-xl border border-base-300">
+                    <div className="card-body p-6 sm:p-8">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-3 bg-primary/10 text-primary rounded-xl">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Create Account</h1>
+                                <p className="text-xs text-slate-500 font-medium">Register as a customer, dealer, supplier, or administrator</p>
+                            </div>
+                        </div>
 
-                {successMessage && (
-                    <p className="text-success-green font-bold mb-4">{successMessage}</p>
-                )}
-
-                {errors.form && (
-                    <p className="text-error-red font-bold mb-4">{errors.form}</p>
-                )}
-
-                <form onSubmit={handleSubmit} noValidate>
-                    <div className="mb-4">
-                        <label htmlFor="title" className="block mb-1 font-medium text-dark-slate">
-                            Title:
-                        </label>
-                        <select
-                            id="title"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
-                        >
-                            <option value="Customer">Customer</option>
-                            <option value="Supplier">Supplier</option>
-                            <option value="Dealer">Dealer</option>
-                            <option value="Admin">Admin</option>
-                        </select>
-                        {errors.title && (
-                            <span className="text-error-red text-sm block mt-1">{errors.title}</span>
+                        {successMessage && (
+                            <div role="alert" className="alert alert-success shadow-sm mb-5 text-sm py-3">
+                                <svg className="w-5 h-5 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>{successMessage}</span>
+                            </div>
                         )}
-                    </div>
 
-                    <div className="mb-4">
-                        <label htmlFor="username" className="block mb-1 font-medium text-dark-slate">
-                            Username:
-                        </label>
-                        <input
-                            id="username"
-                            type="text"
-                            value={username}
-                            placeholder="Enter your username"
-                            onChange={(e) => setUsername(e.target.value)}
-                            className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
-                        />
-                        {errors.username && (
-                            <span className="text-error-red text-sm block mt-1">{errors.username}</span>
+                        {errors.form && (
+                            <div role="alert" className="alert alert-error shadow-sm mb-5 text-sm py-3 text-white bg-error">
+                                <svg className="w-5 h-5 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>{errors.form}</span>
+                            </div>
                         )}
-                    </div>
 
-                    <div className="mb-4">
-                        <label htmlFor="email" className="block mb-1 font-medium text-dark-slate">
-                            Email Address:
-                        </label>
-                        <input
-                            id="email"
-                            type="email"
-                            value={email}
-                            placeholder="Enter your email"
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
-                        />
-                        {errors.email && (
-                            <span className="text-error-red text-sm block mt-1">{errors.email}</span>
-                        )}
-                    </div>
+                        <form onSubmit={handleSubmit} noValidate className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="form-control w-full">
+                                    <label className="label pb-1" htmlFor="title">
+                                        <span className="label-text font-semibold text-slate-700">Account Role / Title</span>
+                                    </label>
+                                    <select
+                                        id="title"
+                                        value={title}
+                                        onChange={(e) => setTitle(e.target.value)}
+                                        className="select select-bordered w-full focus:outline-primary"
+                                    >
+                                        <option value="Customer">Customer</option>
+                                        <option value="Supplier">Supplier</option>
+                                        <option value="Dealer">Dealer</option>
+                                        <option value="Admin">Admin</option>
+                                    </select>
+                                    {errors.title && (
+                                        <span className="text-error text-xs font-medium mt-1">{errors.title}</span>
+                                    )}
+                                </div>
 
-                    <div className="mb-4">
-                        <label htmlFor="phoneNumber" className="block mb-1 font-medium text-dark-slate">
-                            Phone Number:
-                        </label>
-                        <input
-                            id="phoneNumber"
-                            type="text"
-                            value={phoneNumber}
-                            placeholder="Enter your phone number"
-                            onChange={(e) => setPhoneNumber(e.target.value)}
-                            className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
-                        />
-                        {errors.phoneNumber && (
-                            <span className="text-error-red text-sm block mt-1">{errors.phoneNumber}</span>
-                        )}
-                    </div>
+                                <div className="form-control w-full">
+                                    <label className="label pb-1" htmlFor="username">
+                                        <span className="label-text font-semibold text-slate-700">Username</span>
+                                    </label>
+                                    <input
+                                        id="username"
+                                        type="text"
+                                        value={username}
+                                        placeholder="johndoe"
+                                        onChange={(e) => setUsername(e.target.value)}
+                                        className={`input input-bordered w-full focus:outline-primary ${errors.username ? "input-error" : ""}`}
+                                    />
+                                    {errors.username && (
+                                        <span className="text-error text-xs font-medium mt-1">{errors.username}</span>
+                                    )}
+                                </div>
+                            </div>
 
-                    <div className="mb-4">
-                        <label htmlFor="address" className="block mb-1 font-medium text-dark-slate">
-                            Address:
-                        </label>
-                        <input
-                            id="address"
-                            type="text"
-                            value={address}
-                            placeholder="Enter your address"
-                            onChange={(e) => setAddress(e.target.value)}
-                            className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
-                        />
-                        {errors.address && (
-                            <span className="text-error-red text-sm block mt-1">{errors.address}</span>
-                        )}
-                    </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="form-control w-full">
+                                    <label className="label pb-1" htmlFor="email">
+                                        <span className="label-text font-semibold text-slate-700">Email Address</span>
+                                    </label>
+                                    <input
+                                        id="email"
+                                        type="email"
+                                        value={email}
+                                        placeholder="john@company.com"
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className={`input input-bordered w-full focus:outline-primary ${errors.email ? "input-error" : ""}`}
+                                    />
+                                    {errors.email && (
+                                        <span className="text-error text-xs font-medium mt-1">{errors.email}</span>
+                                    )}
+                                </div>
 
-                    <div className="mb-4">
-                        <label htmlFor="photo" className="block mb-1 font-medium text-dark-slate">
-                            Profile Photo:
-                        </label>
-                        <input
-                            id="photo"
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => setPhoto(e.target.files?.[0] || null)}
-                            className="w-full p-2 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15 file:mr-4 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90 cursor-pointer"
-                        />
-                        {errors.photo && (
-                            <span className="text-error-red text-sm block mt-1">{errors.photo}</span>
-                        )}
-                    </div>
+                                <div className="form-control w-full">
+                                    <label className="label pb-1" htmlFor="phoneNumber">
+                                        <span className="label-text font-semibold text-slate-700">Phone Number</span>
+                                    </label>
+                                    <input
+                                        id="phoneNumber"
+                                        type="tel"
+                                        value={phoneNumber}
+                                        placeholder="+1 234 567 890"
+                                        onChange={(e) => setPhoneNumber(e.target.value)}
+                                        className={`input input-bordered w-full focus:outline-primary ${errors.phoneNumber ? "input-error" : ""}`}
+                                    />
+                                    {errors.phoneNumber && (
+                                        <span className="text-error text-xs font-medium mt-1">{errors.phoneNumber}</span>
+                                    )}
+                                </div>
+                            </div>
 
-                    <div className="mb-4">
-                        <label htmlFor="password" className="block mb-1 font-medium text-dark-slate">
-                            Password:
-                        </label>
-                        <input
-                            id="password"
-                            type="password"
-                            value={password}
-                            placeholder="Enter your password"
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
-                        />
-                        {errors.password && (
-                            <span className="text-error-red text-sm block mt-1">{errors.password}</span>
-                        )}
-                    </div>
+                            <div className="form-control w-full">
+                                <label className="label pb-1" htmlFor="address">
+                                    <span className="label-text font-semibold text-slate-700">Physical / Operating Address</span>
+                                </label>
+                                <input
+                                    id="address"
+                                    type="text"
+                                    value={address}
+                                    placeholder="123 Industrial Boulevard, Sector 4"
+                                    onChange={(e) => setAddress(e.target.value)}
+                                    className={`input input-bordered w-full focus:outline-primary ${errors.address ? "input-error" : ""}`}
+                                />
+                                {errors.address && (
+                                    <span className="text-error text-xs font-medium mt-1">{errors.address}</span>
+                                )}
+                            </div>
 
-                    <div className="mb-5">
-                        <label htmlFor="confirmPassword" className="block mb-1 font-medium text-dark-slate">
-                            Confirm Password:
-                        </label>
-                        <input
-                            id="confirmPassword"
-                            type="password"
-                            value={confirmPassword}
-                            placeholder="Confirm your password"
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="w-full p-2.5 border border-secondary-gray rounded bg-card-white text-dark-slate outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15"
-                        />
-                        {errors.confirmPassword && (
-                            <span className="text-error-red text-sm block mt-1">{errors.confirmPassword}</span>
-                        )}
-                    </div>
+                            <div className="form-control w-full">
+                                <label className="label pb-1" htmlFor="photo">
+                                    <span className="label-text font-semibold text-slate-700">Profile / Identification Photo</span>
+                                </label>
+                                <input
+                                    id="photo"
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => setPhoto(e.target.files?.[0] || null)}
+                                    className="file-input file-input-bordered file-input-primary w-full"
+                                />
+                                {errors.photo && (
+                                    <span className="text-error text-xs font-medium mt-1">{errors.photo}</span>
+                                )}
+                            </div>
 
-                    <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="bg-primary text-white border-none py-2.5 px-5 rounded cursor-pointer font-semibold text-[15px] w-full hover:bg-primary/90 disabled:bg-primary/50"
-                    >
-                        {isSubmitting ? "Registering..." : "Registration"}
-                    </button>
-                </form>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="form-control w-full">
+                                    <label className="label pb-1" htmlFor="password">
+                                        <span className="label-text font-semibold text-slate-700">Password</span>
+                                    </label>
+                                    <input
+                                        id="password"
+                                        type="password"
+                                        value={password}
+                                        placeholder="Min. 8 characters"
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className={`input input-bordered w-full focus:outline-primary ${errors.password ? "input-error" : ""}`}
+                                    />
+                                    {errors.password && (
+                                        <span className="text-error text-xs font-medium mt-1">{errors.password}</span>
+                                    )}
+                                </div>
+
+                                <div className="form-control w-full">
+                                    <label className="label pb-1" htmlFor="confirmPassword">
+                                        <span className="label-text font-semibold text-slate-700">Confirm Password</span>
+                                    </label>
+                                    <input
+                                        id="confirmPassword"
+                                        type="password"
+                                        value={confirmPassword}
+                                        placeholder="Re-enter password"
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        className={`input input-bordered w-full focus:outline-primary ${errors.confirmPassword ? "input-error" : ""}`}
+                                    />
+                                    {errors.confirmPassword && (
+                                        <span className="text-error text-xs font-medium mt-1">{errors.confirmPassword}</span>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="pt-3">
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="btn btn-primary w-full shadow-md text-white font-semibold flex items-center justify-center gap-2"
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <span className="loading loading-spinner loading-sm"></span>
+                                            Creating Account...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>Complete Registration</span>
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                            </svg>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+
+                        <div className="divider text-xs text-slate-400 my-4">OR</div>
+
+                        <div className="text-center">
+                            <p className="text-xs text-slate-500">
+                                Already have an account?{" "}
+                                <a href="/login" className="link link-primary font-semibold hover:underline">
+                                    Sign in here
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </>
+        </div>
     );
 }

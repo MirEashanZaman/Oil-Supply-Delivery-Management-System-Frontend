@@ -111,7 +111,6 @@ export default function Home() {
         fetchHomeProducts();
     }, []);
 
-    // Auto-advance hero carousel from right to left every 4 seconds
     useEffect(() => {
         if (!isAutoPlay) return;
         const timer = setInterval(() => {
@@ -120,7 +119,6 @@ export default function Home() {
         return () => clearInterval(timer);
     }, [isAutoPlay]);
 
-    // Manual scroll handlers for product carousel
     const handleScroll = (direction: "left" | "right") => {
         if (scrollContainerRef.current) {
             const scrollAmount = 380;
@@ -136,7 +134,6 @@ export default function Home() {
             <MyHeader name="Home" message="Centralized petroleum supply, dealer management, and delivery tracking" />
             <MyNavigation />
 
-            {/* Welcome Greeting Banner */}
             <div className="w-full bg-[#0F2747] text-white rounded-2xl p-6 sm:p-8 shadow-md mb-8 flex flex-col md:flex-row items-center justify-between gap-6 text-left border border-[#0F2747]/30">
                 <div>
                     <span className="text-xs uppercase font-extrabold tracking-wider bg-[#F59E0B]/20 text-[#F59E0B] px-3 py-1 rounded-full border border-[#F59E0B]/30">
@@ -190,7 +187,6 @@ export default function Home() {
                 </div>
             </div>
 
-            {/* HERO CAROUSEL (SLIDES FROM RIGHT TO LEFT) */}
             <div className="w-full mb-12">
                 <div className="flex items-center justify-between mb-3 px-1 text-left">
                     <div>
@@ -249,7 +245,6 @@ export default function Home() {
                         </div>
                     ))}
 
-                    {/* Carousel Arrow Controls */}
                     <div className="absolute left-4 right-4 top-1/2 -translate-y-1/2 flex justify-between z-20 pointer-events-none">
                         <button
                             onClick={() => setCurrentHeroSlide((prev) => (prev === 0 ? HERO_SLIDES.length - 1 : prev - 1))}
@@ -271,7 +266,6 @@ export default function Home() {
                         </button>
                     </div>
 
-                    {/* Indicator Dots */}
                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
                         {HERO_SLIDES.map((_, idx) => (
                             <button
@@ -287,7 +281,6 @@ export default function Home() {
                 </div>
             </div>
 
-            {/* PRODUCT STREAM CAROUSEL */}
             <div className="w-full mb-12">
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 px-1 text-left gap-2">
                     <div>
@@ -336,7 +329,6 @@ export default function Home() {
                     </div>
                 </div>
 
-                {/* Right-to-Left Carousel Container */}
                 <div className="w-full bg-[#FFFFFF] border border-[#E2E8F0] rounded-2xl p-4 md:p-6 shadow-sm overflow-hidden">
                     {loadingProducts ? (
                         <div className="flex flex-col justify-center items-center py-16">
@@ -349,10 +341,8 @@ export default function Home() {
                             <p className="text-xs">Verified oil products will appear here once listed.</p>
                         </div>
                     ) : isMarqueeMode ? (
-                        /* Infinite Continuous Right-to-Left Stream */
                         <div className="carousel w-full overflow-hidden">
                             <div className="animate-carousel-rtl flex gap-6">
-                                {/* First set of products */}
                                 {products.map((product) => (
                                     <div key={`prod-1-${product.id}`} className="carousel-item">
                                         <div className="card bg-[#FFFFFF] w-80 sm:w-96 shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-all text-left rounded-2xl">
@@ -404,7 +394,6 @@ export default function Home() {
                                     </div>
                                 ))}
 
-                                {/* Duplicate set to ensure seamless infinite looping right-to-left */}
                                 {products.map((product) => (
                                     <div key={`prod-2-${product.id}`} className="carousel-item">
                                         <div className="card bg-[#FFFFFF] w-80 sm:w-96 shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-all text-left rounded-2xl">
@@ -458,7 +447,6 @@ export default function Home() {
                             </div>
                         </div>
                     ) : (
-                        /* Manual Swipeable Carousel */
                         <div
                             ref={scrollContainerRef}
                             className="carousel carousel-center rounded-box w-full space-x-6 p-2 overflow-x-auto scroll-smooth"
@@ -518,7 +506,6 @@ export default function Home() {
                 </div>
             </div>
 
-            {/* PLATFORM ROLES & FEATURES */}
             <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 text-left">
                 <div className="card bg-[#FFFFFF] p-6 rounded-2xl border border-[#E2E8F0] shadow-sm hover:border-[#0F2747]/40 transition-all">
                     <div className="w-10 h-10 rounded-xl bg-[#0F2747]/10 text-[#0F2747] flex items-center justify-center mb-3">

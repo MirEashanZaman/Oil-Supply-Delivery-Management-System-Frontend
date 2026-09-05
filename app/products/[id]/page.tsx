@@ -141,6 +141,7 @@ export default function ProductDetails({
             try {
                 const res = await axios.get(`${API_ENDPOINT}/product/list`, {
                     withCredentials: true,
+                    validateStatus: (status) => status < 500,
                 });
                 if (Array.isArray(res.data)) {
                     const match = res.data.find((p: any) => String(p.id) === String(productId));

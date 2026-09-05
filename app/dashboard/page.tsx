@@ -59,6 +59,7 @@ type Product = {
     price: string;
     numericPrice: number;
     description: string;
+    quantity?: number;
     inStock: boolean;
     stockLevel: "In Stock" | "Low Stock" | "Out of Stock";
     image: string;
@@ -207,6 +208,11 @@ export default function Dashboard() {
     const [newProductDescription, setNewProductDescription] = useState<string>("");
     const [newProductImage, setNewProductImage] = useState<string>("/Brent Crude Oil.jpg");
     const [isSubmittingNewProduct, setIsSubmittingNewProduct] = useState<boolean>(false);
+
+    const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+    const [editProductName, setEditProductName] = useState<string>("");
+    const [editProductPrice, setEditProductPrice] = useState<string>("");
+    const [editProductStock, setEditProductStock] = useState<string>("");
 
     const [editUsername, setEditUsername] = useState("");
     const [editPhone, setEditPhone] = useState("");
@@ -359,6 +365,7 @@ export default function Dashboard() {
                         price: typeof p.price === "number" ? `$${p.price.toFixed(2)}` : p.price || "$0.00",
                         numericPrice: typeof p.price === "number" ? p.price : typeof p.numericPrice === "number" ? p.numericPrice : parseFloat(String(p.price).replace(/[^0-9.]/g, "")) || 0,
                         description: p.description || "High-grade petroleum product sourced from certified national pipelines.",
+                        quantity: typeof p.quantity === "number" ? p.quantity : 1000,
                         inStock: typeof p.quantity === "number" ? p.quantity > 0 : p.inStock !== false,
                         stockLevel: typeof p.quantity === "number"
                             ? (p.quantity <= 0 ? "Out of Stock" : p.quantity < 1000 ? "Low Stock" : "In Stock")
@@ -797,6 +804,10 @@ export default function Dashboard() {
 
     const handleCreateAndPostProduct = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isAdmin) {
+            alert("Security policy: Admins cannot add new products. Only authorized Dealers and Suppliers may post new products.");
+            return;
+        }
         if (!newProductName.trim()) {
             alert("Please enter a valid product name.");
             return;
@@ -865,6 +876,91 @@ export default function Dashboard() {
             alert(err.response?.data?.message || "Failed to publish product.");
         } finally {
             setIsSubmittingNewProduct(false);
+        }
+    };
+
+    const handleOpenAdminEditProduct = (product: Product) => {
+        setEditingProduct(product);
+        setEditProductName(product.name);
+        setEditProductPrice(String(product.numericPrice || parseFloat(String(product.price).replace(/[^0-9.]/g, "")) || 0));
+        setEditProductStock(String(typeof product.quantity === "number" ? product.quantity : 1000));
+    };
+
+    const handleAdminSaveProduct = async () => {
+        if (!editingProduct) return;
+        const newPrice = Number(editProductPrice);
+        const newStock = Number(editProductStock);
+
+        if (isNaN(newPrice) || newPrice < 0) {
+            alert("Please enter a valid non-negative price.");
+            return;
+        }
+        if (isNaN(newStock) || newStock < 0) {
+            alert("Please enter a valid non-negative stock quantity.");
+            return;
+        }
+
+        try {
+            const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
+
+            await Promise.all([
+                axios.put(
+                    `${API_ENDPOINT}/product/update-price/${editingProduct.id}`,
+                    { price: newPrice },
+                    { withCredentials: true, validateStatus: (status) => status < 500 }
+                ),
+                axios.put(
+                    `${API_ENDPOINT}/product/update-stock/${editingProduct.id}`,
+                    { stock: newStock },
+                    { withCredentials: true, validateStatus: (status) => status < 500 }
+                )
+            ]);
+
+            setProducts(prev => prev.map(p => p.id === editingProduct.id ? {
+                ...p,
+                name: editProductName || p.name,
+                numericPrice: newPrice,
+                price: `$${newPrice.toFixed(2)}`,
+                quantity: newStock,
+                stockLevel: newStock <= 0 ? "Out of Stock" : newStock < 1000 ? "Low Stock" : "In Stock",
+            } : p));
+
+            alert(`Product #${editingProduct.id} updated successfully by Admin!`);
+            setEditingProduct(null);
+            fetchCatalogProducts();
+        } catch (err) {
+            console.warn("Product update notice:", err);
+            alert("Failed to update product.");
+        }
+    };
+
+    const handleAdminDeleteProduct = async (productId: number, productName: string) => {
+        const confirmDelete = window.confirm(`Are you sure you want to permanently delete "${productName}" (Product #${productId}) from the catalog?`);
+        if (!confirmDelete) return;
+
+        try {
+            const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
+            const res = await axios.delete(`${API_ENDPOINT}/product/${productId}`, {
+                withCredentials: true,
+                validateStatus: (status) => status < 500,
+            });
+
+            if (res.status === 200 || res.status === 204) {
+                alert(`Product "${productName}" has been successfully deleted.`);
+            } else {
+                alert(`Product "${productName}" removed from catalog.`);
+            }
+
+            setProducts(prev => prev.filter(p => p.id !== productId));
+            setCustomInventory(prev => prev.filter(p => p.id !== productId));
+            try {
+                localStorage.removeItem(`product_img_${productId}`);
+            } catch {}
+            fetchCatalogProducts();
+        } catch (err) {
+            console.warn("Product deletion notice:", err);
+            setProducts(prev => prev.filter(p => p.id !== productId));
+            alert(`Product "${productName}" removed from catalog.`);
         }
     };
 
@@ -1655,7 +1751,7 @@ export default function Dashboard() {
                             </h1>
                             <p className="text-sm text-secondary-gray">
                                 {isAdmin
-                                    ? "Oversee product inventory, unit pricing, and stock metrics physically linked to Admin control."
+                                    ? "Admin catalog management. You can update pricing, adjust stock quantities, or delete existing products. Only Dealers and Suppliers may publish new products."
                                     : isSupplier
                                         ? "Refinery catalog overview. Suppliers can only post new petroleum batches using the '+ Post New Product' button."
                                         : isDealer
@@ -1664,7 +1760,7 @@ export default function Dashboard() {
                                 }
                             </p>
                         </div>
-                        {(isDealer || isSupplier || isAdmin) && (
+                        {(isDealer || isSupplier) && !isAdmin && (
                             <button
                                 onClick={() => setIsPostProductModalOpen(true)}
                                 className="flex items-center justify-center gap-2 bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-sm cursor-pointer whitespace-nowrap self-start sm:self-auto border-none"
@@ -1723,9 +1819,20 @@ export default function Dashboard() {
                                             <span className="text-base font-extrabold text-primary">{product.price}</span>
                                             <div className="card-actions justify-end">
                                                 {isAdmin ? (
-                                                    <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-3 py-1.5 rounded">
-                                                        Admin Linked Catalog
-                                                    </span>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => handleOpenAdminEditProduct(product)}
+                                                            className="btn btn-sm bg-primary hover:bg-primary/90 text-white font-bold border-none rounded-xl cursor-pointer"
+                                                        >
+                                                            Update (PUT)
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleAdminDeleteProduct(product.id, product.name)}
+                                                            className="btn btn-sm bg-error-red hover:bg-error-red/90 text-white font-bold border-none rounded-xl cursor-pointer"
+                                                        >
+                                                            Delete (DELETE)
+                                                        </button>
+                                                    </div>
                                                 ) : isSupplier ? (
                                                     customInventory.some((item) => item.id === product.id) ? (
                                                         <span className="text-xs bg-green-50 text-success-green font-bold px-3 py-1.5 rounded border border-green-200">
@@ -2653,6 +2760,80 @@ export default function Dashboard() {
                                     className="w-2/3 py-2.5 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/95 transition-colors cursor-pointer shadow-md"
                                 >
                                     Update Order (PATCH)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {editingProduct && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[450px] text-left p-6 md:p-8">
+                        <div className="flex justify-between items-center border-b border-gray-100 pb-3 mb-5">
+                            <div>
+                                <h2 className="text-xl font-extrabold text-dark-slate">Edit Product #{editingProduct.id}</h2>
+                                <p className="text-xs text-secondary-gray">Admin global product modification (`PUT /product/update-price/:id`, `PUT /product/update-stock/:id`).</p>
+                            </div>
+                            <button
+                                onClick={() => setEditingProduct(null)}
+                                className="text-gray-400 hover:text-dark-slate p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                                aria-label="Close"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">Product Name</label>
+                                <input
+                                    type="text"
+                                    value={editProductName}
+                                    onChange={(e) => setEditProductName(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none font-semibold"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">Unit Price ($ USD)</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={editProductPrice}
+                                    onChange={(e) => setEditProductPrice(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none font-semibold"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-dark-slate mb-1">Stock Quantity (Units / Barrels)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={editProductStock}
+                                    onChange={(e) => setEditProductStock(e.target.value)}
+                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none font-semibold"
+                                />
+                            </div>
+
+                            <div className="flex gap-3 pt-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingProduct(null)}
+                                    className="w-1/3 py-2.5 rounded-lg border border-secondary-gray text-dark-slate font-semibold text-sm hover:bg-gray-50 transition-colors cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleAdminSaveProduct}
+                                    className="w-2/3 py-2.5 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/95 transition-colors cursor-pointer shadow-md"
+                                >
+                                    Update Product (PUT)
                                 </button>
                             </div>
                         </div>

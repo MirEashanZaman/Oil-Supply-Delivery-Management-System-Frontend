@@ -913,49 +913,59 @@ export default function Dashboard() {
             <MyHeader name="Dashboard" message="system control & operations center!" />
             <MyNavigation />
 
-            {/* Profile Overview Bar */}
-            <div className="w-full max-w-[1200px] bg-card-white border border-[#E2E8F0] shadow-sm rounded-lg p-5 mb-6 flex flex-col md:flex-row items-center justify-between text-left gap-4">
-                <div className="flex items-center gap-4">
-                    {user.photoUrl ? (
-                        <img
-                            src={user.photoUrl}
-                            alt="Profile"
-                            className="w-12 h-12 rounded-full object-cover border border-[#E2E8F0]"
-                            onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                            }}
-                        />
-                    ) : (
-                        <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg">
-                            {(user.userName || user.email)[0].toUpperCase()}
-                        </div>
-                    )}
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h2 className="text-xl font-bold text-dark-slate">
-                                Welcome back, {user.userName || user.email}!
-                            </h2>
-                            <span className="text-xs px-2.5 py-0.5 rounded font-bold uppercase bg-blue-100 text-primary border border-blue-200">
-                                Role: {user.title || "User"}
-                            </span>
-                            {isSupplier && (
-                                <span className={`text-xs px-2 py-0.5 rounded font-bold uppercase ${
-                                    supplierOperationalStatus === "active" 
-                                        ? "bg-green-100 text-success-green border border-green-200" 
-                                        : "bg-red-100 text-error-red border border-red-200"
-                                }`}>
-                                    Status: {supplierOperationalStatus}
+            {/* Profile Overview & Navigation Bar */}
+            <div className="w-full max-w-[1200px] bg-card-white border border-[#E2E8F0] shadow-sm rounded-xl p-5 mb-6 text-left">
+                {/* Top Section: User Info & Logout Button */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#F1F5F9]">
+                    <div className="flex items-center gap-3.5">
+                        {user.photoUrl ? (
+                            <img
+                                src={user.photoUrl}
+                                alt="Profile"
+                                className="w-12 h-12 rounded-full object-cover border border-[#E2E8F0] shadow-xs"
+                                onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                }}
+                            />
+                        ) : (
+                            <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg shadow-xs">
+                                {(user.userName || user.email)[0].toUpperCase()}
+                            </div>
+                        )}
+                        <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <h2 className="text-xl font-bold text-dark-slate">
+                                    Welcome back, {user.userName || user.email}!
+                                </h2>
+                                <span className="text-xs px-2.5 py-0.5 rounded-full font-bold uppercase bg-blue-100 text-primary border border-blue-200">
+                                    Role: {user.title || "User"}
                                 </span>
-                            )}
+                                {isSupplier && (
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase ${
+                                        supplierOperationalStatus === "active" 
+                                            ? "bg-green-100 text-success-green border border-green-200" 
+                                            : "bg-red-100 text-error-red border border-red-200"
+                                    }`}>
+                                        Status: {supplierOperationalStatus}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-xs sm:text-sm text-secondary-gray mt-0.5">
+                                Email: <span className="font-medium text-dark-slate">{user.email}</span> &bull; Hub: <span className="font-medium text-dark-slate">{user.address || "Main Operational HQ"}</span>
+                            </p>
                         </div>
-                        <p className="text-sm text-secondary-gray">
-                            Email: {user.email} | Hub: {user.address || "Main Operational HQ"}
-                        </p>
                     </div>
+
+                    <button
+                        onClick={handleLogout}
+                        className="bg-error-red text-white py-2 px-5 rounded-lg cursor-pointer font-semibold text-xs sm:text-sm hover:bg-error-red/90 transition-all shadow-xs self-start sm:self-center shrink-0"
+                    >
+                        Logout
+                    </button>
                 </div>
-                
-                {/* Navigation Tabs */}
-                <div className="flex gap-2.5 flex-wrap">
+
+                {/* Bottom Section: Dedicated Full-Width Navigation Tabs */}
+                <div className="flex items-center gap-2 pt-3.5 overflow-x-auto flex-wrap">
                     {isAdmin && (
                         <>
                             <button
@@ -963,8 +973,10 @@ export default function Dashboard() {
                                     setActiveTab("monitoring");
                                     fetchAdminMonitoringData();
                                 }}
-                                className={`px-4 py-2 rounded text-sm font-semibold transition-colors cursor-pointer ${
-                                    activeTab === "monitoring" ? "bg-primary text-white" : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9]"
+                                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+                                    activeTab === "monitoring" 
+                                        ? "bg-primary text-white shadow-xs" 
+                                        : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
                                 }`}
                             >
                                 System Health (Monitor)
@@ -974,8 +986,10 @@ export default function Dashboard() {
                                     setActiveTab("users_crud");
                                     fetchAllMergedUsers();
                                 }}
-                                className={`px-4 py-2 rounded text-sm font-semibold transition-colors cursor-pointer ${
-                                    activeTab === "users_crud" ? "bg-primary text-white" : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9]"
+                                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+                                    activeTab === "users_crud" 
+                                        ? "bg-primary text-white shadow-xs" 
+                                        : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
                                 }`}
                             >
                                 Global User CRUD
@@ -985,8 +999,10 @@ export default function Dashboard() {
 
                     <button
                         onClick={() => setActiveTab("products")}
-                        className={`px-4 py-2 rounded text-sm font-semibold transition-colors cursor-pointer ${
-                            activeTab === "products" ? "bg-primary text-white" : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9]"
+                        className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+                            activeTab === "products" 
+                                ? "bg-primary text-white shadow-xs" 
+                                : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
                         }`}
                     >
                         Products Catalog
@@ -998,8 +1014,10 @@ export default function Dashboard() {
                                 setActiveTab("inventory");
                                 if (user.id) fetchCustomInventory(user.id, user.title);
                             }}
-                            className={`px-4 py-2 rounded text-sm font-semibold transition-colors cursor-pointer ${
-                                activeTab === "inventory" ? "bg-primary text-white" : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9]"
+                            className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+                                activeTab === "inventory" 
+                                    ? "bg-primary text-white shadow-xs" 
+                                    : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
                             }`}
                         >
                             {isSupplier ? "Supply Portfolio" : "Stock Inventory"}
@@ -1011,8 +1029,10 @@ export default function Dashboard() {
                             setActiveTab("orders");
                             if (user.id) fetchOrders(user.id, user.title);
                         }}
-                        className={`px-4 py-2 rounded text-sm font-semibold transition-colors cursor-pointer ${
-                            activeTab === "orders" ? "bg-primary text-white" : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9]"
+                        className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+                            activeTab === "orders" 
+                                ? "bg-primary text-white shadow-xs" 
+                                : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
                         }`}
                     >
                         {isCustomer ? "My Orders & Tracking" : isAdmin ? "Global Order Control" : "Fulfill Orders & Logistics"}
@@ -1023,8 +1043,10 @@ export default function Dashboard() {
                             setActiveTab("profile");
                             if (user.email) fetchFullProfile(user.email, user.title);
                         }}
-                        className={`px-4 py-2 rounded text-sm font-semibold transition-colors cursor-pointer ${
-                            activeTab === "profile" ? "bg-primary text-white" : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9]"
+                        className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+                            activeTab === "profile" 
+                                ? "bg-primary text-white shadow-xs" 
+                                : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
                         }`}
                     >
                         Profile Settings
@@ -1033,20 +1055,15 @@ export default function Dashboard() {
                     {!isAdmin && (
                         <button
                             onClick={() => setActiveTab("directory")}
-                            className={`px-4 py-2 rounded text-sm font-semibold transition-colors cursor-pointer ${
-                                activeTab === "directory" ? "bg-primary text-white" : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9]"
+                            className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+                                activeTab === "directory" 
+                                    ? "bg-primary text-white shadow-xs" 
+                                    : "bg-[#FAFBFD] text-secondary-gray hover:bg-[#F1F5F9] border border-[#E2E8F0]"
                             }`}
                         >
                             Directory Search
                         </button>
                     )}
-
-                    <button
-                        onClick={handleLogout}
-                        className="bg-error-red text-white py-2 px-5 rounded cursor-pointer font-semibold text-sm hover:bg-error-red/90 transition-colors"
-                    >
-                        Logout
-                    </button>
                 </div>
             </div>
 

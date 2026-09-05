@@ -95,23 +95,19 @@ export default function Dashboard() {
     const [products, setProducts] = useState<Product[]>([]);
     const [productsLoading, setProductsLoading] = useState(false);
 
-    // Orders tab states
     const [orders, setOrders] = useState<Order[]>([]);
     const [trackedOrderStatus, setTrackedOrderStatus] = useState<string | null>(null);
     const [trackedOrderId, setTrackedOrderId] = useState<number | null>(null);
     const [deliveryDates, setDeliveryDates] = useState<{ [orderId: number]: string }>({});
 
-    // Dealer/Supplier Inventory states
     const [customInventory, setCustomInventory] = useState<Product[]>([]);
     const [supplierOperationalStatus, setSupplierOperationalStatus] = useState<string>("active");
 
-    // Admin System Monitoring & Merged Users States
     const [monitorMetrics, setMonitorMetrics] = useState<any>(null);
     const [allMergedUsers, setAllMergedUsers] = useState<SystemUser[]>([]);
     const [selectedJoiningDate, setSelectedJoiningDate] = useState<string>("");
     const [dateSearchResults, setDateSearchResults] = useState<SystemUser[]>([]);
 
-    // Admin Create User Modal States
     const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
     const [newRole, setNewRole] = useState<"customer" | "dealer" | "supplier">("customer");
     const [newUserName, setNewUserName] = useState("");
@@ -121,23 +117,19 @@ export default function Dashboard() {
     const [newUserAddress, setNewUserAddress] = useState("");
     const [newUserEmailError, setNewUserEmailError] = useState("");
 
-    // Admin Edit User Modal States
     const [editingUser, setEditingUser] = useState<SystemUser | null>(null);
     const [editTargetUserName, setEditTargetUserName] = useState("");
     const [editTargetPhone, setEditTargetPhone] = useState("");
     const [editTargetAddress, setEditTargetAddress] = useState("");
 
-    // Admin Edit Order Modal States
     const [editingOrder, setEditingOrder] = useState<Order | null>(null);
     const [editOrderStatus, setEditOrderStatus] = useState("");
     const [editOrderQuantity, setEditOrderQuantity] = useState(1);
     const [editOrderAddress, setEditOrderAddress] = useState("");
 
-    // Sourcing lists (Suppliers & Dealers)
     const [availableSuppliers, setAvailableSuppliers] = useState<any[]>([]);
     const [availableDealers, setAvailableDealers] = useState<any[]>([]);
 
-    // Customer Interactive Checkout Modal States
     const [checkoutProduct, setCheckoutProduct] = useState<Product | null>(null);
     const [sourcingChoice, setSourcingChoice] = useState<"supplier" | "dealer">("supplier");
     const [selectedPartyId, setSelectedPartyId] = useState<number | "">("");
@@ -150,13 +142,11 @@ export default function Dashboard() {
     const [cardCvv, setCardCvv] = useState<string>("");
     const [isSubmittingOrder, setIsSubmittingOrder] = useState<boolean>(false);
 
-    // Dealer Wholesale Bulk Sourcing Modal States
     const [wholesaleProduct, setWholesaleProduct] = useState<Product | null>(null);
     const [wholesaleSupplierId, setWholesaleSupplierId] = useState<number | "">("");
     const [wholesaleQuantity, setWholesaleQuantity] = useState<number>(50);
     const [isSubmittingWholesale, setIsSubmittingWholesale] = useState<boolean>(false);
 
-    // Supplier / Dealer / Admin "Post / Upload New Product" Modal States
     const [isPostProductModalOpen, setIsPostProductModalOpen] = useState<boolean>(false);
     const [newProductName, setNewProductName] = useState<string>("");
     const [newProductCategory, setNewProductCategory] = useState<string>("Crude Fuel");
@@ -166,18 +156,15 @@ export default function Dashboard() {
     const [newProductImage, setNewProductImage] = useState<string>("/Brent Crude Oil.jpg");
     const [isSubmittingNewProduct, setIsSubmittingNewProduct] = useState<boolean>(false);
 
-    // Profile settings tab states
     const [editUsername, setEditUsername] = useState("");
     const [editPhone, setEditPhone] = useState("");
     const [editAddress, setEditAddress] = useState("");
     const [profileStatus, setProfileStatus] = useState("");
     const [dbLookupStatus, setDbLookupStatus] = useState("");
 
-    // Directory tab states
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<any[]>([]);
 
-    // PusherJS Real-time Messaging States
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
         {
             id: "msg_init_1",
@@ -218,7 +205,6 @@ export default function Dashboard() {
         return "http://localhost:8000/customer/getallcustomer";
     };
 
-    // Load initial user details
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
         if (!storedUser) {
@@ -243,7 +229,6 @@ export default function Dashboard() {
         fetchCatalogProducts();
     }, []);
 
-    // PusherJS real-time channel subscription
     useEffect(() => {
         const pusher = getPusherClient();
         if (!pusher) return;
@@ -263,7 +248,6 @@ export default function Dashboard() {
         };
     }, []);
 
-    // Send real-time message via PusherJS
     const handleSendChatMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!chatInput.trim() || !user) return;
@@ -305,7 +289,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Fetch catalog products from backend (`GET /product/list`)
     const fetchCatalogProducts = async () => {
         setProductsLoading(true);
         const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
@@ -338,7 +321,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Fetch available suppliers and dealers
     const fetchSourcingParties = async () => {
         try {
             const [suppliersRes, dealersRes] = await Promise.allSettled([
@@ -363,7 +345,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Get full profile
     const fetchFullProfile = async (email: string, title?: string) => {
         const url = getAllUsersUrl(title);
         try {
@@ -413,7 +394,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call (Admin): Monitor System Health Metrics (`GET /admin/monitor-data`)
     const fetchAdminMonitoringData = async () => {
         try {
             const res = await axios.get("http://localhost:8000/admin/monitor-data", {
@@ -428,7 +408,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call (Admin): Merged User Directory (`GET /admin/getallusers`)
     const fetchAllMergedUsers = async () => {
         try {
             const res = await axios.get("http://localhost:8000/admin/getallusers", {
@@ -443,7 +422,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call (Admin): Multi-Table Date Search (`GET /admin/joiningdate?date=...`)
     const handleSearchJoiningDate = async () => {
         if (!selectedJoiningDate) {
             alert("Please select a date to search.");
@@ -460,12 +438,10 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call (Admin): Create User (`POST /admin/:role`)
     const handleAdminCreateUser = async (e: React.FormEvent) => {
         e.preventDefault();
         setNewUserEmailError("");
 
-        // Enforce strict email uniqueness across all 4 database tables
         try {
             const check = await checkEmailUniqueness(newUserEmail);
             if (!check.isUnique) {
@@ -511,12 +487,10 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call (Admin): Update User (`PATCH /admin/:role/:id`)
     const handleAdminUpdateUser = async () => {
         if (!editingUser) return;
         const role = (editingUser.title || editingUser.role || "customer").toLowerCase();
 
-        // Security Constraint Check
         if (role === "admin") {
             alert("Security Constraint: Admins cannot modify other Admins.");
             return;
@@ -541,11 +515,9 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call (Admin): Delete User (`DELETE /admin/:role/:id`)
     const handleAdminDeleteUser = async (targetUser: SystemUser) => {
         const role = (targetUser.title || targetUser.role || "customer").toLowerCase();
 
-        // Security Constraint Check
         if (role === "admin") {
             alert("Security Constraint: Admins cannot delete other Admins.");
             return;
@@ -570,7 +542,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call (Admin): Global Order Update (`PATCH /admin/order/:id`)
     const handleAdminUpdateOrder = async () => {
         if (!editingOrder) return;
         try {
@@ -593,7 +564,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call (Admin): Global Order Deletion (`DELETE /admin/order/:id`)
     const handleAdminDeleteOrder = async (orderId: number) => {
         const confirmDelete = window.confirm(`Are you sure you want to permanently delete Order #${orderId}? Associated OrderDetails, Payment, and Delivery records will be purged.`);
         if (!confirmDelete) return;
@@ -611,7 +581,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Inventory (`GET /:role/:id/products`)
     const fetchCustomInventory = async (partyId: number, title?: string) => {
         const r = getRolePath(title);
         try {
@@ -627,7 +596,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Assign Product (`POST /:role/:id/products`)
     const handleAssignProduct = async (product: Product) => {
         if (!user || !user.id) return;
         const r = getRolePath(user.title);
@@ -645,7 +613,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Remove Product (`DELETE /:role/:id/products/:productId`)
     const handleRemoveProductFromStock = async (productId: number) => {
         if (!user || !user.id) return;
         const confirmRemove = window.confirm(`Are you sure you want to remove this product?`);
@@ -664,7 +631,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Post / Create New Product Listing (`POST /product/create` + `POST /:role/:id/products`)
     const handleCreateAndPostProduct = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newProductName.trim()) {
@@ -683,7 +649,6 @@ export default function Dashboard() {
         setIsSubmittingNewProduct(true);
         const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
         try {
-            // 1. Create product in backend database
             const createRes = await axios.post(
                 `${API_ENDPOINT}/product/create`,
                 {
@@ -696,7 +661,6 @@ export default function Dashboard() {
 
             const createdProduct = createRes.data;
 
-            // 2. If Dealer or Supplier, assign to their stock/portfolio
             if (user && user.id && (isDealer || isSupplier)) {
                 const role = getRolePath(user.title);
                 try {
@@ -717,7 +681,6 @@ export default function Dashboard() {
             setNewProductDescription("");
             setIsPostProductModalOpen(false);
 
-            // 3. Refresh live catalog & user's inventory
             fetchCatalogProducts();
             if (user && user.id && (isDealer || isSupplier)) {
                 fetchCustomInventory(user.id, user.title);
@@ -730,7 +693,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Supplier Status Toggle (`PUT /supplier/updatesupplier/:id/:status`)
     const handleToggleSupplierStatus = async () => {
         if (!user || !user.id) return;
         const newStatus = supplierOperationalStatus === "active" ? "inactive" : "active";
@@ -750,7 +712,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Dealer Wholesale Bulk Sourcing (`POST /dealer/placeorder`)
     const handleWholesaleBulkOrder = async () => {
         if (!user || !wholesaleProduct) return;
         const supplierId = wholesaleSupplierId || (availableSuppliers.length > 0 ? availableSuppliers[0].id : null);
@@ -782,7 +743,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Fetch all orders
     const fetchOrders = async (id: number, title?: string) => {
         const r = getRolePath(title);
         if (r === "customer") {
@@ -831,7 +791,6 @@ export default function Dashboard() {
         }
     };
 
-    // Customer Checkout Modal
     const handleOpenCheckout = (product: Product) => {
         setCheckoutProduct(product);
         setOrderQuantity(1);
@@ -843,7 +802,6 @@ export default function Dashboard() {
         }
     };
 
-    // Submit Customer Order
     const handleCompleteOrder = async () => {
         if (!user || !user.id || !checkoutProduct) return;
 
@@ -922,7 +880,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Confirm or Reject Order (`PUT /:role/confirmorder/:id`)
     const handleConfirmOrRejectOrder = async (orderId: number, status: "confirmed" | "rejected", customerEmail?: string) => {
         if (!user) return;
         const r = getRolePath(user.title);
@@ -957,7 +914,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Schedule Delivery (`POST /:role/scheduledelivery`)
     const handleScheduleDelivery = async (orderId: number, customerEmail?: string) => {
         if (!user) return;
         const r = getRolePath(user.title);
@@ -998,7 +954,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Cancel/Remove order
     const handleCancelOrder = async (orderId: number) => {
         if (!user || !user.id) return;
         const confirmCancel = window.confirm("Are you sure you want to cancel this order?");
@@ -1016,7 +971,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Track order status
     const handleTrackOrder = async (orderId: number) => {
         setTrackedOrderId(orderId);
         setTrackedOrderStatus("Connecting to delivery tracker...");
@@ -1034,7 +988,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Profile Updates (PATCH)
     const handleSaveProfile = async () => {
         if (!user || !user.id) return;
         const r = getRolePath(user.title);
@@ -1057,7 +1010,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Delete Own Account
     const handleDeleteAccount = async () => {
         if (!user) return;
         const confirmDelete = window.confirm(`Are you sure you want to delete your ${user.title} account?`);
@@ -1078,7 +1030,6 @@ export default function Dashboard() {
         }
     };
 
-    // Axios Call: Search users in directory
     const handleSearchUsers = async () => {
         if (!searchQuery) {
             setSearchResults([]);
@@ -1136,9 +1087,7 @@ export default function Dashboard() {
             <MyHeader name="Dashboard" message="Oil Supply & Delivery Management System - Operations and logistics portal" />
             <MyNavigation />
 
-            {/* Profile Overview & Navigation Bar */}
             <div className="w-full max-w-[1200px] card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-6 mb-8 text-left">
-                {/* Top Section: User Info & Logout Button */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[#E2E8F0]">
                     <div className="flex items-center gap-4">
                         {user.photoUrl ? (
@@ -1189,7 +1138,6 @@ export default function Dashboard() {
                     </button>
                 </div>
 
-                {/* Bottom Section: Dedicated Full-Width Navigation Tabs */}
                 <div className="flex items-center gap-2 pt-4 overflow-x-auto flex-wrap">
                     {isAdmin && (
                         <>
@@ -1295,7 +1243,6 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* TAB: ADMIN SYSTEM HEALTH & MONITORING */}
             {isAdmin && activeTab === "monitoring" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <div className="flex justify-between items-center mb-6">
@@ -1311,7 +1258,6 @@ export default function Dashboard() {
                         </button>
                     </div>
 
-                    {/* Metrics Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
                         <div className="bg-card-white p-5 rounded-lg border border-[#E2E8F0] shadow-sm">
                             <span className="text-xs font-bold text-secondary-gray uppercase">Total Registered Users</span>
@@ -1346,7 +1292,6 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    {/* Multi-Table Date Search */}
                     <div className="bg-card-white p-6 rounded-lg border border-[#E2E8F0] shadow-sm mb-6">
                         <h2 className="text-lg font-bold text-dark-slate mb-1">Multi-Table Registration Date Search</h2>
                         <p className="text-xs text-secondary-gray mb-4">
@@ -1387,7 +1332,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB: ADMIN GLOBAL USER CRUD */}
             {isAdmin && activeTab === "users_crud" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <div className="flex justify-between items-center mb-6">
@@ -1403,7 +1347,6 @@ export default function Dashboard() {
                         </button>
                     </div>
 
-                    {/* Merged Directory Table */}
                     <div className="bg-card-white rounded-lg border border-[#E2E8F0] shadow-sm overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead className="bg-[#FAFBFD] border-b border-[#E2E8F0] text-xs font-bold text-secondary-gray uppercase">
@@ -1475,7 +1418,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB 1: PRODUCT CATALOG & BULK SOURCING */}
             {activeTab === "products" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
@@ -1610,7 +1552,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB: STOCK INVENTORY / SUPPLY PORTFOLIO */}
             {(isDealer || isSupplier) && activeTab === "inventory" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
@@ -1709,7 +1650,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB 2: ORDERS MANAGEMENT & FULFILLMENT */}
             {activeTab === "orders" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <h1 className="text-2xl font-extrabold text-dark-slate mb-2">
@@ -1863,7 +1803,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB 3: PROFILE SETTINGS */}
             {activeTab === "profile" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <h1 className="text-2xl font-extrabold text-dark-slate mb-6">Profile & Account Settings</h1>
@@ -1966,7 +1905,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB 4: SYSTEM DIRECTORY (CUSTOMERS/DEALERS/SUPPLIERS) */}
             {activeTab === "directory" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn">
                     <h1 className="text-2xl font-extrabold text-dark-slate mb-6">System User Directory</h1>
@@ -2004,7 +1942,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* TAB: REAL-TIME MESSAGING (PUSHERJS) */}
             {activeTab === "messages" && (
                 <div className="w-full max-w-[1200px] text-left animate-fadeIn mb-12">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -2028,7 +1965,6 @@ export default function Dashboard() {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                        {/* Left: Message Composer */}
                         <div className="lg:col-span-5 space-y-4">
                             <div className="card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-6">
                                 <h2 className="text-base font-bold text-[#1E293B] mb-1">Send a Real-Time Message</h2>
@@ -2100,7 +2036,6 @@ export default function Dashboard() {
                                 </form>
                             </div>
 
-                            {/* User details badge */}
                             <div className="card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-4 text-xs text-[#64748B]">
                                 <div className="flex items-center justify-between">
                                     <span>Sending as: <strong className="text-[#1E293B]">{user.userName || user.email}</strong></span>
@@ -2111,7 +2046,6 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        {/* Right: Live Message Feed */}
                         <div className="lg:col-span-7">
                             <div className="card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-6">
                                 <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#E2E8F0]">
@@ -2204,7 +2138,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* ADMIN CREATE USER MODAL */}
             {isCreateUserModalOpen && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
                     <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[500px] text-left p-6 md:p-8">
@@ -2332,7 +2265,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* ADMIN EDIT USER MODAL */}
             {editingUser && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
                     <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[450px] text-left p-6 md:p-8">
@@ -2404,7 +2336,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* ADMIN EDIT ORDER MODAL */}
             {editingOrder && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
                     <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[450px] text-left p-6 md:p-8">
@@ -2483,7 +2414,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* DEALER WHOLESALE BULK SOURCING MODAL */}
             {wholesaleProduct && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
                     <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[550px] text-left p-6 md:p-8">
@@ -2562,7 +2492,6 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* CUSTOMER CHECKOUT MODAL */}
             {checkoutProduct && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
                     <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[650px] max-h-[90vh] overflow-y-auto text-left p-6 md:p-8">
@@ -2778,7 +2707,6 @@ export default function Dashboard() {
                     </div>
                 </div>
             )}
-            {/* SUPPLIER / DEALER / ADMIN: POST & UPLOAD PRODUCT MODAL */}
             {isPostProductModalOpen && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
                     <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[620px] max-h-[90vh] overflow-y-auto text-left p-6 md:p-8">
@@ -2802,7 +2730,6 @@ export default function Dashboard() {
                             </button>
                         </div>
 
-                        {/* Informative Role Banner */}
                         <div className="bg-blue-50/70 border border-blue-200 rounded-lg p-3.5 mb-6 flex items-start gap-3">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -2906,7 +2833,6 @@ export default function Dashboard() {
                                 </div>
                             </div>
 
-                            {/* Image Preview */}
                             <div>
                                 <label className="block text-xs font-bold text-dark-slate mb-1.5">
                                     Photo Preview:

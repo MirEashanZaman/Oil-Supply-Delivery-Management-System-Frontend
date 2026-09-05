@@ -57,36 +57,29 @@ export default function Login() {
 
             // Automatically check against the 4 backend auth controllers
             for (const r of roles) {
-                const candidateUrls = [
-                    `${API_ENDPOINT}/${r}/signin/`,
-                    `${API_ENDPOINT}/${r}/signin`,
-                    `${API_ENDPOINT}/${r}/auth/signIn`,
-                ];
-
-                for (const url of candidateUrls) {
-                    try {
-                        const response = await axios.post(
-                            url,
-                            {
-                                email: result.data.email,
-                                password: result.data.password,
-                            },
-                            {
-                                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                                withCredentials: true,
-                            }
-                        );
-                        if (response.data) {
-                            loginSuccess = true;
-                            matchedRole = r.charAt(0).toUpperCase() + r.slice(1);
-                            apiUserData = response.data;
-                            break;
+                try {
+                    const response = await axios.post(
+                        `${API_ENDPOINT}/${r}/auth/signIn`,
+                        {
+                            email: result.data.email,
+                            password: result.data.password,
+                        },
+                        {
+                            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                            withCredentials: true,
+                            validateStatus: (status) => status < 500,
                         }
-                    } catch (err: any) {
-                        if (err.response?.status !== 404) {
-                            lastErrorMessage = err.response?.data?.message || lastErrorMessage;
-                        }
+                    );
+                    if (response.status === 200 && response.data) {
+                        loginSuccess = true;
+                        matchedRole = r.charAt(0).toUpperCase() + r.slice(1);
+                        apiUserData = response.data;
+                        break;
+                    } else if (response.status === 401) {
+                        lastErrorMessage = response.data?.message || lastErrorMessage;
                     }
+                } catch (err: any) {
+                    console.warn(`Sign-in check for ${r} error:`, err);
                 }
 
                 if (loginSuccess) break;

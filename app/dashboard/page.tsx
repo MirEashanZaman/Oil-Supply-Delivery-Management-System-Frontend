@@ -6,6 +6,7 @@ import axios from "axios";
 import MyNavigation from "@/components/navigation";
 import MyHeader from "@/components/header";
 import { getPusherClient, ChatMessage } from "@/lib/pusher";
+import { checkEmailUniqueness } from "@/lib/email-checker";
 
 type UserData = {
     id?: number;
@@ -118,6 +119,7 @@ export default function Dashboard() {
     const [newUserPassword, setNewUserPassword] = useState("");
     const [newUserPhone, setNewUserPhone] = useState("");
     const [newUserAddress, setNewUserAddress] = useState("");
+    const [newUserEmailError, setNewUserEmailError] = useState("");
 
     // Admin Edit User Modal States
     const [editingUser, setEditingUser] = useState<SystemUser | null>(null);
@@ -461,6 +463,21 @@ export default function Dashboard() {
     // Axios Call (Admin): Create User (`POST /admin/:role`)
     const handleAdminCreateUser = async (e: React.FormEvent) => {
         e.preventDefault();
+        setNewUserEmailError("");
+
+        // Enforce strict email uniqueness across all 4 database tables
+        try {
+            const check = await checkEmailUniqueness(newUserEmail);
+            if (!check.isUnique) {
+                const msg = `Cannot create account: An account with the email "${newUserEmail}" already exists as a ${check.existingRole}. There can be only one account per email address across the entire system.`;
+                setNewUserEmailError(msg);
+                alert(msg);
+                return;
+            }
+        } catch (checkErr) {
+            console.warn("Email uniqueness pre-check failed:", checkErr);
+        }
+
         try {
             await axios.post(
                 `http://localhost:8000/admin/${newRole}`,
@@ -481,11 +498,16 @@ export default function Dashboard() {
             setNewUserPassword("");
             setNewUserPhone("");
             setNewUserAddress("");
+            setNewUserEmailError("");
             fetchAllMergedUsers();
             fetchAdminMonitoringData();
         } catch (err: any) {
             console.error("Create user failed:", err);
-            alert(err.response?.data?.message || "Failed to create user.");
+            const apiMsg = err.response?.data?.message || "Failed to create user.";
+            if (err.response?.status === 409) {
+                setNewUserEmailError(`Email "${newUserEmail}" already exists in the system. There can only be one account per email.`);
+            }
+            alert(Array.isArray(apiMsg) ? apiMsg.join(", ") : apiMsg);
         }
     };
 
@@ -2235,9 +2257,25 @@ export default function Dashboard() {
                                     required
                                     value={newUserEmail}
                                     placeholder="Enter email..."
-                                    onChange={(e) => setNewUserEmail(e.target.value)}
-                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none"
+                                    onChange={(e) => {
+                                        setNewUserEmail(e.target.value);
+                                        setNewUserEmailError("");
+                                    }}
+                                    onBlur={async () => {
+                                        if (newUserEmail.includes("@")) {
+                                            const check = await checkEmailUniqueness(newUserEmail);
+                                            if (!check.isUnique) {
+                                                setNewUserEmailError(`Email is already registered to a ${check.existingRole} account. Only one account per email is allowed.`);
+                                            } else {
+                                                setNewUserEmailError("");
+                                            }
+                                        }
+                                    }}
+                                    className={`w-full p-2.5 border rounded bg-white text-dark-slate text-sm outline-none ${newUserEmailError ? "border-red-500" : "border-secondary-gray"}`}
                                 />
+                                {newUserEmailError && (
+                                    <p className="text-xs text-red-600 font-semibold mt-1">{newUserEmailError}</p>
+                                )}
                             </div>
 
                             <div>

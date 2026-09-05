@@ -1019,54 +1019,54 @@ export default function Dashboard() {
 
     return (
         <>
-            <MyHeader name="Dashboard" message="Enterprise operations control and resource distribution center" />
+            <MyHeader name="Dashboard" message="Oil Supply & Delivery Management System - Operations and logistics portal" />
             <MyNavigation />
 
             {/* Profile Overview & Navigation Bar */}
-            <div className="w-full max-w-[1200px] card bg-base-100 border border-base-300 shadow-xl rounded-2xl p-6 mb-8 text-left">
+            <div className="w-full max-w-[1200px] card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-6 mb-8 text-left">
                 {/* Top Section: User Info & Logout Button */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-base-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[#E2E8F0]">
                     <div className="flex items-center gap-4">
                         {user.photoUrl ? (
                             <img
                                 src={user.photoUrl}
                                 alt="Profile"
-                                className="w-14 h-14 rounded-2xl object-cover border-2 border-primary/20 shadow-md"
+                                className="w-14 h-14 rounded-2xl object-cover border-2 border-[#0F2747]/20 shadow-sm"
                                 onError={(e) => {
                                     e.currentTarget.style.display = 'none';
                                 }}
                             />
                         ) : (
-                            <div className="w-14 h-14 rounded-2xl bg-primary text-white flex items-center justify-center font-black text-xl shadow-md">
+                            <div className="w-14 h-14 rounded-2xl bg-[#0F2747] text-white flex items-center justify-center font-black text-xl shadow-sm">
                                 {(user.userName || user.email)[0].toUpperCase()}
                             </div>
                         )}
                         <div>
                             <div className="flex items-center gap-2 flex-wrap">
-                                <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                                <h2 className="text-xl sm:text-2xl font-bold text-[#1E293B] tracking-tight">
                                     Welcome, {user.userName || user.email}
                                 </h2>
-                                <span className="badge badge-primary font-bold uppercase text-xs text-white">
+                                <span className="badge bg-[#0F2747] text-[#F59E0B] font-bold uppercase text-xs border-none px-3 py-1">
                                     Role: {user.title || "User"}
                                 </span>
                                 {isSupplier && (
-                                    <span className={`badge font-bold uppercase text-xs text-white ${
-                                        supplierOperationalStatus === "active" ? "badge-success" : "badge-error"
+                                    <span className={`badge font-bold uppercase text-xs text-white border-none px-3 py-1 ${
+                                        supplierOperationalStatus === "active" ? "bg-[#16A34A]" : "bg-[#DC2626]"
                                     }`}>
                                         Status: {supplierOperationalStatus}
                                     </span>
                                 )}
                             </div>
-                            <p className="text-xs sm:text-sm text-slate-500 mt-1 flex items-center gap-3 flex-wrap">
-                                <span>Email: <strong className="text-slate-800">{user.email}</strong></span>
-                                <span>Hub: <strong className="text-slate-800">{user.address || "Main Operational HQ"}</strong></span>
+                            <p className="text-xs sm:text-sm text-[#64748B] mt-1 flex items-center gap-3 flex-wrap">
+                                <span>Email: <strong className="text-[#1E293B]">{user.email}</strong></span>
+                                <span>Hub: <strong className="text-[#1E293B]">{user.address || "Main Operations Depot"}</strong></span>
                             </p>
                         </div>
                     </div>
 
                     <button
                         onClick={handleLogout}
-                        className="btn btn-error btn-sm text-white font-semibold shadow-md flex items-center gap-1.5 self-start sm:self-center shrink-0"
+                        className="btn bg-[#DC2626] hover:bg-[#b91c1c] btn-sm text-white font-semibold border-none shadow-sm rounded-xl flex items-center gap-1.5 self-start sm:self-center shrink-0 cursor-pointer"
                     >
                         <span>Sign Out</span>
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1380,7 +1380,7 @@ export default function Dashboard() {
                         {(isDealer || isSupplier || isAdmin) && (
                             <button
                                 onClick={() => setIsPostProductModalOpen(true)}
-                                className="flex items-center justify-center gap-2 bg-primary text-white font-bold px-5 py-2.5 rounded-lg text-sm hover:bg-primary/90 transition-all shadow-md cursor-pointer whitespace-nowrap self-start sm:self-auto"
+                                className="flex items-center justify-center gap-2 bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-sm cursor-pointer whitespace-nowrap self-start sm:self-auto border-none"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
@@ -1392,11 +1392,11 @@ export default function Dashboard() {
 
                     {productsLoading ? (
                         <div className="flex flex-col justify-center items-center py-16">
-                            <span className="loading loading-spinner loading-lg text-primary mb-3"></span>
+                            <span className="loading loading-spinner loading-lg text-[#0F2747] mb-3"></span>
                             <p className="text-sm text-secondary-gray">Loading live petroleum catalog...</p>
                         </div>
                     ) : products.length === 0 ? (
-                        <div className="bg-card-white p-8 rounded-lg border border-[#E2E8F0] text-center shadow-sm max-w-xl mx-auto">
+                        <div className="bg-card-white p-8 rounded-2xl border border-[#E2E8F0] text-center shadow-sm max-w-xl mx-auto">
                             <p className="text-secondary-gray font-medium mb-1">No products currently available in the catalog.</p>
                             <p className="text-xs text-secondary-gray">New petroleum grades will appear here as soon as they are added.</p>
                         </div>
@@ -1405,9 +1405,9 @@ export default function Dashboard() {
                             {products.map((product) => (
                                 <div
                                     key={product.id}
-                                    className="card bg-base-100 w-96 max-w-full shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-shadow"
+                                    className="card bg-[#FFFFFF] w-96 max-w-full shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-shadow rounded-2xl"
                                 >
-                                    <figure className="h-48 w-full overflow-hidden bg-slate-100">
+                                    <figure className="h-48 w-full overflow-hidden bg-[#F5F7FA]">
                                         <img
                                             src={product.image}
                                             alt={product.name}
@@ -1423,7 +1423,7 @@ export default function Dashboard() {
                                                 <span className="text-xs font-bold text-secondary-gray bg-[#F1F5F9] px-2.5 py-1 rounded">
                                                     {product.category}
                                                 </span>
-                                                <span className={`text-xs font-semibold px-2 py-0.5 rounded ${product.stockLevel === "In Stock" ? "bg-green-100 text-success-green" : "bg-amber-100 text-secondary"
+                                                <span className={`text-xs font-semibold px-2 py-0.5 rounded ${product.stockLevel === "In Stock" ? "bg-green-100 text-success-green" : "bg-amber-100 text-[#D97706]"
                                                     }`}>
                                                     {product.stockLevel}
                                                 </span>
@@ -1453,7 +1453,7 @@ export default function Dashboard() {
                                                     <div className="flex gap-2">
                                                         <button
                                                             onClick={() => handleAssignProduct(product)}
-                                                            className="btn btn-sm bg-emerald-600 hover:bg-emerald-700 text-white border-none"
+                                                            className="btn btn-sm bg-emerald-600 hover:bg-emerald-700 text-white border-none rounded-xl"
                                                         >
                                                             + Assign Stock
                                                         </button>
@@ -1463,7 +1463,7 @@ export default function Dashboard() {
                                                                 setWholesaleQuantity(50);
                                                                 if (availableSuppliers.length > 0) setWholesaleSupplierId(availableSuppliers[0].id);
                                                             }}
-                                                            className="btn btn-primary btn-sm text-white"
+                                                            className="btn bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] btn-sm font-bold border-none rounded-xl"
                                                         >
                                                             Bulk Source
                                                         </button>
@@ -1471,7 +1471,7 @@ export default function Dashboard() {
                                                 ) : (
                                                     <button
                                                         onClick={() => handleOpenCheckout(product)}
-                                                        className="btn btn-primary"
+                                                        className="btn bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold border-none rounded-xl text-xs sm:text-sm"
                                                     >
                                                         Buy Now
                                                     </button>
@@ -2201,7 +2201,7 @@ export default function Dashboard() {
                                 type="button"
                                 disabled={isSubmittingWholesale}
                                 onClick={handleWholesaleBulkOrder}
-                                className="w-2/3 py-2.5 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/95 transition-colors cursor-pointer shadow-md disabled:bg-primary/50"
+                                className="w-2/3 py-2.5 rounded-xl bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold text-sm transition-colors cursor-pointer shadow-sm border-none disabled:opacity-50"
                             >
                                 {isSubmittingWholesale ? "Placing Wholesale Order..." : `Confirm Wholesale Order (${wholesaleQuantity} units)`}
                             </button>
@@ -2412,7 +2412,7 @@ export default function Dashboard() {
                                 type="button"
                                 disabled={isSubmittingOrder}
                                 onClick={handleCompleteOrder}
-                                className="w-2/3 py-3 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/95 transition-colors cursor-pointer shadow-md disabled:bg-primary/50"
+                                className="w-2/3 py-3 rounded-xl bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold text-sm transition-colors cursor-pointer shadow-sm border-none disabled:opacity-50"
                             >
                                 {isSubmittingOrder
                                     ? "Processing Order..."
@@ -2591,7 +2591,7 @@ export default function Dashboard() {
                                 <button
                                     type="submit"
                                     disabled={isSubmittingNewProduct}
-                                    className="w-2/3 py-2.5 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-colors cursor-pointer shadow-md disabled:bg-primary/50 flex items-center justify-center gap-2"
+                                    className="w-2/3 py-2.5 rounded-xl bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold text-sm transition-colors cursor-pointer shadow-sm border-none disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
                                     {isSubmittingNewProduct ? (
                                         <>

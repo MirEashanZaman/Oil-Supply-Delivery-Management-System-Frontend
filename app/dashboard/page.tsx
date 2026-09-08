@@ -45,7 +45,6 @@ import { ProfileTab } from "@/components/dashboard/tabs/profile-tab";
 export default function Dashboard() {
     const router = useRouter();
     const [user, setUser] = useState<UserData | null>(null);
-    const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<DashboardTab>("products");
     const [products, setProducts] = useState<Product[]>([]);
     const [productsLoading, setProductsLoading] = useState(false);
@@ -210,7 +209,6 @@ export default function Dashboard() {
             router.push("/login");
             return;
         }
-        setLoading(false);
         fetchCatalogProducts();
     }, []);
 
@@ -225,21 +223,26 @@ export default function Dashboard() {
             if (Array.isArray(res.data)) {
                 const mapped: Product[] = res.data
                     .sort((a: any, b: any) => (a.id || 0) - (b.id || 0))
-                    .map((p: any) => ({
-                        id: p.id,
-                        name: p.name || `Product #${p.id}`,
-                        category: p.category || (p.categories?.[0]?.name) || "Petroleum Grade",
-                        price: typeof p.price === "number" ? `$${p.price.toFixed(2)}` : p.price || "$0.00",
-                        numericPrice: typeof p.price === "number" ? p.price : parseFloat(String(p.price).replace(/[^0-9.]/g, "")) || 0,
-                        description: p.description || "High-grade petroleum fuel product.",
-                        quantity: typeof p.quantity === "number" ? p.quantity : 1000,
-                        stock: typeof p.quantity === "number" ? p.quantity : typeof p.stock === "number" ? p.stock : 1000,
-                        inStock: typeof p.quantity === "number" ? p.quantity > 0 : true,
-                        stockLevel: (p.quantity || 1000) <= 0 ? "Out of Stock" : (p.quantity || 1000) < 1000 ? "Low Stock" : "In Stock",
-                        image: getProductImage(p.name, p.image, p.id),
-                        supplier: p.supplier || (p.supplierId ? { id: p.supplierId } : undefined),
-                        dealer: p.dealer || (p.dealerId ? { id: p.dealerId } : undefined),
-                    }));
+                    .map((p: any) => {
+                        const mappedSupplier = p.suppliers?.[0] || p.supplier || (p.supplierId ? { id: p.supplierId } : undefined);
+                        const mappedDealer = p.dealers?.[0] || p.dealer || (p.dealerId ? { id: p.dealerId } : undefined);
+
+                        return {
+                            id: p.id,
+                            name: p.name || `Product #${p.id}`,
+                            category: p.category || (p.categories?.[0]?.name) || "Petroleum Grade",
+                            price: typeof p.price === "number" ? `$${p.price.toFixed(2)}` : p.price || "$0.00",
+                            numericPrice: typeof p.price === "number" ? p.price : parseFloat(String(p.price).replace(/[^0-9.]/g, "")) || 0,
+                            description: p.description || "High-grade petroleum fuel product.",
+                            quantity: typeof p.quantity === "number" ? p.quantity : 1000,
+                            stock: typeof p.quantity === "number" ? p.quantity : typeof p.stock === "number" ? p.stock : 1000,
+                            inStock: typeof p.quantity === "number" ? p.quantity > 0 : true,
+                            stockLevel: (p.quantity || 1000) <= 0 ? "Out of Stock" : (p.quantity || 1000) < 1000 ? "Low Stock" : "In Stock",
+                            image: getProductImage(p.name, p.image, p.id),
+                            supplier: mappedSupplier,
+                            dealer: mappedDealer,
+                        };
+                    });
                 setProducts(mapped);
             }
         } catch (err) {
@@ -395,8 +398,7 @@ export default function Dashboard() {
                                 const assignedParty = r === "supplier"
                                     ? (o.supplier ?? o.supplierId ?? o.supplier_id ?? o.supplierUser ?? o.supplier_user)
                                     : (o.dealer ?? o.dealerId ?? o.dealer_id ?? o.dealerUser ?? o.dealer_user);
-                                const hasAssignmentMetadata = assignedParty !== undefined && assignedParty !== null;
-                                if ((r === "supplier" || r === "dealer") && hasAssignmentMetadata && !isAssignedToUser(assignedParty, id)) {
+                                if ((r === "supplier" || r === "dealer") && !isAssignedToUser(assignedParty, id)) {
                                     return;
                                 }
 
@@ -600,10 +602,16 @@ export default function Dashboard() {
                         status: "pending",
                         product: { id: Number(item.product.id) || 1 },
                         payment: { cardNumber: cleanCard, cardType: cleanType, amount: itemAmount, status: "completed" },
+                        sourceType: item.sourcingChoice,
                     };
 
-                    if (item.sourcingChoice === "supplier") itemPayload.supplier = { id: (partyIdNum > 0 && !isNaN(partyIdNum)) ? partyIdNum : defaultSupplierId };
-                    else itemPayload.dealer = { id: (partyIdNum > 0 && !isNaN(partyIdNum)) ? partyIdNum : defaultDealerId };
+                    if (item.sourcingChoice === "supplier") {
+                        itemPayload.supplier = { id: (partyIdNum > 0 && !isNaN(partyIdNum)) ? partyIdNum : defaultSupplierId };
+                        itemPayload.supplierId = itemPayload.supplier.id;
+                    } else {
+                        itemPayload.dealer = { id: (partyIdNum > 0 && !isNaN(partyIdNum)) ? partyIdNum : defaultDealerId };
+                        itemPayload.dealerId = itemPayload.dealer.id;
+                    }
 
                     try {
                         const itemRes = await axios.post(`http://localhost:8000/customer/${user.id}/orders`, itemPayload, { withCredentials: true, validateStatus: (status) => status < 500 });
@@ -633,9 +641,15 @@ export default function Dashboard() {
                 status: "pending",
                 product: { id: checkoutProduct.id },
                 payment: { cardNumber: cleanCard, cardType: cleanType, amount: totalAmount, status: "completed" },
+                sourceType: sourcingChoice,
             };
-            if (sourcingChoice === "supplier") orderPayload.supplier = { id: Number(selectedPartyId) || 1 };
-            else orderPayload.dealer = { id: Number(selectedPartyId) || 1 };
+            if (sourcingChoice === "supplier") {
+                orderPayload.supplier = { id: Number(selectedPartyId) || 1 };
+                orderPayload.supplierId = orderPayload.supplier.id;
+            } else {
+                orderPayload.dealer = { id: Number(selectedPartyId) || 1 };
+                orderPayload.dealerId = orderPayload.dealer.id;
+            }
 
             const orderRes = await axios.post(`http://localhost:8000/customer/${user.id}/orders`, orderPayload, { withCredentials: true, validateStatus: (status) => status < 500 });
             if (orderRes.status === 200 || orderRes.status === 201) {
@@ -695,11 +709,15 @@ export default function Dashboard() {
         const role = getRolePath(user.title || user.role);
         const normalizedStatus = status.trim().toLowerCase();
         const allowedStatuses = role === "customer"
-            ? []
-            : ["pending", "confirmed", "processing", "out for delivery", "cancelled", "rejected", "delivered"];
+            ? ["delivered"]
+            : ["pending", "confirmed", "processing", "out for delivery", "cancelled", "rejected"];
 
         if (!allowedStatuses.includes(normalizedStatus)) {
-            alert("Customers cannot update order status. Suppliers and dealers can update order statuses.");
+            alert(
+                role === "customer"
+                    ? "Customers can only mark orders as delivered."
+                    : "Suppliers and dealers can update order statuses except delivered."
+            );
             return;
         }
 
@@ -730,15 +748,20 @@ export default function Dashboard() {
                 ));
                 alert(`Order marked as ${nextStatus} successfully!`);
             } else {
+                const serverMessage = res.data?.message || `Order update failed (${res.status}) at /${role}/confirmorder/${orderId}.`;
                 alert(
-                    res.data?.message ||
-                    `Order update failed (${res.status}) at /${role}/confirmorder/${orderId}.`
+                    res.status === 401
+                        ? "Your session has expired. Please login again and retry."
+                        : serverMessage
                 );
             }
         } catch (err: any) {
+            const status = err.response?.status;
+            const serverMessage = err.response?.data?.message || `Failed to update order status at /${role}/confirmorder/${orderId}.`;
             alert(
-                err.response?.data?.message ||
-                `Failed to update order status at /${role}/confirmorder/${orderId}.`
+                status === 401
+                    ? "Your session has expired. Please login again and retry."
+                    : serverMessage
             );
         }
     };
@@ -902,14 +925,6 @@ export default function Dashboard() {
         localStorage.removeItem("user");
         router.push("/login");
     };
-
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-[#F5F7FA]">
-                <p className="font-bold text-lg text-[#0F2747]">Loading System Dashboard...</p>
-            </div>
-        );
-    }
 
     if (!user) {
         return (

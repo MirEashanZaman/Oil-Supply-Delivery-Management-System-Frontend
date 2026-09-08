@@ -78,7 +78,6 @@ const getProductImage = (name?: string, img?: string, id?: number | string) => {
     return "/Brent Crude Oil.jpg";
 };
 
-
 const HERO_SLIDES = [
     {
         id: 1,

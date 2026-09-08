@@ -1,0 +1,232 @@
+"use client";
+
+import React, { useState } from "react";
+import { SystemUser } from "../types";
+import { getRoleBadgeColor } from "../utils";
+
+interface AdminMonitoringTabProps {
+  users: SystemUser[];
+  loadingUsers: boolean;
+  onEditUser: (user: SystemUser) => void;
+  onDeleteUser: (id: number) => void;
+  onCreateUser: (newUser: {
+    name: string;
+    email: string;
+    password: string;
+    role: string;
+    phone: string;
+    address: string;
+  }) => void;
+  creatingUser: boolean;
+}
+
+export const AdminMonitoringTab: React.FC<AdminMonitoringTabProps> = ({
+  users,
+  loadingUsers,
+  onEditUser,
+  onDeleteUser,
+  onCreateUser,
+  creatingUser,
+}) => {
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [selectedUserRole, setSelectedUserRole] = useState("All");
+  const [selectedJoiningDate, setSelectedJoiningDate] = useState("");
+  const [dateSearchResults, setDateSearchResults] = useState<SystemUser[]>([]);
+  const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
+
+  const [newUserForm, setNewUserForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "Customer",
+    phone: "",
+    address: "",
+  });
+
+  const handleCreateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onCreateUser(newUserForm);
+    setNewUserForm({
+      name: "",
+      email: "",
+      password: "",
+      role: "Customer",
+      phone: "",
+      address: "",
+    });
+    setIsCreateUserModalOpen(false);
+  };
+
+  const handleSearchJoiningDate = () => {
+    if (!selectedJoiningDate) {
+      alert("Please select a date to search.");
+      return;
+    }
+    const matched = users.filter((u) => u.createdAt && u.createdAt.startsWith(selectedJoiningDate));
+    setDateSearchResults(matched);
+  };
+
+  const filteredUsers = users.filter((u) => {
+    const uName = (u.userName || u.username || u.name || "").toLowerCase();
+    const uEmail = (u.email || "").toLowerCase();
+    const query = userSearchQuery.trim().toLowerCase();
+    const matchesQuery = !query || uName.includes(query) || uEmail.includes(query);
+    const role = (u.title || u.role || "user").toLowerCase();
+    const matchesRole = selectedUserRole === "All" || role === selectedUserRole.toLowerCase();
+    return matchesQuery && matchesRole;
+  });
+
+  return (
+    <div className="w-full text-left animate-fadeIn space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold text-dark-slate">Global User Management & Search</h1>
+          <p className="text-sm text-secondary-gray">
+            Search users by username across all system roles, create new users, and manage account details.
+          </p>
+        </div>
+        <button
+          onClick={() => setIsCreateUserModalOpen(true)}
+          className="bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-green-700 transition-colors cursor-pointer shadow-sm self-start sm:self-auto"
+        >
+          + Create New User
+        </button>
+      </div>
+
+      <div className="bg-white border border-[#E2E8F0] p-4 sm:p-5 rounded-2xl shadow-sm">
+        <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between mb-3">
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              value={userSearchQuery}
+              onChange={(e) => setUserSearchQuery(e.target.value)}
+              placeholder="Search users by username or email..."
+              className="w-full pl-10 pr-10 py-2.5 border border-[#E2E8F0] rounded-xl text-sm bg-[#F8FAFC] text-dark-slate placeholder-secondary-gray focus:outline-none focus:border-primary focus:bg-white transition-all shadow-inner"
+            />
+            {userSearchQuery && (
+              <button
+                type="button"
+                onClick={() => setUserSearchQuery("")}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-dark-slate cursor-pointer"
+                title="Clear search"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between sm:justify-end gap-3 text-xs">
+            <span className="font-semibold text-secondary-gray whitespace-nowrap">
+              Showing <span className="font-bold text-dark-slate">{filteredUsers.length}</span> of <span className="font-bold text-dark-slate">{users.length}</span> users
+            </span>
+            {(userSearchQuery || selectedUserRole !== "All") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setUserSearchQuery("");
+                  setSelectedUserRole("All");
+                }}
+                className="text-xs text-error-red hover:underline font-bold cursor-pointer whitespace-nowrap"
+              >
+                Reset Filters
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-[#F1F5F9]">
+          <span className="text-xs font-bold text-secondary-gray mr-1">Filter by Role:</span>
+          {["All", "Customer", "Dealer", "Supplier", "Admin"].map((roleOption) => (
+            <button
+              key={roleOption}
+              type="button"
+              onClick={() => setSelectedUserRole(roleOption)}
+              className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                selectedUserRole === roleOption
+                  ? "bg-[#0F2747] text-white shadow-sm"
+                  : "bg-[#F1F5F9] text-secondary-gray hover:bg-[#E2E8F0] hover:text-dark-slate"
+              }`}
+            >
+              {roleOption}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="table w-full text-left">
+            <thead className="bg-[#F8FAFC] text-dark-slate border-b border-[#E2E8F0]">
+              <tr>
+                <th className="py-3 px-4 font-bold">Role</th>
+                <th className="py-3 px-4 font-bold">Username</th>
+                <th className="py-3 px-4 font-bold">Email</th>
+                <th className="py-3 px-4 font-bold">Phone</th>
+                <th className="py-3 px-4 font-bold">Address / Hub</th>
+                <th className="py-3 px-4 font-bold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E2E8F0]">
+              {loadingUsers ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-8 text-secondary-gray">
+                    Loading users...
+                  </td>
+                </tr>
+              ) : filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-8 text-secondary-gray">
+                    No users found matching query.
+                  </td>
+                </tr>
+              ) : (
+                filteredUsers.map((u) => {
+                  const role = u.title || u.role || "User";
+                  const isTargetAdmin = role.toLowerCase() === "admin";
+                  return (
+                    <tr key={`${role}-${u.id}`} className="hover:bg-[#F8FAFC]/80 transition-colors">
+                      <td className="py-3 px-4">
+                        <span className={`badge border-none font-bold text-xs uppercase px-2.5 py-1 ${getRoleBadgeColor(role)}`}>
+                          {role}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-bold text-dark-slate">{u.userName || u.username || u.name}</td>
+                      <td className="py-3 px-4 text-secondary-gray text-xs">{u.email}</td>
+                      <td className="py-3 px-4 text-secondary-gray text-xs">{u.phoneNumber || u.phone || "—"}</td>
+                      <td className="py-3 px-4 text-secondary-gray text-xs">{u.address || "—"}</td>
+                      <td className="py-3 px-4 text-right">
+                        {!isTargetAdmin && (
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => onEditUser(u)}
+                              className="btn btn-xs bg-[#0F2747] hover:bg-[#0F2747]/90 text-white font-bold border-none rounded-lg cursor-pointer"
+                            >
+                              Edit (PATCH)
+                            </button>
+                            <button
+                              onClick={() => onDeleteUser(u.id)}
+                              className="btn btn-xs bg-error-red hover:bg-error-red/90 text-white font-bold border-none rounded-lg cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};

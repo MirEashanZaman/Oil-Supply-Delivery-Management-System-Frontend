@@ -20,8 +20,14 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({
   onClose = () => { },
 }) => {
   const activeOrders = orders.filter(
-    (o) => o.status !== "Cancelled" && o.status !== "Rejected"
+    (o) => {
+      const status = (o.status || "").toLowerCase();
+      return status !== "cancelled" && status !== "rejected" && status !== "delivered" && status !== "completed";
+    }
   );
+  const selectedOrderIsTrackable = selectedTrackingOrder
+    ? activeOrders.some((order) => order.id === selectedTrackingOrder.id)
+    : false;
 
   return (
     <div className="space-y-6 text-left">
@@ -64,7 +70,7 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({
       </div>
 
       { }
-      {selectedTrackingOrder ? (
+      {selectedTrackingOrder && selectedOrderIsTrackable ? (
         <div className="rounded-2xl overflow-hidden border border-[#E2E8F0]">
           <UberMapTracker
             order={selectedTrackingOrder as any}

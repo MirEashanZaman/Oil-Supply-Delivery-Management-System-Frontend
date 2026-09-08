@@ -28,10 +28,11 @@ export const AdminMonitoringTab: React.FC<AdminMonitoringTabProps> = ({
   onCreateUser,
   creatingUser,
 }) => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("");
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [selectedUserRole, setSelectedUserRole] = useState("All");
+  const [selectedJoiningDate, setSelectedJoiningDate] = useState("");
+  const [dateSearchResults, setDateSearchResults] = useState<SystemUser[]>([]);
+  const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
 
   const [newUserForm, setNewUserForm] = useState({
     name: "",
@@ -53,270 +54,178 @@ export const AdminMonitoringTab: React.FC<AdminMonitoringTabProps> = ({
       phone: "",
       address: "",
     });
-    setShowCreateForm(false);
+    setIsCreateUserModalOpen(false);
+  };
+
+  const handleSearchJoiningDate = () => {
+    if (!selectedJoiningDate) {
+      alert("Please select a date to search.");
+      return;
+    }
+    const matched = users.filter((u) => u.createdAt && u.createdAt.startsWith(selectedJoiningDate));
+    setDateSearchResults(matched);
   };
 
   const filteredUsers = users.filter((u) => {
-    const matchesSearch =
-      u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.role?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole =
-      roleFilter === "all" ||
-      (u.role || "").toLowerCase() === roleFilter.toLowerCase();
-    const matchesDate =
-      !dateFilter ||
-      (u.createdAt && u.createdAt.startsWith(dateFilter));
-    return matchesSearch && matchesRole && matchesDate;
+    const uName = (u.userName || u.username || u.name || "").toLowerCase();
+    const uEmail = (u.email || "").toLowerCase();
+    const query = userSearchQuery.trim().toLowerCase();
+    const matchesQuery = !query || uName.includes(query) || uEmail.includes(query);
+    const role = (u.title || u.role || "user").toLowerCase();
+    const matchesRole = selectedUserRole === "All" || role === selectedUserRole.toLowerCase();
+    return matchesQuery && matchesRole;
   });
 
   return (
-    <div className="space-y-6">
-      {/* Top Filter Bar */}
-      <div className="bg-slate-850 p-4 rounded-2xl border border-slate-800 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-        <div className="flex-1 flex flex-col sm:flex-row items-center gap-3">
-          <div className="relative w-full sm:flex-1">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-              🔍
-            </span>
+    <div className="w-full text-left animate-fadeIn space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold text-dark-slate">Global User Management & Search</h1>
+          <p className="text-sm text-secondary-gray">
+            Search users by username across all system roles, create new users, and manage account details.
+          </p>
+        </div>
+        <button
+          onClick={() => setIsCreateUserModalOpen(true)}
+          className="bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-green-700 transition-colors cursor-pointer shadow-sm self-start sm:self-auto"
+        >
+          + Create New User
+        </button>
+      </div>
+
+      <div className="bg-white border border-[#E2E8F0] p-4 sm:p-5 rounded-2xl shadow-sm">
+        <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between mb-3">
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
             <input
               type="text"
-              placeholder="Search users by name or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-10 pr-4 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
+              value={userSearchQuery}
+              onChange={(e) => setUserSearchQuery(e.target.value)}
+              placeholder="Search users by username or email..."
+              className="w-full pl-10 pr-10 py-2.5 border border-[#E2E8F0] rounded-xl text-sm bg-[#F8FAFC] text-dark-slate placeholder-secondary-gray focus:outline-none focus:border-primary focus:bg-white transition-all shadow-inner"
             />
+            {userSearchQuery && (
+              <button
+                type="button"
+                onClick={() => setUserSearchQuery("")}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-dark-slate cursor-pointer"
+                title="Clear search"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
-            >
-              <option value="all">All Roles</option>
-              <option value="Customer">Customers</option>
-              <option value="Dealer">Dealers</option>
-              <option value="Supplier">Suppliers</option>
-              <option value="Admin">Admins</option>
-            </select>
-
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
-              title="Filter by join date"
-            />
-
-            {dateFilter && (
+          <div className="flex items-center justify-between sm:justify-end gap-3 text-xs">
+            <span className="font-semibold text-secondary-gray whitespace-nowrap">
+              Showing <span className="font-bold text-dark-slate">{filteredUsers.length}</span> of <span className="font-bold text-dark-slate">{users.length}</span> users
+            </span>
+            {(userSearchQuery || selectedUserRole !== "All") && (
               <button
-                onClick={() => setDateFilter("")}
-                className="text-xs text-rose-400 hover:text-rose-300 font-bold px-2 py-1"
+                type="button"
+                onClick={() => {
+                  setUserSearchQuery("");
+                  setSelectedUserRole("All");
+                }}
+                className="text-xs text-error-red hover:underline font-bold cursor-pointer whitespace-nowrap"
               >
-                Clear
+                Reset Filters
               </button>
             )}
           </div>
         </div>
 
-        <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          className="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition whitespace-nowrap"
-        >
-          {showCreateForm ? "✕ Cancel" : "+ Register New User"}
-        </button>
+        <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-[#F1F5F9]">
+          <span className="text-xs font-bold text-secondary-gray mr-1">Filter by Role:</span>
+          {["All", "Customer", "Dealer", "Supplier", "Admin"].map((roleOption) => (
+            <button
+              key={roleOption}
+              type="button"
+              onClick={() => setSelectedUserRole(roleOption)}
+              className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                selectedUserRole === roleOption
+                  ? "bg-[#0F2747] text-white shadow-sm"
+                  : "bg-[#F1F5F9] text-secondary-gray hover:bg-[#E2E8F0] hover:text-dark-slate"
+              }`}
+            >
+              {roleOption}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Expandable Create User Form */}
-      {showCreateForm && (
-        <div className="bg-slate-850 border border-amber-500/30 rounded-2xl p-6 shadow-xl">
-          <h4 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-            <span>🛡️</span> Create New System User
-          </h4>
-          <form onSubmit={handleCreateSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-400 mb-1">
-                Full Name
-              </label>
-              <input
-                type="text"
-                required
-                value={newUserForm.name}
-                onChange={(e) =>
-                  setNewUserForm({ ...newUserForm, name: e.target.value })
-                }
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
-                placeholder="John Doe"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-400 mb-1">
-                Email Address
-              </label>
-              <input
-                type="email"
-                required
-                value={newUserForm.email}
-                onChange={(e) =>
-                  setNewUserForm({ ...newUserForm, email: e.target.value })
-                }
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
-                placeholder="john@example.com"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-400 mb-1">
-                Password
-              </label>
-              <input
-                type="password"
-                required
-                value={newUserForm.password}
-                onChange={(e) =>
-                  setNewUserForm({ ...newUserForm, password: e.target.value })
-                }
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
-                placeholder="••••••••"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-400 mb-1">
-                System Role
-              </label>
-              <select
-                value={newUserForm.role}
-                onChange={(e) =>
-                  setNewUserForm({ ...newUserForm, role: e.target.value })
-                }
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
-              >
-                <option value="Customer">Customer</option>
-                <option value="Dealer">Dealer</option>
-                <option value="Supplier">Supplier</option>
-                <option value="Admin">Admin</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-400 mb-1">
-                Phone Number (Optional)
-              </label>
-              <input
-                type="text"
-                value={newUserForm.phone}
-                onChange={(e) =>
-                  setNewUserForm({ ...newUserForm, phone: e.target.value })
-                }
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
-                placeholder="+1 234 567 890"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-400 mb-1">
-                Address / Depot Hub (Optional)
-              </label>
-              <input
-                type="text"
-                value={newUserForm.address}
-                onChange={(e) =>
-                  setNewUserForm({ ...newUserForm, address: e.target.value })
-                }
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
-                placeholder="Terminal 4, Sector 7"
-              />
-            </div>
-            <div className="md:col-span-2 flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowCreateForm(false)}
-                className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-700 transition"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={creatingUser}
-                className="px-5 py-2 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 text-slate-950 font-bold text-xs rounded-xl transition shadow-lg shadow-amber-500/20 disabled:opacity-50"
-              >
-                {creatingUser ? "Registering..." : "Create User"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Users Table */}
-      <div className="bg-slate-850 border border-slate-800 rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-base font-bold text-white">System Accounts</h3>
-            <p className="text-xs text-slate-400">Total registered system actors: {users.length}</p>
-          </div>
-        </div>
-
-        {loadingUsers ? (
-          <div className="text-center py-16">
-            <div className="inline-block w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-            <p className="text-xs text-slate-400">Loading user accounts...</p>
-          </div>
-        ) : filteredUsers.length === 0 ? (
-          <div className="text-center py-16 bg-slate-900/50 rounded-xl border border-slate-800">
-            <p className="text-xs text-slate-400">No users found matching query.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-900/80 text-slate-400 border-b border-slate-800 uppercase tracking-wider text-[10px]">
+      <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="table w-full text-left">
+            <thead className="bg-[#F8FAFC] text-dark-slate border-b border-[#E2E8F0]">
+              <tr>
+                <th className="py-3 px-4 font-bold">Role</th>
+                <th className="py-3 px-4 font-bold">Username</th>
+                <th className="py-3 px-4 font-bold">Email</th>
+                <th className="py-3 px-4 font-bold">Phone</th>
+                <th className="py-3 px-4 font-bold">Address / Hub</th>
+                <th className="py-3 px-4 font-bold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E2E8F0]">
+              {loadingUsers ? (
                 <tr>
-                  <th className="p-3">User</th>
-                  <th className="p-3">Email</th>
-                  <th className="p-3">Role</th>
-                  <th className="p-3">Phone</th>
-                  <th className="p-3">Joined Date</th>
-                  <th className="p-3 text-right">Actions</th>
+                  <td colSpan={6} className="text-center py-8 text-secondary-gray">
+                    Loading users...
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800 text-slate-300">
-                {filteredUsers.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-800/50 transition">
-                    <td className="p-3 font-semibold text-white flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-center font-bold text-[10px]">
-                        {u.name?.charAt(0)?.toUpperCase() || "U"}
-                      </div>
-                      {u.name}
-                    </td>
-                    <td className="p-3 text-slate-300">{u.email}</td>
-                    <td className="p-3">
-                      <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold ${getRoleBadgeColor(u.role)}`}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td className="p-3 text-slate-400">{u.phone || "—"}</td>
-                    <td className="p-3 text-slate-400">
-                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}
-                    </td>
-                    <td className="p-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => onEditUser(u)}
-                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg font-semibold text-[11px] transition"
-                        >
-                          ✏️ Edit
-                        </button>
-                        <button
-                          onClick={() => onDeleteUser(u.id)}
-                          className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-lg font-semibold text-[11px] transition"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              ) : filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-8 text-secondary-gray">
+                    No users found matching query.
+                  </td>
+                </tr>
+              ) : (
+                filteredUsers.map((u) => {
+                  const role = u.title || u.role || "User";
+                  const isTargetAdmin = role.toLowerCase() === "admin";
+                  return (
+                    <tr key={`${role}-${u.id}`} className="hover:bg-[#F8FAFC]/80 transition-colors">
+                      <td className="py-3 px-4">
+                        <span className={`badge border-none font-bold text-xs uppercase px-2.5 py-1 ${getRoleBadgeColor(role)}`}>
+                          {role}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-bold text-dark-slate">{u.userName || u.username || u.name}</td>
+                      <td className="py-3 px-4 text-secondary-gray text-xs">{u.email}</td>
+                      <td className="py-3 px-4 text-secondary-gray text-xs">{u.phoneNumber || u.phone || "—"}</td>
+                      <td className="py-3 px-4 text-secondary-gray text-xs">{u.address || "—"}</td>
+                      <td className="py-3 px-4 text-right">
+                        {!isTargetAdmin && (
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => onEditUser(u)}
+                              className="btn btn-xs bg-[#0F2747] hover:bg-[#0F2747]/90 text-white font-bold border-none rounded-lg cursor-pointer"
+                            >
+                              Edit (PATCH)
+                            </button>
+                            <button
+                              onClick={() => onDeleteUser(u.id)}
+                              className="btn btn-xs bg-error-red hover:bg-error-red/90 text-white font-bold border-none rounded-lg cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

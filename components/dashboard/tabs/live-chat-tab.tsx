@@ -2,25 +2,33 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { UserData } from "../types";
-
-interface Message {
-  sender: string;
-  text: string;
-  time: string;
-  isMe: boolean;
-}
+import { ChatMessage } from "@/lib/pusher";
 
 interface LiveChatTabProps {
   userData: UserData | null;
 }
 
 export const LiveChatTab: React.FC<LiveChatTabProps> = ({ userData }) => {
-  const [messages, setMessages] = useState<Message[]>([
+  const [messages, setMessages] = useState<ChatMessage[]>([
     {
-      sender: "Refinery Logistics Dispatch",
-      text: "Hello! Welcome to the 24/7 Petroleum Delivery and Dispatch channel. How can we support your consignment today?",
-      time: "10:00 AM",
-      isMe: false,
+      id: "msg_init_1",
+      sender: "Refinery Dispatch Central",
+      email: "refinery@oilsupply-delivery.com",
+      role: "Supplier",
+      topic: "Refinery Wholesale Availability",
+      message: "All crude fuel pipelines and regional tanker depots operating at verified ISO specifications. Real-time dispatches active.",
+      timestamp: "09:30 AM",
+      channel: "oil-supply-chat",
+    },
+    {
+      id: "msg_init_2",
+      sender: "Dhaka Regional Dealer Hub",
+      email: "dealer@oilsupply-delivery.com",
+      role: "Dealer",
+      topic: "Order Dispatch & Logistics",
+      message: "Bulk tanker allocations ready for commercial customers. Priority road dispatches scheduled for Kuril and Gazipur depots.",
+      timestamp: "10:15 AM",
+      channel: "oil-supply-chat",
     },
   ]);
   const [inputMessage, setInputMessage] = useState("");
@@ -34,111 +42,89 @@ export const LiveChatTab: React.FC<LiveChatTabProps> = ({ userData }) => {
     e.preventDefault();
     if (!inputMessage.trim()) return;
 
-    const newMsg: Message = {
-      sender: userData?.name || "Me",
-      text: inputMessage.trim(),
-      time: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      isMe: true,
+    const newMsg: ChatMessage = {
+      id: `msg_${Date.now()}`,
+      sender: userData?.userName || userData?.name || "User",
+      email: userData?.email || "user@example.com",
+      role: userData?.title || userData?.role || "Customer",
+      topic: "Logistics Dispatch",
+      message: inputMessage.trim(),
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      channel: "oil-supply-chat",
     };
 
     setMessages((prev) => [...prev, newMsg]);
     setInputMessage("");
-
-    // Automated dispatcher reply simulation
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          sender: "Refinery Logistics Dispatch",
-          text: "Acknowledged. Dispatch team is reviewing telematics and consignment status.",
-          time: new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          isMe: false,
-        },
-      ]);
-    }, 1200);
   };
 
   return (
-    <div className="bg-slate-850 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[650px]">
-      {/* Chat Header */}
-      <div className="bg-slate-900 px-6 py-4 border-b border-slate-800 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center text-slate-950 font-black text-lg">
-              💬
-            </div>
-            <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-slate-900" />
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-white">
-              Logistics Dispatch & Driver Telematics Desk
-            </h4>
-            <p className="text-xs text-emerald-400 font-medium flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Connected to Fleet Network
-            </p>
-          </div>
+    <div className="w-full text-left animate-fadeIn">
+      <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm">
+        <h2 className="text-xl font-bold text-dark-slate mb-1">Realtime Logistics Dispatch Chat</h2>
+        <p className="text-xs text-secondary-gray mb-4">Direct WebSocket line across Refineries, Dealers, and Transport Fleets.</p>
+
+        <div className="h-96 overflow-y-auto bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-4 space-y-3 mb-4">
+          {messages.map((m) => {
+            const isMe = m.email === userData?.email;
+            return (
+              <div
+                key={m.id}
+                className={`p-4 rounded-2xl border text-xs transition-all ${
+                  isMe ? "bg-[#0F2747]/5 border-[#0F2747]/20" : "bg-white border-[#E2E8F0]"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-[#1E293B] text-sm">{m.sender}</span>
+                    <span
+                      className={`badge text-[10px] font-bold uppercase border-none px-2 py-0.5 ${
+                        m.role === "Supplier"
+                          ? "bg-[#0F2747] text-[#F59E0B]"
+                          : m.role === "Dealer"
+                          ? "bg-[#F59E0B]/20 text-[#D97706]"
+                          : m.role === "Admin"
+                          ? "bg-[#16A34A]/20 text-[#16A34A]"
+                          : "bg-[#64748B]/15 text-[#1E293B]"
+                      }`}
+                    >
+                      {m.role || "User"}
+                    </span>
+                    {isMe && (
+                      <span className="badge bg-[#16A34A] text-white text-[9px] font-bold border-none px-1.5 py-0.5">
+                        You
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-[#64748B] font-mono">{m.timestamp}</span>
+                </div>
+                <div className="mb-2">
+                  <span className="inline-block text-[11px] font-semibold text-[#0F2747] bg-[#0F2747]/10 px-2 py-0.5 rounded-md">
+                    {m.topic}
+                  </span>
+                </div>
+                <p className="text-[#1E293B] text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">{m.message}</p>
+              </div>
+            );
+          })}
+          <div ref={messagesEndRef} />
         </div>
 
-        <div className="text-xs text-slate-400 hidden sm:block">
-          Active Operator: <span className="text-amber-400 font-semibold">{userData?.name}</span>
-        </div>
-      </div>
-
-      {/* Messages Feed */}
-      <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-900/40">
-        {messages.map((m, idx) => (
-          <div
-            key={idx}
-            className={`flex flex-col ${
-              m.isMe ? "items-end" : "items-start"
-            }`}
+        <form onSubmit={handleSendMessage} className="flex gap-2">
+          <input
+            type="text"
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            placeholder="Type a broadcast message to all logistics channels..."
+            className="flex-1 p-2.5 border border-secondary-gray rounded-xl text-sm outline-none bg-white text-dark-slate"
+          />
+          <button
+            type="submit"
+            className="bg-[#0F2747] hover:bg-[#163860] text-white px-5 py-2.5 rounded-xl font-bold text-xs transition shadow-sm cursor-pointer"
           >
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-bold text-slate-400">
-                {m.sender}
-              </span>
-              <span className="text-[10px] text-slate-500">{m.time}</span>
-            </div>
-            <div
-              className={`max-w-md px-4 py-2.5 rounded-2xl text-xs leading-relaxed ${
-                m.isMe
-                  ? "bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 font-medium rounded-tr-none shadow-lg shadow-amber-500/10"
-                  : "bg-slate-800 text-slate-200 border border-slate-700/80 rounded-tl-none"
-              }`}
-            >
-              {m.text}
-            </div>
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
+            Send Message
+          </button>
+        </form>
       </div>
-
-      {/* Chat Input Form */}
-      <form
-        onSubmit={handleSendMessage}
-        className="p-4 bg-slate-900 border-t border-slate-800 flex items-center gap-3"
-      >
-        <input
-          type="text"
-          value={inputMessage}
-          onChange={(e) => setInputMessage(e.target.value)}
-          placeholder="Type a message to logistics team or driver..."
-          className="flex-1 bg-slate-850 border border-slate-700 rounded-xl px-4 py-3 text-white text-xs focus:outline-none focus:border-amber-500 transition"
-        />
-        <button
-          type="submit"
-          className="px-5 py-3 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition flex items-center gap-1.5"
-        >
-          <span>Send</span> 🚀
-        </button>
-      </form>
     </div>
   );
 };

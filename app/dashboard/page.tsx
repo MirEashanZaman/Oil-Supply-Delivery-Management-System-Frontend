@@ -589,17 +589,17 @@ export default function Dashboard() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
-                <p className="font-semibold text-lg animate-pulse">Loading System Dashboard...</p>
+            <div className="min-h-screen flex items-center justify-center bg-[#F5F7FA]">
+                <p className="font-bold text-lg text-[#0F2747] animate-pulse">Loading System Dashboard...</p>
             </div>
         );
     }
 
     if (!user) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-white p-4">
-                <h2 className="text-rose-400 text-xl font-bold mb-4">Access Denied</h2>
-                <button onClick={() => router.push("/login")} className="px-6 py-2.5 bg-amber-500 text-slate-950 font-bold rounded-xl">
+            <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5F7FA] p-4 text-center">
+                <h2 className="text-[#DC2626] text-xl font-bold mb-4">Access Denied</h2>
+                <button onClick={() => router.push("/login")} className="btn btn-primary font-bold rounded-xl px-6">
                     Go to Login
                 </button>
             </div>
@@ -607,77 +607,158 @@ export default function Dashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+        <div className="min-h-screen bg-[#F5F7FA] text-[#1E293B] flex flex-col">
             <MyHeader name="Dashboard" message="Oil Supply & Delivery Operations Portal" />
             <MyNavigation />
 
-            {/* Main Dashboard Container */}
-            <div className="flex-1 flex flex-col lg:flex-row max-w-[1550px] w-full mx-auto p-4 sm:p-6 gap-6">
-                {/* Clean Modular Dashboard Sidebar */}
-                <div className="w-full lg:w-72 shrink-0">
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl p-4 sticky top-6">
-                        <div className="flex items-center gap-3 p-3 bg-slate-850 rounded-xl mb-4">
-                            <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-lg">
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col items-center p-4 sm:p-6 w-full">
+                {/* Profile & Navigation Card */}
+                <div className="w-full max-w-[1200px] card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-6 mb-8 text-left">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-[#E2E8F0] pb-6">
+                        <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 rounded-2xl bg-[#0F2747] text-white flex items-center justify-center font-black text-2xl shadow-md">
                                 {user.userName?.charAt(0)?.toUpperCase() || "U"}
                             </div>
-                            <div className="min-w-0 flex-1">
-                                <h4 className="text-sm font-bold text-white truncate">{user.userName || user.name}</h4>
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${getRoleBadgeColor(user.title || user.role || "")}`}>
-                                    {user.title || user.role || "User"}
-                                </span>
+                            <div>
+                                <div className="flex items-center gap-3">
+                                    <h2 className="text-xl font-extrabold text-[#0F2747]">
+                                        {user.userName || user.name}
+                                    </h2>
+                                    <span className={`badge border-none font-bold text-xs px-3 py-1 ${getRoleBadgeColor(user.title || user.role || "")}`}>
+                                        {user.title || user.role || "User"}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-secondary-gray mt-0.5">
+                                    {user.email} • {user.address || "Main Operational Hub"}
+                                </p>
                             </div>
                         </div>
 
-                        <nav className="space-y-1 text-xs font-semibold">
-                            <button onClick={() => setActiveTab("overview")} className={`w-full text-left px-3 py-2.5 rounded-xl transition ${activeTab === "overview" ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-300 hover:bg-slate-800"}`}>
-                                📊 Command Overview
-                            </button>
-                            <button onClick={() => setActiveTab("products")} className={`w-full text-left px-3 py-2.5 rounded-xl transition ${activeTab === "products" ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-300 hover:bg-slate-800"}`}>
-                                ⛽ Product Marketplace ({products.length})
-                            </button>
-                            <button onClick={() => setActiveTab("orders")} className={`w-full text-left px-3 py-2.5 rounded-xl transition ${activeTab === "orders" ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-300 hover:bg-slate-800"}`}>
-                                📦 Consignments & Orders ({orders.length})
-                            </button>
-                            <button onClick={() => setActiveTab("tracking")} className={`w-full text-left px-3 py-2.5 rounded-xl transition ${activeTab === "tracking" ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-300 hover:bg-slate-800"}`}>
-                                🛰️ Live GPS Fleet Dispatch
-                            </button>
-                            {(user.role === "Dealer" || user.title === "Dealer" || user.role === "Supplier" || user.title === "Supplier") && (
-                                <button onClick={() => setActiveTab("inventory")} className={`w-full text-left px-3 py-2.5 rounded-xl transition ${activeTab === "inventory" ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-300 hover:bg-slate-800"}`}>
-                                    🏭 Refinery Stock Reserve
-                                </button>
-                            )}
-                            {(user.role === "Admin" || user.title === "Admin") && (
-                                <button onClick={() => setActiveTab("admin-monitoring")} className={`w-full text-left px-3 py-2.5 rounded-xl transition ${activeTab === "admin-monitoring" ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-300 hover:bg-slate-800"}`}>
-                                    🛡️ Admin User Control
-                                </button>
-                            )}
-                            <button onClick={() => setActiveTab("chat")} className={`w-full text-left px-3 py-2.5 rounded-xl transition ${activeTab === "chat" ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-300 hover:bg-slate-800"}`}>
-                                💬 Realtime Logistics Chat
-                            </button>
-                            <button onClick={() => setActiveTab("profile")} className={`w-full text-left px-3 py-2.5 rounded-xl transition ${activeTab === "profile" ? "bg-amber-500 text-slate-950 font-bold" : "text-slate-300 hover:bg-slate-800"}`}>
-                                👤 Account Settings
-                            </button>
-                        </nav>
-
-                        {user.role === "Customer" && (
-                            <div className="pt-4 mt-4 border-t border-slate-800">
-                                <button onClick={() => setIsCartModalOpen(true)} className="w-full py-2.5 bg-gradient-to-r from-amber-500/20 to-yellow-500/10 border border-amber-500/40 text-amber-300 font-bold rounded-xl text-xs flex items-center justify-center gap-2">
+                        <div className="flex items-center gap-3 w-full md:w-auto justify-end flex-wrap">
+                            {user.role === "Customer" && (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCartModalOpen(true)}
+                                    className="btn btn-accent btn-sm rounded-xl font-bold flex items-center gap-2"
+                                >
                                     <span>🛒 Delivery Cart</span>
-                                    {cartTotalItems > 0 && <span className="bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full text-[10px]">{cartTotalItems}</span>}
+                                    {cartTotalItems > 0 && (
+                                        <span className="badge badge-sm bg-[#0F2747] text-white border-none font-bold">
+                                            {cartTotalItems}
+                                        </span>
+                                    )}
                                 </button>
-                            </div>
-                        )}
-
-                        <div className="pt-4 mt-4 border-t border-slate-800">
-                            <button onClick={handleLogout} className="w-full py-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 font-bold rounded-xl text-xs hover:bg-rose-500/20 transition">
-                                🚪 Sign Out
+                            )}
+                            <button
+                                type="button"
+                                onClick={handleLogout}
+                                className="btn btn-ghost btn-sm text-[#DC2626] hover:bg-rose-50 rounded-xl font-bold"
+                            >
+                                Sign Out
                             </button>
                         </div>
                     </div>
+
+                    {/* Horizontal Navigation Tabs */}
+                    <div className="flex items-center gap-2 overflow-x-auto pt-4 no-scrollbar">
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab("overview")}
+                            className={`btn btn-sm rounded-xl font-bold transition-all ${
+                                activeTab === "overview"
+                                    ? "btn-primary shadow-sm"
+                                    : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
+                            }`}
+                        >
+                            📊 Overview
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab("products")}
+                            className={`btn btn-sm rounded-xl font-bold transition-all ${
+                                activeTab === "products"
+                                    ? "btn-primary shadow-sm"
+                                    : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
+                            }`}
+                        >
+                            ⛽ Products ({products.length})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab("orders")}
+                            className={`btn btn-sm rounded-xl font-bold transition-all ${
+                                activeTab === "orders"
+                                    ? "btn-primary shadow-sm"
+                                    : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
+                            }`}
+                        >
+                            📦 Orders ({orders.length})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab("tracking")}
+                            className={`btn btn-sm rounded-xl font-bold transition-all ${
+                                activeTab === "tracking"
+                                    ? "btn-primary shadow-sm"
+                                    : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
+                            }`}
+                        >
+                            🛰️ Live Tracking
+                        </button>
+                        {(user.role === "Dealer" || user.title === "Dealer" || user.role === "Supplier" || user.title === "Supplier") && (
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab("inventory")}
+                                className={`btn btn-sm rounded-xl font-bold transition-all ${
+                                    activeTab === "inventory"
+                                        ? "btn-primary shadow-sm"
+                                        : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
+                                }`}
+                            >
+                                🏭 Stock Reserve
+                            </button>
+                        )}
+                        {(user.role === "Admin" || user.title === "Admin") && (
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab("admin-monitoring")}
+                                className={`btn btn-sm rounded-xl font-bold transition-all ${
+                                    activeTab === "admin-monitoring"
+                                        ? "btn-primary shadow-sm"
+                                        : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
+                                }`}
+                            >
+                                🛡️ Admin Monitoring
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab("chat")}
+                            className={`btn btn-sm rounded-xl font-bold transition-all ${
+                                activeTab === "chat"
+                                    ? "btn-primary shadow-sm"
+                                    : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
+                            }`}
+                        >
+                            💬 Realtime Chat
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab("profile")}
+                            className={`btn btn-sm rounded-xl font-bold transition-all ${
+                                activeTab === "profile"
+                                    ? "btn-primary shadow-sm"
+                                    : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
+                            }`}
+                        >
+                            👤 Profile
+                        </button>
+                    </div>
                 </div>
 
-                {/* Main Tab Content View */}
-                <div className="flex-1 min-w-0">
+                {/* Tab Content Display */}
+                <div className="w-full max-w-[1200px] mb-12">
                     {activeTab === "overview" && (
                         <OverviewTab
                             userData={user}

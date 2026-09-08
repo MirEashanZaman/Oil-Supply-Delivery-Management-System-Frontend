@@ -17,6 +17,19 @@ export default function ContactInfo() {
     const [liveMessages, setLiveMessages] = useState<ChatMessage[]>([]);
 
     useEffect(() => {
+        const loadStoredMessages = async () => {
+            try {
+                const res = await axios.get("/api/messages");
+                if (res.data?.success && Array.isArray(res.data?.data)) {
+                    setLiveMessages(res.data.data.slice(0, 6));
+                }
+            } catch (err) {
+                console.warn("Failed to load saved chat history:", err);
+            }
+        };
+
+        loadStoredMessages();
+
         const pusher = getPusherClient();
         if (!pusher) return;
 

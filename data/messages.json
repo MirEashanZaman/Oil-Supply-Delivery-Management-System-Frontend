@@ -1,0 +1,92 @@
+[
+  {
+    "id": "msg_1788890356167_xcy2i",
+    "sender": "Mir Eashan Zaman",
+    "email": "eshan.zaman570@gmail.com",
+    "role": "Customer",
+    "topic": "General Support",
+    "message": "HELLO",
+    "timestamp": "11:59 PM",
+    "channel": "oil-supply-chat"
+  },
+  {
+    "id": "msg_1788889887305_ue4qv",
+    "sender": "Tisha",
+    "email": "tisha@gmail.com",
+    "role": "Admin",
+    "topic": "General Support",
+    "message": "abcde",
+    "timestamp": "11:51 PM",
+    "channel": "oil-supply-chat"
+  },
+  {
+    "id": "msg_1788889766055_1gt0k",
+    "sender": "Mir Eashan Zaman",
+    "email": "eshan.zaman570@gmail.com",
+    "role": "Customer",
+    "topic": "General Support",
+    "message": "abcde",
+    "timestamp": "11:49 PM",
+    "channel": "oil-supply-chat"
+  },
+  {
+    "id": "msg_1788889621700_emh4y",
+    "sender": "nowshin",
+    "email": "nowshin@gmail.com",
+    "role": "Supplier",
+    "topic": "General Support",
+    "message": "abcde",
+    "timestamp": "11:47 PM",
+    "channel": "oil-supply-chat"
+  },
+  {
+    "id": "msg_1788889486845_ky1k1",
+    "sender": "Tisha",
+    "email": "tisha@gmail.com",
+    "role": "Admin",
+    "topic": "Order Dispatch",
+    "message": "yes",
+    "timestamp": "11:44 PM",
+    "channel": "oil-supply-chat"
+  },
+  {
+    "id": "msg_1788889417989_1izav",
+    "sender": "Mir Eashan Zaman",
+    "email": "eshan.zaman570@gmail.com",
+    "role": "Customer",
+    "topic": "General Support",
+    "message": "hi",
+    "timestamp": "11:43 PM",
+    "channel": "oil-supply-chat"
+  },
+  {
+    "id": "msg_1788889090162_nblm7",
+    "sender": "Kowshik",
+    "email": "kowshik@gmail.com",
+    "role": "Dealer",
+    "topic": "General Support",
+    "message": "hi",
+    "timestamp": "11:38 PM",
+    "channel": "oil-supply-chat"
+  },
+  {
+    "id": "msg_1788888487053_qdl8k",
+    "sender": "Mir Eashan Zaman",
+    "email": "eshan.zaman570@gmail.com",
+    "role": "Customer",
+    "topic": "Delivery Status",
+    "message": "Received",
+    "timestamp": "11:28 PM",
+    "channel": "oil-supply-chat"
+  },
+  {
+    "id": "msg_1788888354392_2uhwx",
+    "sender": "nowshin",
+    "email": "nowshin@gmail.com",
+    "role": "Supplier",
+    "topic": "Logistics Dispatch",
+    "message": "hi",
+    "timestamp": "11:25 PM",
+    "channel": "oil-supply-chat"
+  }
+]

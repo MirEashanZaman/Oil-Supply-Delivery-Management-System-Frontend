@@ -1,60 +1,106 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import axios from "axios";
 import { UserData } from "../types";
-import { ChatMessage } from "@/lib/pusher";
+import { ChatMessage, getPusherClient } from "@/lib/pusher";
 
 interface LiveChatTabProps {
   userData: UserData | null;
 }
 
 export const LiveChatTab: React.FC<LiveChatTabProps> = ({ userData }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "msg_init_1",
-      sender: "Refinery Dispatch Central",
-      email: "refinery@oilsupply-delivery.com",
-      role: "Supplier",
-      topic: "Refinery Wholesale Availability",
-      message: "All crude fuel pipelines and regional tanker depots operating at verified ISO specifications. Real-time dispatches active.",
-      timestamp: "09:30 AM",
-      channel: "oil-supply-chat",
-    },
-    {
-      id: "msg_init_2",
-      sender: "Dhaka Regional Dealer Hub",
-      email: "dealer@oilsupply-delivery.com",
-      role: "Dealer",
-      topic: "Order Dispatch & Logistics",
-      message: "Bulk tanker allocations ready for commercial customers. Priority road dispatches scheduled for Kuril and Gazipur depots.",
-      timestamp: "10:15 AM",
-      channel: "oil-supply-chat",
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
+  const [selectedTopic, setSelectedTopic] = useState("General Support");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const channelName = "oil-supply-chat";
+
+  useEffect(() => {
+    const loadStoredMessages = async () => {
+      try {
+        const res = await axios.get(`/api/messages?channel=${encodeURIComponent(channelName)}`);
+        if (res.data?.success && Array.isArray(res.data?.data)) {
+          setMessages(res.data.data.slice(0, 50));
+        }
+      } catch (err) {
+        console.warn("Failed to load live chat history:", err);
+      }
+    };
+
+    if (!userData) {
+      return;
+    }
+
+    loadStoredMessages();
+
+    const pollTimer = window.setInterval(() => {
+      loadStoredMessages();
+    }, 4000);
+
+    const pusher = getPusherClient();
+    if (!pusher) {
+      return () => window.clearInterval(pollTimer);
+    }
+
+    const subscriptions = [channelName].map((name) => {
+      const channel = pusher.subscribe(name);
+      channel.bind("new-message", (data: ChatMessage) => {
+        setMessages((prev) => [data, ...prev.filter((m) => m.id !== data.id)].slice(0, 50));
+      });
+      return channel;
+    });
+
+    return () => {
+      window.clearInterval(pollTimer);
+      subscriptions.forEach((channel) => {
+        channel.unbind_all();
+        channel.unsubscribe();
+      });
+    };
+  }, [channelName, userData?.email]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputMessage.trim()) return;
+    const trimmedMessage = inputMessage.trim();
+    if (!trimmedMessage) return;
 
-    const newMsg: ChatMessage = {
+    const payload: ChatMessage = {
       id: `msg_${Date.now()}`,
       sender: userData?.userName || userData?.name || "User",
       email: userData?.email || "user@example.com",
       role: userData?.title || userData?.role || "Customer",
-      topic: "Logistics Dispatch",
-      message: inputMessage.trim(),
+      topic: selectedTopic,
+      message: trimmedMessage,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      channel: "oil-supply-chat",
+      channel: channelName,
     };
 
-    setMessages((prev) => [...prev, newMsg]);
     setInputMessage("");
+
+    try {
+      const res = await axios.post("/api/messages", {
+        sender: payload.sender,
+        email: payload.email,
+        role: payload.role,
+        topic: payload.topic,
+        message: payload.message,
+        channel: payload.channel,
+      });
+
+      if (res.data?.success && res.data?.data) {
+        const newMsg = res.data.data;
+        setMessages((prev) => [newMsg, ...prev.filter((m) => m.id !== newMsg.id)].slice(0, 50));
+      }
+    } catch (err) {
+      console.warn("Live chat send fallback:", err);
+      setMessages((prev) => [payload, ...prev.filter((m) => m.id !== payload.id)].slice(0, 50));
+    }
   };
 
   return (
@@ -69,23 +115,21 @@ export const LiveChatTab: React.FC<LiveChatTabProps> = ({ userData }) => {
             return (
               <div
                 key={m.id}
-                className={`p-4 rounded-2xl border text-xs transition-all ${
-                  isMe ? "bg-[#0F2747]/5 border-[#0F2747]/20" : "bg-white border-[#E2E8F0]"
-                }`}
+                className={`p-4 rounded-2xl border text-xs transition-all ${isMe ? "bg-[#0F2747]/5 border-[#0F2747]/20" : "bg-white border-[#E2E8F0]"
+                  }`}
               >
                 <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-[#1E293B] text-sm">{m.sender}</span>
                     <span
-                      className={`badge text-[10px] font-bold uppercase border-none px-2 py-0.5 ${
-                        m.role === "Supplier"
-                          ? "bg-[#0F2747] text-[#F59E0B]"
-                          : m.role === "Dealer"
+                      className={`badge text-[10px] font-bold uppercase border-none px-2 py-0.5 ${m.role === "Supplier"
+                        ? "bg-[#0F2747] text-[#F59E0B]"
+                        : m.role === "Dealer"
                           ? "bg-[#F59E0B]/20 text-[#D97706]"
                           : m.role === "Admin"
-                          ? "bg-[#16A34A]/20 text-[#16A34A]"
-                          : "bg-[#64748B]/15 text-[#1E293B]"
-                      }`}
+                            ? "bg-[#16A34A]/20 text-[#16A34A]"
+                            : "bg-[#64748B]/15 text-[#1E293B]"
+                        }`}
                     >
                       {m.role || "User"}
                     </span>
@@ -109,14 +153,27 @@ export const LiveChatTab: React.FC<LiveChatTabProps> = ({ userData }) => {
           <div ref={messagesEndRef} />
         </div>
 
-        <form onSubmit={handleSendMessage} className="flex gap-2">
-          <input
-            type="text"
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            placeholder="Type a broadcast message to all logistics channels..."
-            className="flex-1 p-2.5 border border-secondary-gray rounded-xl text-sm outline-none bg-white text-dark-slate"
-          />
+        <form onSubmit={handleSendMessage} className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <select
+              value={selectedTopic}
+              onChange={(e) => setSelectedTopic(e.target.value)}
+              className="p-2.5 border border-secondary-gray rounded-xl text-sm outline-none bg-white text-dark-slate"
+            >
+              <option value="General Support">General Support</option>
+              <option value="Order Dispatch">Order Dispatch</option>
+              <option value="Supplier Update">Supplier Update</option>
+              <option value="Dealer Update">Dealer Update</option>
+              <option value="Delivery Status">Delivery Status</option>
+            </select>
+            <input
+              type="text"
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              placeholder="Type a broadcast message to all logistics channels..."
+              className="flex-1 p-2.5 border border-secondary-gray rounded-xl text-sm outline-none bg-white text-dark-slate"
+            />
+          </div>
           <button
             type="submit"
             className="bg-[#0F2747] hover:bg-[#163860] text-white px-5 py-2.5 rounded-xl font-bold text-xs transition shadow-sm cursor-pointer"

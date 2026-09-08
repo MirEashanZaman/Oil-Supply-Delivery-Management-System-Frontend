@@ -108,7 +108,6 @@ export default function Home() {
     const [isMarqueeMode, setIsMarqueeMode] = useState(true);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [products, setProducts] = useState<CarouselProduct[]>([]);
-    const [loadingProducts, setLoadingProducts] = useState(true);
     const [user, setUser] = useState<{ userName?: string; email?: string; title?: string } | null>(null);
 
     useEffect(() => {
@@ -145,8 +144,8 @@ export default function Home() {
                             category: p.category || (p.categories?.[0]?.name) || "Petroleum Grade",
                             price: typeof p.price === "number" ? `$${p.price.toFixed(2)}` : p.price || "$0.00",
                             description: p.description || "Petroleum product sourced via certified refinery pipelines.",
-                            stockLevel: typeof p.quantity === "number" 
-                                ? (p.quantity <= 0 ? "Out of Stock" : p.quantity < 1000 ? "Low Stock" : "In Stock") 
+                            stockLevel: typeof p.quantity === "number"
+                                ? (p.quantity <= 0 ? "Out of Stock" : p.quantity < 1000 ? "Low Stock" : "In Stock")
                                 : p.stockLevel || "In Stock",
                             image: getProductImage(p.name, p.image, p.id),
                         }));
@@ -154,8 +153,6 @@ export default function Home() {
                 }
             } catch (err) {
                 console.warn("Could not fetch products for home carousel:", err);
-            } finally {
-                setLoadingProducts(false);
             }
         };
         fetchHomeProducts();
@@ -260,13 +257,12 @@ export default function Home() {
                     {HERO_SLIDES.map((slide, idx) => (
                         <div
                             key={slide.id}
-                            className={`carousel-item absolute inset-0 w-full h-full transition-all duration-700 ease-in-out ${
-                                idx === currentHeroSlide
+                            className={`carousel-item absolute inset-0 w-full h-full transition-all duration-700 ease-in-out ${idx === currentHeroSlide
                                     ? "opacity-100 translate-x-0 z-10"
                                     : idx < currentHeroSlide
-                                    ? "opacity-0 -translate-x-full z-0"
-                                    : "opacity-0 translate-x-full z-0"
-                            }`}
+                                        ? "opacity-0 -translate-x-full z-0"
+                                        : "opacity-0 translate-x-full z-0"
+                                }`}
                         >
                             <img
                                 src={slide.image}
@@ -321,9 +317,8 @@ export default function Home() {
                             <button
                                 key={idx}
                                 onClick={() => setCurrentHeroSlide(idx)}
-                                className={`w-2.5 h-2.5 rounded-full transition-all cursor-pointer ${
-                                    idx === currentHeroSlide ? "bg-[#F59E0B] w-7" : "bg-white/50 hover:bg-white"
-                                }`}
+                                className={`w-2.5 h-2.5 rounded-full transition-all cursor-pointer ${idx === currentHeroSlide ? "bg-[#F59E0B] w-7" : "bg-white/50 hover:bg-white"
+                                    }`}
                                 aria-label={`Slide ${idx + 1}`}
                             />
                         ))}
@@ -380,12 +375,7 @@ export default function Home() {
                 </div>
 
                 <div className="w-full bg-[#FFFFFF] border border-[#E2E8F0] rounded-2xl p-4 md:p-6 shadow-sm overflow-hidden">
-                    {loadingProducts ? (
-                        <div className="flex flex-col justify-center items-center py-16">
-                            <span className="loading loading-spinner loading-lg text-[#0F2747] mb-3"></span>
-                            <p className="text-sm text-[#64748B] font-medium">Loading petroleum catalog...</p>
-                        </div>
-                    ) : products.length === 0 ? (
+                    {products.length === 0 ? (
                         <div className="text-center py-12 text-[#64748B]">
                             <p className="font-semibold text-base mb-1 text-[#1E293B]">No products currently available in the catalog.</p>
                             <p className="text-xs">Verified oil products will appear here once listed.</p>
@@ -412,9 +402,8 @@ export default function Home() {
                                                         <span className="badge bg-[#F5F7FA] border border-[#CBD5E1] text-xs font-semibold text-[#1E293B]">
                                                             {product.category}
                                                         </span>
-                                                        <span className={`badge text-xs font-semibold border-none ${
-                                                            product.stockLevel === "In Stock" ? "bg-[#16A34A] text-white" : product.stockLevel === "Low Stock" ? "bg-[#F59E0B] text-[#1E293B]" : "bg-[#DC2626] text-white"
-                                                        }`}>
+                                                        <span className={`badge text-xs font-semibold border-none ${product.stockLevel === "In Stock" ? "bg-[#16A34A] text-white" : product.stockLevel === "Low Stock" ? "bg-[#F59E0B] text-[#1E293B]" : "bg-[#DC2626] text-white"
+                                                            }`}>
                                                             {product.stockLevel}
                                                         </span>
                                                     </div>
@@ -463,9 +452,8 @@ export default function Home() {
                                                         <span className="badge bg-[#F5F7FA] border border-[#CBD5E1] text-xs font-semibold text-[#1E293B]">
                                                             {product.category}
                                                         </span>
-                                                        <span className={`badge text-xs font-semibold border-none ${
-                                                            product.stockLevel === "In Stock" ? "bg-[#16A34A] text-white" : product.stockLevel === "Low Stock" ? "bg-[#F59E0B] text-[#1E293B]" : "bg-[#DC2626] text-white"
-                                                        }`}>
+                                                        <span className={`badge text-xs font-semibold border-none ${product.stockLevel === "In Stock" ? "bg-[#16A34A] text-white" : product.stockLevel === "Low Stock" ? "bg-[#F59E0B] text-[#1E293B]" : "bg-[#DC2626] text-white"
+                                                            }`}>
                                                             {product.stockLevel}
                                                         </span>
                                                     </div>
@@ -520,9 +508,8 @@ export default function Home() {
                                                     <span className="badge bg-[#F5F7FA] border border-[#CBD5E1] text-xs font-semibold text-[#1E293B]">
                                                         {product.category}
                                                     </span>
-                                                    <span className={`badge text-xs font-semibold border-none ${
-                                                        product.stockLevel === "In Stock" ? "bg-[#16A34A] text-white" : product.stockLevel === "Low Stock" ? "bg-[#F59E0B] text-[#1E293B]" : "bg-[#DC2626] text-white"
-                                                    }`}>
+                                                    <span className={`badge text-xs font-semibold border-none ${product.stockLevel === "In Stock" ? "bg-[#16A34A] text-white" : product.stockLevel === "Low Stock" ? "bg-[#F59E0B] text-[#1E293B]" : "bg-[#DC2626] text-white"
+                                                        }`}>
                                                         {product.stockLevel}
                                                     </span>
                                                 </div>

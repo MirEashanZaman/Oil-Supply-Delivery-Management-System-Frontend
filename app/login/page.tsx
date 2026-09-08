@@ -170,11 +170,7 @@ export default function Login() {
             }
 
             localStorage.setItem("user", JSON.stringify(userData));
-
-            setSuccessMessage("Login successful! Redirecting to dashboard...");
-            setTimeout(() => {
-                router.push("/dashboard");
-            }, 1200);
+            router.push("/dashboard");
         } catch (error: any) {
             console.warn("Login request notice:", error);
             const apiMessage = error.response?.data?.message || "Invalid credentials or backend connection error.";

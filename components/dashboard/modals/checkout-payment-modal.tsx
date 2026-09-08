@@ -95,8 +95,14 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
 }) => {
     if (!isOpen) return null;
 
+    const fixedSupplier = checkoutProduct?.supplier?.id ? checkoutProduct.supplier : null;
+    const fixedDealer = checkoutProduct?.dealer?.id ? checkoutProduct.dealer : null;
+    const hasFixedSource = Boolean(fixedSupplier) !== Boolean(fixedDealer);
+    const supplierOptions = fixedSupplier ? [fixedSupplier] : availableSuppliers;
+    const dealerOptions = fixedDealer ? [fixedDealer] : availableDealers;
+
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn">
             <div className="bg-card-white rounded-2xl shadow-2xl border border-[#E2E8F0] w-full max-w-[650px] max-h-[90vh] overflow-y-auto text-left p-6 md:p-8">
                 <div className="flex justify-between items-center border-b border-[#E2E8F0] pb-4 mb-5">
                     <div>
@@ -120,7 +126,7 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
                     </button>
                 </div>
 
-                {}
+                { }
                 {isMultiCheckout ? (
                     <div className="bg-[#FAFBFD] p-4 rounded-xl border border-[#E2E8F0] mb-5 space-y-3">
                         <div className="flex justify-between items-center border-b border-[#E2E8F0] pb-2">
@@ -166,7 +172,7 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
                         </div>
                     </div>
                 ) : (
-                    
+
                     checkoutProduct && (
                         <>
                             <div className="bg-[#FAFBFD] p-4 rounded-xl border border-[#E2E8F0] mb-5 flex gap-4 items-center">
@@ -210,7 +216,7 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
                                 <label className="block text-xs font-bold text-dark-slate mb-2">
                                     Select Sourcing Distribution Channel:
                                 </label>
-                                <div className="grid grid-cols-2 gap-3 mb-3">
+                                {!hasFixedSource && <div className="grid grid-cols-2 gap-3 mb-3">
                                     <button
                                         type="button"
                                         onClick={() => {
@@ -218,8 +224,8 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
                                             if (availableSuppliers.length > 0) setSelectedPartyId(availableSuppliers[0].id);
                                         }}
                                         className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${sourcingChoice === "supplier"
-                                                ? "border-primary bg-blue-50/50 ring-2 ring-primary/20"
-                                                : "border-[#E2E8F0] bg-white hover:bg-gray-50"
+                                            ? "border-primary bg-blue-50/50 ring-2 ring-primary/20"
+                                            : "border-[#E2E8F0] bg-white hover:bg-gray-50"
                                             }`}
                                     >
                                         <span className="block font-bold text-xs text-dark-slate">Refinery Direct Supplier</span>
@@ -233,14 +239,14 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
                                             if (availableDealers.length > 0) setSelectedPartyId(availableDealers[0].id);
                                         }}
                                         className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${sourcingChoice === "dealer"
-                                                ? "border-primary bg-blue-50/50 ring-2 ring-primary/20"
-                                                : "border-[#E2E8F0] bg-white hover:bg-gray-50"
+                                            ? "border-primary bg-blue-50/50 ring-2 ring-primary/20"
+                                            : "border-[#E2E8F0] bg-white hover:bg-gray-50"
                                             }`}
                                     >
                                         <span className="block font-bold text-xs text-dark-slate">Authorized Local Dealer</span>
                                         <span className="block text-[11px] text-secondary-gray">Regional distributor hub</span>
                                     </button>
-                                </div>
+                                </div>}
 
                                 <div>
                                     <label className="block text-xs font-semibold text-secondary-gray mb-1">
@@ -252,8 +258,8 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
                                         className="w-full p-2.5 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none"
                                     >
                                         {sourcingChoice === "supplier" ? (
-                                            availableSuppliers.length > 0 ? (
-                                                availableSuppliers.map((s) => (
+                                            supplierOptions.length > 0 ? (
+                                                supplierOptions.map((s) => (
                                                     <option key={s.id} value={s.id}>
                                                         {s.userName || s.username || `Supplier Partner #${s.id}`} ({s.email || "Verified"})
                                                     </option>
@@ -262,8 +268,8 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
                                                 <option value="" disabled>No registered suppliers available</option>
                                             )
                                         ) : (
-                                            availableDealers.length > 0 ? (
-                                                availableDealers.map((d) => (
+                                            dealerOptions.length > 0 ? (
+                                                dealerOptions.map((d) => (
                                                     <option key={d.id} value={d.id}>
                                                         {d.userName || d.username || `Authorized Dealer #${d.id}`} ({d.email || "Verified"})
                                                     </option>
@@ -293,7 +299,7 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
                 <div className="border-t border-[#E2E8F0] pt-4 mb-5">
                     <div className="bg-[#1E3A8A]/5 border border-[#1E3A8A]/20 p-3 rounded-xl mb-4 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full bg-[#059669] animate-pulse shrink-0"></span>
+                            <span className="w-2.5 h-2.5 rounded-full bg-[#059669] shrink-0"></span>
                             <div>
                                 <span className="text-xs font-bold text-[#0F172A] block">Sandbox Payment Gateway Active</span>
                                 <span className="text-[11px] text-[#64748B] block">Safe test environment. Simulates real-time card and mobile banking authorization.</span>
@@ -308,33 +314,30 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
                         <button
                             type="button"
                             onClick={() => setPaymentMethod("card")}
-                            className={`flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${
-                                paymentMethod === "card"
-                                    ? "bg-primary text-white shadow-sm"
-                                    : "bg-[#F1F5F9] text-secondary-gray hover:bg-[#E2E8F0] hover:text-dark-slate"
-                            }`}
+                            className={`flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${paymentMethod === "card"
+                                ? "bg-primary text-white shadow-sm"
+                                : "bg-[#F1F5F9] text-secondary-gray hover:bg-[#E2E8F0] hover:text-dark-slate"
+                                }`}
                         >
                             Credit / Debit Card
                         </button>
                         <button
                             type="button"
                             onClick={() => setPaymentMethod("mobile")}
-                            className={`flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${
-                                paymentMethod === "mobile"
-                                    ? "bg-primary text-white shadow-sm"
-                                    : "bg-[#F1F5F9] text-secondary-gray hover:bg-[#E2E8F0] hover:text-dark-slate"
-                            }`}
+                            className={`flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${paymentMethod === "mobile"
+                                ? "bg-primary text-white shadow-sm"
+                                : "bg-[#F1F5F9] text-secondary-gray hover:bg-[#E2E8F0] hover:text-dark-slate"
+                                }`}
                         >
                             Mobile Banking
                         </button>
                         <button
                             type="button"
                             onClick={() => setPaymentMethod("bank")}
-                            className={`flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${
-                                paymentMethod === "bank"
-                                    ? "bg-primary text-white shadow-sm"
-                                    : "bg-[#F1F5F9] text-secondary-gray hover:bg-[#E2E8F0] hover:text-dark-slate"
-                            }`}
+                            className={`flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${paymentMethod === "bank"
+                                ? "bg-primary text-white shadow-sm"
+                                : "bg-[#F1F5F9] text-secondary-gray hover:bg-[#E2E8F0] hover:text-dark-slate"
+                                }`}
                         >
                             Bank Transfer
                         </button>

@@ -4243,7 +4243,7 @@ export default function Dashboard() {
             {/* Multi-Product Delivery Cart Modal / Drawer */}
             {isCartModalOpen && (
                 <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 z-50 animate-fadeIn">
-                    <div className="bg-card-white rounded-2xl shadow-2xl border border-[#E2E8F0] w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden text-left">
+                    <div className="bg-card-white rounded-2xl shadow-2xl border border-[#E2E8F0] w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden text-left">
                         {/* Cart Header */}
                         <div className="bg-[#0F2747] text-white p-4 sm:p-5 flex items-center justify-between border-b border-blue-950">
                             <div className="flex items-center gap-3">
@@ -4322,32 +4322,75 @@ export default function Dashboard() {
                                     {cartItems.map((item) => (
                                         <div
                                             key={item.product.id}
-                                            className="p-3.5 sm:p-4 rounded-xl border border-[#E2E8F0] bg-[#FAFBFD] hover:border-primary/40 transition-colors flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
+                                            className="p-3.5 sm:p-4 rounded-xl border border-[#E2E8F0] bg-white hover:border-primary/40 transition-all shadow-xs space-y-3"
                                         >
-                                            <div className="flex items-center gap-3 min-w-[200px]">
-                                                <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-200 shrink-0 border border-slate-300">
-                                                    <img
-                                                        src={item.product.image || getProductImage(item.product.name, item.product.image, item.product.id)}
-                                                        alt={item.product.name}
-                                                        className="w-full h-full object-cover"
-                                                    />
+                                            {/* Top Row: Product Details & Quantity / Price Controls */}
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden bg-slate-100 shrink-0 border border-slate-200">
+                                                        <img
+                                                            src={item.product.image || getProductImage(item.product.name, item.product.image, item.product.id)}
+                                                            alt={item.product.name}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <span className="text-[10px] font-bold text-secondary-gray bg-slate-50 px-2 py-0.5 rounded border border-[#E2E8F0]">
+                                                            {item.product.category || "Petroleum Grade"}
+                                                        </span>
+                                                        <h4 className="text-sm font-bold text-dark-slate truncate mt-0.5">{item.product.name}</h4>
+                                                        <p className="text-xs font-semibold text-primary">{item.product.price} / unit</p>
+                                                    </div>
                                                 </div>
-                                                <div className="space-y-0.5">
-                                                    <span className="text-[10px] font-bold text-secondary-gray bg-white px-2 py-0.5 rounded border border-[#E2E8F0]">
-                                                        {item.product.category}
-                                                    </span>
-                                                    <h4 className="text-sm font-bold text-dark-slate">{item.product.name}</h4>
-                                                    <p className="text-xs font-semibold text-primary">{item.product.price} / unit</p>
+
+                                                {/* Quantity Stepper & Subtotal & Delete */}
+                                                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                                                    <div className="flex items-center border border-slate-200 rounded-lg bg-slate-50 overflow-hidden shadow-2xs">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleUpdateCartQty(item.product.id, item.quantity - 1)}
+                                                            className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center hover:bg-slate-200 text-dark-slate font-bold cursor-pointer transition-colors"
+                                                        >
+                                                            -
+                                                        </button>
+                                                        <span className="w-8 sm:w-9 text-center text-xs font-bold text-dark-slate">
+                                                            {item.quantity}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleUpdateCartQty(item.product.id, item.quantity + 1)}
+                                                            className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center hover:bg-slate-200 text-dark-slate font-bold cursor-pointer transition-colors"
+                                                        >
+                                                            +
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="text-right min-w-[70px]">
+                                                        <span className="text-xs sm:text-sm font-black text-primary block">
+                                                            ${(item.product.numericPrice * item.quantity).toFixed(2)}
+                                                        </span>
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveFromCart(item.product.id)}
+                                                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-slate-400 hover:text-error-red hover:bg-red-50 flex items-center justify-center transition-colors cursor-pointer"
+                                                        title="Remove from cart"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    </button>
                                                 </div>
                                             </div>
 
-                                            {/* Sourcing & Destination Selector per Item */}
-                                            <div className="flex-1 w-full md:w-auto grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                            {/* Bottom Row: Dedicated Logistics Origin & Destination Grid */}
+                                            <div className="bg-[#FAFBFD] p-2.5 sm:p-3 rounded-lg border border-[#E2E8F0] grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs">
                                                 <div>
-                                                    <label className="block text-[10px] font-bold text-secondary-gray uppercase mb-0.5">
+                                                    <label className="block text-[10px] font-bold text-secondary-gray uppercase mb-1">
                                                         Sourcing Origin:
                                                     </label>
-                                                    <div className="flex gap-1">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                                                         <select
                                                             value={item.sourcingChoice}
                                                             onChange={(e) => {
@@ -4355,7 +4398,7 @@ export default function Dashboard() {
                                                                 const defaultParty = choice === "supplier" ? (availableSuppliers[0]?.id || 1) : (availableDealers[0]?.id || 1);
                                                                 handleUpdateCartSourcing(item.product.id, choice, defaultParty);
                                                             }}
-                                                            className="p-1.5 border border-secondary-gray rounded-lg bg-white text-dark-slate text-xs outline-none"
+                                                            className="w-full p-1.5 sm:p-2 border border-secondary-gray rounded-lg bg-white text-dark-slate text-xs font-medium outline-none focus:border-primary"
                                                         >
                                                             <option value="supplier">Refinery Supplier</option>
                                                             <option value="dealer">Local Dealer</option>
@@ -4363,7 +4406,7 @@ export default function Dashboard() {
                                                         <select
                                                             value={item.selectedPartyId}
                                                             onChange={(e) => handleUpdateCartSourcing(item.product.id, item.sourcingChoice, e.target.value)}
-                                                            className="p-1.5 border border-secondary-gray rounded-lg bg-white text-dark-slate text-xs outline-none flex-1 truncate"
+                                                            className="w-full p-1.5 sm:p-2 border border-secondary-gray rounded-lg bg-white text-dark-slate text-xs font-medium outline-none focus:border-primary truncate"
                                                         >
                                                             {item.sourcingChoice === "supplier"
                                                                 ? availableSuppliers.map((s) => (
@@ -4381,57 +4424,17 @@ export default function Dashboard() {
                                                 </div>
 
                                                 <div>
-                                                    <label className="block text-[10px] font-bold text-secondary-gray uppercase mb-0.5">
+                                                    <label className="block text-[10px] font-bold text-secondary-gray uppercase mb-1">
                                                         Delivery Site:
                                                     </label>
                                                     <input
                                                         type="text"
                                                         value={item.deliveryAddress || deliveryAddress || ""}
                                                         onChange={(e) => handleUpdateCartAddress(item.product.id, e.target.value)}
-                                                        placeholder="Site address..."
-                                                        className="w-full p-1.5 border border-secondary-gray rounded-lg bg-white text-dark-slate text-xs outline-none"
+                                                        placeholder="Enter site delivery address..."
+                                                        className="w-full p-1.5 sm:p-2 border border-secondary-gray rounded-lg bg-white text-dark-slate text-xs font-medium outline-none focus:border-primary"
                                                     />
                                                 </div>
-                                            </div>
-
-                                            {/* Quantity & Subtotal Controls */}
-                                            <div className="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto pt-2 md:pt-0 border-t md:border-t-0 border-[#E2E8F0]">
-                                                <div className="flex items-center border border-secondary-gray rounded-lg bg-white overflow-hidden shadow-2xs">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleUpdateCartQty(item.product.id, item.quantity - 1)}
-                                                        className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 text-dark-slate font-bold cursor-pointer"
-                                                    >
-                                                        -
-                                                    </button>
-                                                    <span className="w-8 text-center text-xs font-bold text-dark-slate">
-                                                        {item.quantity}
-                                                    </span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleUpdateCartQty(item.product.id, item.quantity + 1)}
-                                                        className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 text-dark-slate font-bold cursor-pointer"
-                                                    >
-                                                        +
-                                                    </button>
-                                                </div>
-
-                                                <div className="text-right min-w-[75px]">
-                                                    <span className="text-xs font-black text-primary block">
-                                                        ${(item.product.numericPrice * item.quantity).toFixed(2)}
-                                                    </span>
-                                                </div>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRemoveFromCart(item.product.id)}
-                                                    className="w-7 h-7 rounded-lg text-slate-400 hover:text-error-red hover:bg-red-50 flex items-center justify-center transition-colors cursor-pointer"
-                                                    title="Remove from cart"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                </button>
                                             </div>
                                         </div>
                                     ))}

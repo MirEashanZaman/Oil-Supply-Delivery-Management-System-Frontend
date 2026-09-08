@@ -384,6 +384,7 @@ export default function Dashboard() {
         setSandboxAuthCode(randomAuth);
         setSandboxStep("gateway");
         setSandboxOtp("123456");
+        setIsCartModalOpen(false);
         setIsSandboxModalOpen(true);
     };
 
@@ -3993,7 +3994,7 @@ export default function Dashboard() {
             )}
 
             {isSandboxModalOpen && (checkoutProduct || isMultiCheckout) && (
-                <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
+                <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-[60] animate-fadeIn">
                     <div className="bg-card-white rounded-2xl shadow-2xl border border-[#E2E8F0] w-full max-w-[580px] overflow-hidden text-left">
                         <div className="bg-[#0F2747] text-white p-5 flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -4014,7 +4015,12 @@ export default function Dashboard() {
                             </div>
                             {sandboxStep !== "processing" && (
                                 <button
-                                    onClick={() => setIsSandboxModalOpen(false)}
+                                    onClick={() => {
+                                        setIsSandboxModalOpen(false);
+                                        if (isMultiCheckout) {
+                                            setIsCartModalOpen(true);
+                                        }
+                                    }}
                                     className="text-slate-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -4111,7 +4117,7 @@ export default function Dashboard() {
                                             </svg>
                                             <span>
                                                 {isMultiCheckout
-                                                    ? `Authorize All Deliveries ($${cartTotalAmount} USD)`
+                                                    ? `Authorize All Deliveries ($${cartTotalAmount.toFixed(2)} USD)`
                                                     : "Authorize & Complete Sandbox Payment"}
                                             </span>
                                         </button>
@@ -4126,7 +4132,12 @@ export default function Dashboard() {
 
                                         <button
                                             type="button"
-                                            onClick={() => setIsSandboxModalOpen(false)}
+                                            onClick={() => {
+                                                setIsSandboxModalOpen(false);
+                                                if (isMultiCheckout) {
+                                                    setIsCartModalOpen(true);
+                                                }
+                                            }}
                                             className="w-full py-2 text-xs text-secondary-gray hover:text-dark-slate font-medium cursor-pointer"
                                         >
                                             Cancel and Return

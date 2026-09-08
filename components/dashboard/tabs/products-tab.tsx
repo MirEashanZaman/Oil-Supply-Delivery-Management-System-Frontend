@@ -11,6 +11,7 @@ interface ProductsTabProps {
   onAddToCart?: (product: Product) => void;
   onInstantOrder?: (product: Product) => void;
   onWholesaleOrder?: (product: Product) => void;
+  onAddToPortfolio?: (product: Product) => void;
   onEditProduct?: (product: Product) => void;
   onDeleteProduct?: (id: number, name: string) => void;
   onOpenPostProductModal?: () => void;
@@ -23,6 +24,7 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
   onAddToCart,
   onInstantOrder,
   onWholesaleOrder,
+  onAddToPortfolio,
   onEditProduct,
   onDeleteProduct,
   onOpenPostProductModal,
@@ -231,12 +233,22 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                         Refinery Listed
                       </span>
                     ) : isDealer ? (
-                      <button
-                        onClick={() => onWholesaleOrder && onWholesaleOrder(product)}
-                        className="btn bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] btn-sm font-bold border-none rounded-xl"
-                      >
-                        Bulk Source
-                      </button>
+                      <div className="flex flex-wrap justify-end gap-2">
+                        {onAddToPortfolio && (
+                          <button
+                            onClick={() => onAddToPortfolio(product)}
+                            className="btn bg-slate-100 hover:bg-slate-200 text-dark-slate btn-sm font-bold border border-slate-200 rounded-xl"
+                          >
+                            Add to Profile
+                          </button>
+                        )}
+                        <button
+                          onClick={() => onWholesaleOrder && onWholesaleOrder(product)}
+                          className="btn bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] btn-sm font-bold border-none rounded-xl"
+                        >
+                          Bulk Source
+                        </button>
+                      </div>
                     ) : canPlaceOrder ? (
                       <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                         <button

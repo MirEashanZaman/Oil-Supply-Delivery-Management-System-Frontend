@@ -247,6 +247,62 @@ export default function Dashboard() {
         }
     };
 
+    const handleCreateAndPostProduct = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!user) return;
+        if (!newProductForm.name.trim()) {
+            alert("Please enter a valid product name.");
+            return;
+        }
+        if (!newProductForm.price || Number(newProductForm.price) <= 0) {
+            alert("Please enter a valid price greater than $0.");
+            return;
+        }
+        if (!newProductForm.stock || Number(newProductForm.stock) <= 0) {
+            alert("Please enter a valid stock quantity greater than 0.");
+            return;
+        }
+
+        setIsSubmittingNewProduct(true);
+        const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
+        const role = getRolePath(user.title || user.role);
+
+        try {
+            const createRes = await axios.post(
+                `${API_ENDPOINT}/product/create`,
+                {
+                    name: newProductForm.name.trim(),
+                    price: Number(newProductForm.price),
+                    quantity: Number(newProductForm.stock),
+                },
+                { withCredentials: true }
+            );
+
+            const createdProduct = createRes.data;
+            if ((role === "supplier" || role === "dealer") && user.id && createdProduct?.id) {
+                try {
+                    await axios.post(
+                        `${API_ENDPOINT}/${role}/${user.id}/products`,
+                        { productIds: [createdProduct.id] },
+                        { withCredentials: true }
+                    );
+                } catch {
+                    console.warn("Product was created but could not be added to the user's portfolio.");
+                }
+            }
+
+            alert(`Product "${newProductForm.name.trim()}" published successfully!`);
+            setNewProductForm({ name: "", description: "", price: "", stock: "", category: "Octane" });
+            setIsPostProductModalOpen(false);
+            await fetchCatalogProducts();
+        } catch (err: any) {
+            alert(err.response?.data?.message || "Failed to publish product.");
+        } finally {
+            setIsSubmittingNewProduct(false);
+        }
+    };
+
     const fetchSourcingParties = async () => {
         try {
             const [suppliersRes, dealersRes] = await Promise.allSettled([
@@ -1129,12 +1185,7 @@ export default function Dashboard() {
                 onClose={() => setIsPostProductModalOpen(false)}
                 newProduct={newProductForm}
                 setNewProduct={setNewProductForm}
-                onSubmit={(e) => {
-                    e.preventDefault();
-                    alert("Product published successfully!");
-                    setIsPostProductModalOpen(false);
-                    fetchCatalogProducts();
-                }}
+                onSubmit={handleCreateAndPostProduct}
                 submitting={isSubmittingNewProduct}
             />
 

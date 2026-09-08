@@ -35,15 +35,15 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         {isCustomer
           ? "My Order History & Live Tracking"
           : isAdmin
-          ? "Global Order Control & Modification"
-          : "Fulfill Customer & Dealer Orders"}
+            ? "Global Order Control & Modification"
+            : "Fulfill Customer & Dealer Orders"}
       </h1>
       <p className="text-sm text-secondary-gray mb-6">
         {isCustomer
           ? "View past orders, delivery channel selections, payment invoices, and real-time status updates."
           : isAdmin
-          ? "Global authority to edit order details or delete orders (with automatic cascade clean-up of OrderDetails, Payments, and Deliveries)."
-          : "Confirm or reject retail/wholesale orders, schedule deliveries, and dispatch email updates to buyers."}
+            ? "Global authority to edit order details or delete orders (with automatic cascade clean-up of OrderDetails, Payments, and Deliveries)."
+            : "Confirm or reject retail/wholesale orders, schedule deliveries, and dispatch email updates to buyers."}
       </p>
 
       {loadingOrders ? (
@@ -66,9 +66,11 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
               item.status?.toLowerCase() === "canceled";
             const isRejected = item.status?.toLowerCase() === "rejected";
             const isConfirmed = item.status?.toLowerCase() === "confirmed";
+            const isProcessing = item.status?.toLowerCase() === "processing";
             const isScheduled =
               item.status?.toLowerCase() === "scheduled" ||
               item.status?.toLowerCase() === "in-transit";
+            const canSelectStatus = isConfirmed || isProcessing || isScheduled;
 
             return (
               <div
@@ -81,17 +83,16 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                       Order #{item.id}
                     </h3>
                     <span
-                      className={`text-xs px-2.5 py-0.5 rounded font-bold uppercase ${
-                        isConfirmed
-                          ? "bg-green-100 text-success-green border border-green-200"
-                          : isRejected
+                      className={`text-xs px-2.5 py-0.5 rounded font-bold uppercase ${isConfirmed
+                        ? "bg-green-100 text-success-green border border-green-200"
+                        : isRejected
                           ? "bg-red-100 text-error-red border border-red-200"
                           : isDelivered
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                          : isScheduled
-                          ? "bg-teal-100 text-teal-800 border border-teal-200"
-                          : "bg-blue-50 text-primary border border-blue-100"
-                      }`}
+                            ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                            : isScheduled
+                              ? "bg-teal-100 text-teal-800 border border-teal-200"
+                              : "bg-blue-50 text-primary border border-blue-100"
+                        }`}
                     >
                       {item.status ? item.status.toUpperCase() : "PENDING"}
                     </span>
@@ -141,12 +142,20 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                           </svg>
                           <span>Delivery Complete</span>
                         </div>
-                      ) : isCancelled ? (
+                      ) : isCancelled || isRejected ? (
                         <span className="bg-red-50 text-red-700 text-xs font-bold px-3 py-2 rounded border border-red-200">
-                          Order Cancelled
+                          {isRejected ? "Order Rejected" : "Order Cancelled"}
                         </span>
                       ) : (
                         <>
+                          {onUpdateOrderStatus && (
+                            <button
+                              onClick={() => onUpdateOrderStatus(item.id, "delivered")}
+                              className="bg-emerald-600 text-white text-xs font-semibold px-3 py-2 rounded-xl hover:bg-emerald-700 transition-colors cursor-pointer"
+                            >
+                              Mark Delivered
+                            </button>
+                          )}
                           <button
                             onClick={() => onOpenLiveTrack(item)}
                             className="bg-primary text-white text-xs font-semibold px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors cursor-pointer"
@@ -173,36 +182,41 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                           </svg>
                           <span>Delivery Complete</span>
                         </span>
-                      ) : isConfirmed ? (
-                        <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-2 rounded-lg border border-green-300">
-                          Confirmed
-                        </span>
                       ) : isRejected ? (
                         <span className="bg-red-100 text-red-700 text-xs font-bold px-3 py-2 rounded-lg border border-red-300">
                           Rejected
                         </span>
-                      ) : isScheduled ? (
-                        <span className="bg-teal-100 text-teal-700 text-xs font-bold px-3 py-2 rounded-lg border border-teal-300">
-                          Scheduled
-                        </span>
+                      ) : canSelectStatus ? (
+                        <select
+                          value={(item.status || "confirmed").toLowerCase()}
+                          onChange={(event) => onUpdateOrderStatus?.(item.id, event.target.value)}
+                          className="select select-bordered select-sm text-xs font-semibold border-slate-300 rounded-lg"
+                          aria-label={`Update status for order ${item.id}`}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="confirmed">Confirmed</option>
+                          <option value="processing">Processing</option>
+                          <option value="out for delivery">Out for Delivery</option>
+                          <option value="cancelled">Cancelled</option>
+                          <option value="rejected">Rejected</option>
+                        </select>
                       ) : (
                         onUpdateOrderStatus && (
-                          <button
-                            onClick={() => onUpdateOrderStatus(item.id, "confirmed")}
-                            className="bg-green-600 text-white text-xs font-semibold px-3 py-2 rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
-                          >
-                            Confirm (PUT)
-                          </button>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              onClick={() => onUpdateOrderStatus(item.id, "confirmed")}
+                              className="bg-green-600 text-white text-xs font-semibold px-3 py-2 rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
+                            >
+                              Confirm (PUT)
+                            </button>
+                            <button
+                              onClick={() => onUpdateOrderStatus(item.id, "rejected")}
+                              className="bg-red-600 text-white text-xs font-semibold px-3 py-2 rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
+                            >
+                              Reject (PUT)
+                            </button>
+                          </div>
                         )
-                      )}
-
-                      {!isRejected && !isDelivered && onUpdateOrderStatus && (
-                        <button
-                          onClick={() => onUpdateOrderStatus(item.id, "rejected")}
-                          className="bg-red-600 text-white text-xs font-semibold px-3 py-2 rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
-                        >
-                          Reject (PUT)
-                        </button>
                       )}
                     </div>
                   )}

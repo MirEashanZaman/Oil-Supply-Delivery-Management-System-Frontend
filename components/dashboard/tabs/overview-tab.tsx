@@ -51,7 +51,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   return (
     <div className="space-y-6 text-left">
-      {}
+      { }
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card bg-card-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm hover:border-[#F59E0B] transition">
           <div className="flex items-center justify-between mb-2">
@@ -106,26 +106,26 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </div>
       </div>
 
-      {}
-      <div className="p-6 rounded-2xl bg-[#0F2747] text-white border border-blue-900 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      { }
+      <div className="p-6 rounded-2xl bg-slate-900 text-white border border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h3 className="text-lg font-bold text-white mb-1">
             {isCustomer
               ? "Need petroleum fuel delivery?"
               : isSupplier
-              ? "Supply refinery fuel lots to network"
-              : isDealer
-              ? "Wholesale Refinery Sourcing"
-              : "System Fleet Telematics"}
+                ? "Supply refinery fuel lots to network"
+                : isDealer
+                  ? "Wholesale Refinery Sourcing"
+                  : "System Fleet Telematics"}
           </h3>
           <p className="text-xs text-slate-300">
             {isCustomer
               ? "Browse certified fuels, add items to cart for multi-product simultaneous delivery."
               : isSupplier
-              ? "Post bulk refinery product lots or manage active depot wholesale requests."
-              : isDealer
-              ? "Procure wholesale tankers directly from refinery suppliers."
-              : "Monitor real-time tanker GPS tracking and manage user registrations."}
+                ? "Post bulk refinery product lots or manage active depot wholesale requests."
+                : isDealer
+                  ? "Procure wholesale tankers directly from refinery suppliers."
+                  : "Monitor real-time tanker GPS tracking and manage user registrations."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2.5">
@@ -144,7 +144,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   onClick={onOpenCart}
                   className="btn bg-white/10 hover:bg-white/20 text-white border border-white/20 btn-sm text-xs font-bold rounded-xl"
                 >
-                  Open Delivery Cart 
+                  Open Delivery Cart
                 </button>
               )}
             </>
@@ -180,7 +180,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </div>
       </div>
 
-      {}
+      { }
       <div className="card bg-card-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div>

@@ -1408,15 +1408,21 @@ export default function Dashboard() {
 
             // If Multi-Product Cart Checkout
             if (isMultiCheckout && cartItems.length > 0) {
-                const createdIds: number[] = [];
+                const createdIds: (number | string)[] = [];
+                const defaultSupplierId = availableSuppliers[0]?.id ? Number(availableSuppliers[0].id) : 1;
+                const defaultDealerId = availableDealers[0]?.id ? Number(availableDealers[0].id) : 1;
+
                 for (const item of cartItems) {
-                    const itemDest = item.deliveryAddress?.trim() || destination;
-                    const itemAmount = Number((item.product.numericPrice * item.quantity).toFixed(2));
+                    const itemDest = item.deliveryAddress?.trim() || destination || user.address || "Main Operational Hub";
+                    const itemQty = Math.max(1, parseInt(String(item.quantity)) || 1);
+                    const itemAmount = Number((item.product.numericPrice * itemQty).toFixed(2));
+                    const prodId = Number(item.product.id) || 1;
+
                     const itemPayload: any = {
-                        quantity: item.quantity,
+                        quantity: itemQty,
                         address: itemDest,
                         status: "pending",
-                        product: { id: item.product.id },
+                        product: { id: prodId },
                         payment: {
                             cardNumber: cleanCard,
                             cardType: cleanType,
@@ -1425,10 +1431,11 @@ export default function Dashboard() {
                         },
                     };
 
+                    const partyIdNum = Number(item.selectedPartyId);
                     if (item.sourcingChoice === "supplier") {
-                        itemPayload.supplier = { id: Number(item.selectedPartyId || availableSuppliers[0]?.id || 1) };
+                        itemPayload.supplier = { id: (partyIdNum > 0 && !isNaN(partyIdNum)) ? partyIdNum : defaultSupplierId };
                     } else {
-                        itemPayload.dealer = { id: Number(item.selectedPartyId || availableDealers[0]?.id || 1) };
+                        itemPayload.dealer = { id: (partyIdNum > 0 && !isNaN(partyIdNum)) ? partyIdNum : defaultDealerId };
                     }
 
                     try {
@@ -1438,7 +1445,10 @@ export default function Dashboard() {
                             { withCredentials: true, validateStatus: (status) => status < 500 }
                         );
                         if (itemRes.status === 200 || itemRes.status === 201) {
-                            if (itemRes.data?.id) createdIds.push(itemRes.data.id);
+                            const newId = itemRes.data?.id || (Array.isArray(itemRes.data) && itemRes.data[0]?.id) || (`ORD-${Date.now()}-${Math.floor(Math.random()*1000)}`);
+                            createdIds.push(newId);
+                        } else {
+                            console.warn("Sub-order response status:", itemRes.status, itemRes.data);
                         }
                     } catch (itemErr) {
                         console.warn("Sub-order creation error for item:", item.product.name, itemErr);
@@ -1446,7 +1456,8 @@ export default function Dashboard() {
                 }
 
                 if (createdIds.length > 0) {
-                    setCreatedOrderId(createdIds[0]);
+                    const firstNumId = createdIds.find(id => typeof id === "number") as number | undefined;
+                    setCreatedOrderId(firstNumId || null);
                     try {
                         const itemsListText = cartItems.map((it, idx) =>
                             `${idx + 1}. ${it.product.name} (Qty: ${it.quantity}) @ $${it.product.price} = $${(it.product.numericPrice * it.quantity).toFixed(2)} [Sourced: ${it.sourcingChoice.toUpperCase()}] -> Destination: ${it.deliveryAddress || destination}`
@@ -1480,7 +1491,7 @@ export default function Dashboard() {
                     }, 1000);
                 } else {
                     setSandboxStep("declined");
-                    alert("Failed to create multi-product orders.");
+                    alert("Failed to create multi-product orders. Please check your backend connection.");
                 }
                 return;
             }

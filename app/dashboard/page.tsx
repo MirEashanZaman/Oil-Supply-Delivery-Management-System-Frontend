@@ -154,7 +154,7 @@ export default function Dashboard() {
         }
 
         updateCartState(updated);
-        setCartToast(` Added ${product.name} (${quantity} unit${quantity > 1 ? "s" : ""}) to delivery cart!`);
+        setCartToast(`Product added to cart successfully: ${product.name} (${quantity} unit${quantity > 1 ? "s" : ""})`);
         setTimeout(() => setCartToast(null), 3000);
     };
 
@@ -237,6 +237,8 @@ export default function Dashboard() {
                         inStock: typeof p.quantity === "number" ? p.quantity > 0 : true,
                         stockLevel: (p.quantity || 1000) <= 0 ? "Out of Stock" : (p.quantity || 1000) < 1000 ? "Low Stock" : "In Stock",
                         image: getProductImage(p.name, p.image, p.id),
+                        supplier: p.supplier || (p.supplierId ? { id: p.supplierId } : undefined),
+                        dealer: p.dealer || (p.dealerId ? { id: p.dealerId } : undefined),
                     }));
                 setProducts(mapped);
             }
@@ -244,6 +246,62 @@ export default function Dashboard() {
             console.warn("Failed to fetch products:", err);
         } finally {
             setProductsLoading(false);
+        }
+    };
+
+    const handleCreateAndPostProduct = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!user) return;
+        if (!newProductForm.name.trim()) {
+            alert("Please enter a valid product name.");
+            return;
+        }
+        if (!newProductForm.price || Number(newProductForm.price) <= 0) {
+            alert("Please enter a valid price greater than $0.");
+            return;
+        }
+        if (!newProductForm.stock || Number(newProductForm.stock) <= 0) {
+            alert("Please enter a valid stock quantity greater than 0.");
+            return;
+        }
+
+        setIsSubmittingNewProduct(true);
+        const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
+        const role = getRolePath(user.title || user.role);
+
+        try {
+            const createRes = await axios.post(
+                `${API_ENDPOINT}/product/create`,
+                {
+                    name: newProductForm.name.trim(),
+                    price: Number(newProductForm.price),
+                    quantity: Number(newProductForm.stock),
+                },
+                { withCredentials: true }
+            );
+
+            const createdProduct = createRes.data;
+            if ((role === "supplier" || role === "dealer") && user.id && createdProduct?.id) {
+                try {
+                    await axios.post(
+                        `${API_ENDPOINT}/${role}/${user.id}/products`,
+                        { productIds: [createdProduct.id] },
+                        { withCredentials: true }
+                    );
+                } catch {
+                    console.warn("Product was created but could not be added to the user's portfolio.");
+                }
+            }
+
+            alert(`Product "${newProductForm.name.trim()}" published successfully!`);
+            setNewProductForm({ name: "", description: "", price: "", stock: "", category: "Octane" });
+            setIsPostProductModalOpen(false);
+            await fetchCatalogProducts();
+        } catch (err: any) {
+            alert(err.response?.data?.message || "Failed to publish product.");
+        } finally {
+            setIsSubmittingNewProduct(false);
         }
     };
 
@@ -306,6 +364,14 @@ export default function Dashboard() {
         }
     };
 
+    const isAssignedToUser = (assignment: any, userId?: number) => {
+        if (!assignment || !userId) return false;
+        const identifiers = typeof assignment === "object"
+            ? [assignment.id, assignment.userId, assignment.user?.id, assignment.supplierId, assignment.dealerId]
+            : [assignment];
+        return identifiers.some((identifier) => Number(identifier) === Number(userId));
+    };
+
     const fetchOrders = async (id?: number, title?: string) => {
         const r = getRolePath(title);
         if (r === "customer") {
@@ -326,6 +392,14 @@ export default function Dashboard() {
                     res.data.forEach((cust: any) => {
                         if (Array.isArray(cust.orders)) {
                             cust.orders.forEach((o: any) => {
+                                const assignedParty = r === "supplier"
+                                    ? (o.supplier ?? o.supplierId ?? o.supplier_id ?? o.supplierUser ?? o.supplier_user)
+                                    : (o.dealer ?? o.dealerId ?? o.dealer_id ?? o.dealerUser ?? o.dealer_user);
+                                const hasAssignmentMetadata = assignedParty !== undefined && assignedParty !== null;
+                                if ((r === "supplier" || r === "dealer") && hasAssignmentMetadata && !isAssignedToUser(assignedParty, id)) {
+                                    return;
+                                }
+
                                 allOrders.push({
                                     id: o.id,
                                     quantity: o.quantity || 1,
@@ -336,8 +410,8 @@ export default function Dashboard() {
                                     customerName: cust.username || cust.userName || cust.email,
                                     customerEmail: cust.email,
                                     product: o.product || { id: 1, name: "Fuel Product" },
-                                    supplier: o.supplier,
-                                    dealer: o.dealer,
+                                    supplier: o.supplier || (o.supplierId || o.supplier_id ? { id: o.supplierId || o.supplier_id } : undefined),
+                                    dealer: o.dealer || (o.dealerId || o.dealer_id ? { id: o.dealerId || o.dealer_id } : undefined),
                                     payment: o.payment,
                                     totalAmount: o.payment?.amount || (o.quantity * 2.5).toFixed(2),
                                 });
@@ -387,16 +461,89 @@ export default function Dashboard() {
             return;
         }
 
+        const hasSupplierSource = Boolean(product.supplier?.id);
+        const hasDealerSource = Boolean(product.dealer?.id);
+        const fixedSource = hasSupplierSource !== hasDealerSource
+            ? hasDealerSource ? "dealer" : "supplier"
+            : sourcingChoice;
+        const fixedPartyId = fixedSource === "dealer" ? product.dealer?.id : product.supplier?.id;
+
         setCheckoutProduct(product);
+        setSourcingChoice(fixedSource);
         setOrderQuantity(1);
         if (user?.address) setDeliveryAddress(user.address);
-        if (sourcingChoice === "supplier" && availableSuppliers.length > 0) setSelectedPartyId(availableSuppliers[0].id);
-        else if (sourcingChoice === "dealer" && availableDealers.length > 0) setSelectedPartyId(availableDealers[0].id);
+        if (fixedPartyId) setSelectedPartyId(fixedPartyId);
+        else if (fixedSource === "supplier" && availableSuppliers.length > 0) setSelectedPartyId(availableSuppliers[0].id);
+        else if (fixedSource === "dealer" && availableDealers.length > 0) setSelectedPartyId(availableDealers[0].id);
         applySandboxCardPreset("Visa");
         setIsSandboxModalOpen(false);
         setSandboxStep("gateway");
         setCreatedPaymentRecord(null);
         setCreatedOrderId(null);
+    };
+
+    const handleWholesaleOrder = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user?.id || !wholesaleProduct) return;
+
+        const quantity = Number(wholesaleQuantity);
+        const supplierId = wholesaleProduct.supplier?.id || wholesaleProduct.user?.id;
+        if (!supplierId || !quantity || quantity <= 0) {
+            alert("A supplier and valid wholesale quantity are required.");
+            return;
+        }
+
+        setOrderingWholesale(true);
+        try {
+            const res = await axios.post(
+                "http://localhost:8000/dealer/placeorder",
+                {
+                    productId: wholesaleProduct.id,
+                    supplierId: Number(supplierId),
+                    quantity,
+                    address: wholesaleAddress,
+                    notes: wholesaleNotes,
+                },
+                { withCredentials: true, validateStatus: (status) => status < 500 }
+            );
+
+            if (res.status === 200 || res.status === 201) {
+                alert("Wholesale order placed successfully.");
+                setWholesaleProduct(null);
+                setWholesaleAddress("");
+                setWholesaleNotes("");
+                fetchOrders(user.id, user.title);
+                await fetchCatalogProducts();
+            } else {
+                alert(res.data?.message || "Wholesale order could not be placed.");
+            }
+        } catch (err: any) {
+            alert(err.response?.data?.message || "Wholesale order failed.");
+        } finally {
+            setOrderingWholesale(false);
+        }
+    };
+
+    const handleAddProductToPortfolio = async (product: Product) => {
+        if (!user?.id) return;
+        const role = getRolePath(user.title || user.role);
+        if (role !== "dealer") return;
+
+        try {
+            const res = await axios.post(
+                `http://localhost:8000/dealer/${user.id}/products`,
+                { productIds: [product.id] },
+                { withCredentials: true, validateStatus: (status) => status < 500 }
+            );
+            if (res.status === 200 || res.status === 201 || res.status === 204) {
+                alert(`${product.name} was added to your profile.`);
+                await fetchCatalogProducts();
+            } else {
+                alert(res.data?.message || "The product could not be added to your profile.");
+            }
+        } catch (err: any) {
+            alert(err.response?.data?.message || "Failed to add product to your profile.");
+        }
     };
 
     const handleLaunchSandboxGateway = () => {
@@ -548,26 +695,51 @@ export default function Dashboard() {
         const role = getRolePath(user.title || user.role);
         const normalizedStatus = status.trim().toLowerCase();
         const allowedStatuses = role === "customer"
-            ? ["delivered"]
-            : ["pending", "confirmed", "processing", "out for delivery", "cancelled", "rejected"];
+            ? []
+            : ["pending", "confirmed", "processing", "out for delivery", "cancelled", "rejected", "delivered"];
 
         if (!allowedStatuses.includes(normalizedStatus)) {
-            alert(role === "customer"
-                ? "Customers can only mark an order as delivered."
-                : "Suppliers and dealers can update every order status except delivered."
-            );
+            alert("Customers cannot update order status. Suppliers and dealers can update order statuses.");
             return;
         }
 
-        const r = getRolePath(user.title || user.role);
-        try {
-            const res = await axios.put(`http://localhost:8000/${r}/confirmorder/${orderId}`, { status: normalizedStatus }, { withCredentials: true, validateStatus: (status) => status < 500 });
-            if (res.status === 200 || res.status === 204) {
-                alert(`Order marked as ${status} successfully!`);
-                fetchOrders(user.id || 1, user.title);
+        if (role === "supplier" || role === "dealer") {
+            const targetOrder = orders.find((order) => order.id === orderId);
+            const assignedParty = role === "supplier" ? targetOrder?.supplier : targetOrder?.dealer;
+            if (!targetOrder || (assignedParty && !isAssignedToUser(assignedParty, user.id))) {
+                alert("You can only update orders assigned to you.");
+                return;
             }
-        } catch (err) {
-            alert("Failed to update status.");
+        }
+
+        try {
+            const res = await axios.put(
+                `http://localhost:8000/${role}/confirmorder/${orderId}`,
+                { status: normalizedStatus },
+                { withCredentials: true, validateStatus: (status) => status < 500 }
+            );
+            if (res.status === 200 || res.status === 204) {
+                const nextStatus = normalizedStatus === "delivered" ? "Delivered" : status;
+                setOrders((currentOrders) => currentOrders.map((order) => (
+                    order.id === orderId ? { ...order, status: nextStatus } : order
+                )));
+                setUberTrackingOrder((currentOrder) => (
+                    currentOrder?.id === orderId
+                        ? { ...currentOrder, status: nextStatus }
+                        : currentOrder
+                ));
+                alert(`Order marked as ${nextStatus} successfully!`);
+            } else {
+                alert(
+                    res.data?.message ||
+                    `Order update failed (${res.status}) at /${role}/confirmorder/${orderId}.`
+                );
+            }
+        } catch (err: any) {
+            alert(
+                err.response?.data?.message ||
+                `Failed to update order status at /${role}/confirmorder/${orderId}.`
+            );
         }
     };
 
@@ -734,7 +906,7 @@ export default function Dashboard() {
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#F5F7FA]">
-                <p className="font-bold text-lg text-[#0F2747] animate-pulse">Loading System Dashboard...</p>
+                <p className="font-bold text-lg text-[#0F2747]">Loading System Dashboard...</p>
             </div>
         );
     }
@@ -754,6 +926,15 @@ export default function Dashboard() {
         <div className="min-h-screen bg-[#F5F7FA] text-[#1E293B] flex flex-col">
             <MyHeader name="Dashboard" message="Oil Supply & Delivery Operations Portal" />
             <MyNavigation />
+
+            {cartToast && (
+                <div
+                    role="status"
+                    className="fixed right-5 top-5 z-[70] rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-sm"
+                >
+                    {cartToast}
+                </div>
+            )}
 
             { }
             <div className="flex-1 flex flex-col items-center p-4 sm:p-6 w-full">
@@ -928,6 +1109,7 @@ export default function Dashboard() {
                                 setWholesaleProduct(prod);
                                 setWholesaleQuantity("50");
                             }}
+                            onAddToPortfolio={handleAddProductToPortfolio}
                             onOpenPostProductModal={() => setIsPostProductModalOpen(true)}
                         />
                     )}
@@ -947,7 +1129,10 @@ export default function Dashboard() {
 
                     {activeTab === "tracking" && (
                         <TrackingTab
-                            selectedTrackingOrder={uberTrackingOrder || orders[0] || null}
+                            selectedTrackingOrder={uberTrackingOrder || orders.find((order) => {
+                                const status = (order.status || "").toLowerCase();
+                                return status !== "delivered" && status !== "completed" && status !== "cancelled" && status !== "rejected";
+                            }) || null}
                             orders={orders}
                             onSelectOrder={(ord) => setUberTrackingOrder(ord)}
                             userRole={user.title || user.role}
@@ -1116,11 +1301,7 @@ export default function Dashboard() {
                 setWholesaleAddress={setWholesaleAddress}
                 wholesaleNotes={wholesaleNotes}
                 setWholesaleNotes={setWholesaleNotes}
-                onSubmit={(e) => {
-                    e.preventDefault();
-                    alert("Wholesale order submitted to refinery partner!");
-                    setWholesaleProduct(null);
-                }}
+                onSubmit={handleWholesaleOrder}
                 orderingWholesale={orderingWholesale}
             />
 
@@ -1129,12 +1310,7 @@ export default function Dashboard() {
                 onClose={() => setIsPostProductModalOpen(false)}
                 newProduct={newProductForm}
                 setNewProduct={setNewProductForm}
-                onSubmit={(e) => {
-                    e.preventDefault();
-                    alert("Product published successfully!");
-                    setIsPostProductModalOpen(false);
-                    fetchCatalogProducts();
-                }}
+                onSubmit={handleCreateAndPostProduct}
                 submitting={isSubmittingNewProduct}
             />
 

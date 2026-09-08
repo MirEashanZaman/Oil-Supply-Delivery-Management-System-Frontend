@@ -65,6 +65,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
               item.status?.toLowerCase() === "cancelled" ||
               item.status?.toLowerCase() === "canceled";
             const isRejected = item.status?.toLowerCase() === "rejected";
+            const isPending = !item.status || item.status.toLowerCase() === "pending";
             const isConfirmed = item.status?.toLowerCase() === "confirmed";
             const isProcessing = item.status?.toLowerCase() === "processing";
             const isScheduled =
@@ -148,20 +149,14 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                         </span>
                       ) : (
                         <>
-                          {onUpdateOrderStatus && (
+                          {!isPending && (
                             <button
-                              onClick={() => onUpdateOrderStatus(item.id, "delivered")}
-                              className="bg-emerald-600 text-white text-xs font-semibold px-3 py-2 rounded-xl hover:bg-emerald-700 transition-colors cursor-pointer"
+                              onClick={() => onOpenLiveTrack(item)}
+                              className="bg-primary text-white text-xs font-semibold px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors cursor-pointer"
                             >
-                              Mark Delivered
+                              Track Delivery
                             </button>
                           )}
-                          <button
-                            onClick={() => onOpenLiveTrack(item)}
-                            className="bg-primary text-white text-xs font-semibold px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors cursor-pointer"
-                          >
-                            Track Delivery
-                          </button>
                           {onCancelOrder && (
                             <button
                               onClick={() => onCancelOrder(item.id)}
@@ -199,6 +194,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                           <option value="out for delivery">Out for Delivery</option>
                           <option value="cancelled">Cancelled</option>
                           <option value="rejected">Rejected</option>
+                          <option value="delivered">Delivered</option>
                         </select>
                       ) : (
                         onUpdateOrderStatus && (

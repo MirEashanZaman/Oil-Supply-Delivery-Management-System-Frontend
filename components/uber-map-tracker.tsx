@@ -831,7 +831,7 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
     }
 
     return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 z-50 animate-fadeIn">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-2 sm:p-4 z-50 animate-fadeIn">
             {content}
         </div>
     );

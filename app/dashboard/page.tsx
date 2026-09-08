@@ -549,12 +549,12 @@ export default function Dashboard() {
         const normalizedStatus = status.trim().toLowerCase();
         const allowedStatuses = role === "customer"
             ? ["delivered"]
-            : ["pending", "confirmed", "out for delivery", "rejected"];
+            : ["pending", "confirmed", "processing", "out for delivery", "cancelled", "rejected"];
 
         if (!allowedStatuses.includes(normalizedStatus)) {
             alert(role === "customer"
                 ? "Customers can only mark an order as delivered."
-                : "Suppliers and dealers can update pending, confirmed, out for delivery, or rejected orders."
+                : "Suppliers and dealers can update every order status except delivered."
             );
             return;
         }

@@ -66,9 +66,11 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
               item.status?.toLowerCase() === "canceled";
             const isRejected = item.status?.toLowerCase() === "rejected";
             const isConfirmed = item.status?.toLowerCase() === "confirmed";
+            const isProcessing = item.status?.toLowerCase() === "processing";
             const isScheduled =
               item.status?.toLowerCase() === "scheduled" ||
               item.status?.toLowerCase() === "in-transit";
+            const canSelectStatus = isConfirmed || isProcessing || isScheduled;
 
             return (
               <div
@@ -180,49 +182,41 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                           </svg>
                           <span>Delivery Complete</span>
                         </span>
-                      ) : isConfirmed ? (
-                        <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-2 rounded-lg border border-green-300">
-                          Confirmed
-                        </span>
                       ) : isRejected ? (
                         <span className="bg-red-100 text-red-700 text-xs font-bold px-3 py-2 rounded-lg border border-red-300">
                           Rejected
                         </span>
-                      ) : isScheduled ? (
-                        <span className="bg-teal-100 text-teal-700 text-xs font-bold px-3 py-2 rounded-lg border border-teal-300">
-                          Scheduled
-                        </span>
-                      ) : (
-                        onUpdateOrderStatus && (
-                          <button
-                            onClick={() => onUpdateOrderStatus(item.id, "confirmed")}
-                            className="bg-green-600 text-white text-xs font-semibold px-3 py-2 rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
-                          >
-                            Confirm (PUT)
-                          </button>
-                        )
-                      )}
-
-                      {(isSupplier || isDealer) && onUpdateOrderStatus && !isDelivered && !isRejected && (
+                      ) : canSelectStatus ? (
                         <select
-                          value={item.status || "Pending"}
-                          onChange={(event) => onUpdateOrderStatus(item.id, event.target.value)}
+                          value={(item.status || "confirmed").toLowerCase()}
+                          onChange={(event) => onUpdateOrderStatus?.(item.id, event.target.value)}
                           className="select select-bordered select-sm text-xs font-semibold border-slate-300 rounded-lg"
                           aria-label={`Update status for order ${item.id}`}
                         >
-                          <option value="Pending">Pending</option>
-                          <option value="Confirmed">Confirmed</option>
-                          <option value="Out for Delivery">Out for Delivery</option>
+                          <option value="pending">Pending</option>
+                          <option value="confirmed">Confirmed</option>
+                          <option value="processing">Processing</option>
+                          <option value="out for delivery">Out for Delivery</option>
+                          <option value="cancelled">Cancelled</option>
+                          <option value="rejected">Rejected</option>
                         </select>
-                      )}
-
-                      {!isRejected && !isDelivered && onUpdateOrderStatus && (
-                        <button
-                          onClick={() => onUpdateOrderStatus(item.id, "rejected")}
-                          className="bg-red-600 text-white text-xs font-semibold px-3 py-2 rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
-                        >
-                          Reject (PUT)
-                        </button>
+                      ) : (
+                        onUpdateOrderStatus && (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              onClick={() => onUpdateOrderStatus(item.id, "confirmed")}
+                              className="bg-green-600 text-white text-xs font-semibold px-3 py-2 rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
+                            >
+                              Confirm (PUT)
+                            </button>
+                            <button
+                              onClick={() => onUpdateOrderStatus(item.id, "rejected")}
+                              className="bg-red-600 text-white text-xs font-semibold px-3 py-2 rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
+                            >
+                              Reject (PUT)
+                            </button>
+                          </div>
+                        )
                       )}
                     </div>
                   )}

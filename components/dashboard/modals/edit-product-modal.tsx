@@ -33,7 +33,7 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
           onClick={onClose}
           className="absolute top-4 right-4 text-slate-400 hover:text-white"
         >
-          ✕
+          
         </button>
         <h3 className="text-xl font-bold text-white mb-2">Edit Product</h3>
         <p className="text-xs text-amber-400 font-semibold mb-4">

@@ -10,7 +10,7 @@ export default function MyHeader(props: { name: string; message: string }) {
                     width={56}
                     height={56}
                     priority
-                    className="object-contain drop-shadow-sm"
+                    className="object-contain"
                 />
                 <div className="text-left">
                     <span className="text-xs font-bold uppercase tracking-wider text-[#F59E0B] block">

@@ -66,6 +66,14 @@ type Product = {
     image: string;
 };
 
+export type CartItem = {
+    product: Product;
+    quantity: number;
+    sourcingChoice: "supplier" | "dealer";
+    selectedPartyId: number | string;
+    deliveryAddress?: string;
+};
+
 type SystemUser = {
     id: number;
     username?: string;
@@ -256,6 +264,128 @@ export default function Dashboard() {
     const [sandboxProcessingLogs, setSandboxProcessingLogs] = useState<string[]>([]);
     const [createdPaymentRecord, setCreatedPaymentRecord] = useState<any>(null);
     const [createdOrderId, setCreatedOrderId] = useState<number | null>(null);
+
+    // Multi-Product Delivery Cart state
+    const [cartItems, setCartItems] = useState<CartItem[]>([]);
+    const [isCartModalOpen, setIsCartModalOpen] = useState<boolean>(false);
+    const [cartToast, setCartToast] = useState<string | null>(null);
+    const [isMultiCheckout, setIsMultiCheckout] = useState<boolean>(false);
+
+    // Cart calculations
+    const cartTotalItems = useMemo(() => {
+        return cartItems.reduce((acc, item) => acc + item.quantity, 0);
+    }, [cartItems]);
+
+    const cartSubtotal = useMemo(() => {
+        return cartItems.reduce((acc, item) => acc + (item.product.numericPrice * item.quantity), 0);
+    }, [cartItems]);
+
+    const cartTotalAmount = useMemo(() => {
+        return Number(cartSubtotal.toFixed(2));
+    }, [cartSubtotal]);
+
+    // Load cart on mount
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem("petroleum_cart");
+            if (saved) {
+                setCartItems(JSON.parse(saved));
+            }
+        } catch {}
+    }, []);
+
+    const updateCartState = (newCart: CartItem[]) => {
+        setCartItems(newCart);
+        try {
+            localStorage.setItem("petroleum_cart", JSON.stringify(newCart));
+        } catch {}
+    };
+
+    const handleAddToCart = (
+        product: Product,
+        quantity: number = 1,
+        sourcing: "supplier" | "dealer" = "supplier",
+        partyId?: number | string
+    ) => {
+        const defaultParty = partyId || (sourcing === "supplier" ? (availableSuppliers[0]?.id || 1) : (availableDealers[0]?.id || 1));
+        const defaultDest = deliveryAddress.trim() || user?.address || "Main Operational Hub";
+
+        const existingIndex = cartItems.findIndex((ci) => ci.product.id === product.id);
+        let updated: CartItem[];
+
+        if (existingIndex >= 0) {
+            updated = cartItems.map((ci, idx) =>
+                idx === existingIndex ? { ...ci, quantity: ci.quantity + quantity } : ci
+            );
+        } else {
+            updated = [
+                ...cartItems,
+                {
+                    product,
+                    quantity,
+                    sourcingChoice: sourcing,
+                    selectedPartyId: defaultParty,
+                    deliveryAddress: defaultDest,
+                },
+            ];
+        }
+
+        updateCartState(updated);
+        setCartToast(`✓ Added ${product.name} (${quantity} unit${quantity > 1 ? "s" : ""}) to delivery cart!`);
+        setTimeout(() => {
+            setCartToast(null);
+        }, 3000);
+    };
+
+    const handleUpdateCartQty = (productId: number, newQty: number) => {
+        if (newQty <= 0) {
+            handleRemoveFromCart(productId);
+            return;
+        }
+        const updated = cartItems.map((ci) =>
+            ci.product.id === productId ? { ...ci, quantity: newQty } : ci
+        );
+        updateCartState(updated);
+    };
+
+    const handleRemoveFromCart = (productId: number) => {
+        const updated = cartItems.filter((ci) => ci.product.id !== productId);
+        updateCartState(updated);
+    };
+
+    const handleClearCart = () => {
+        updateCartState([]);
+    };
+
+    const handleUpdateCartSourcing = (productId: number, sourcingChoice: "supplier" | "dealer", partyId: number | string) => {
+        const updated = cartItems.map((ci) =>
+            ci.product.id === productId ? { ...ci, sourcingChoice, selectedPartyId: partyId } : ci
+        );
+        updateCartState(updated);
+    };
+
+    const handleUpdateCartAddress = (productId: number, address: string) => {
+        const updated = cartItems.map((ci) =>
+            ci.product.id === productId ? { ...ci, deliveryAddress: address } : ci
+        );
+        updateCartState(updated);
+    };
+
+    const handleLaunchMultiCartSandbox = () => {
+        if (cartItems.length === 0) {
+            alert("Your delivery cart is empty.");
+            return;
+        }
+        setIsMultiCheckout(true);
+        setCheckoutProduct(cartItems[0].product);
+        const randomTxn = `SANDBOX-MULTI-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+        const randomAuth = `AUTH-${Math.floor(100000 + Math.random() * 900000)}`;
+        setSandboxTxnId(randomTxn);
+        setSandboxAuthCode(randomAuth);
+        setSandboxStep("gateway");
+        setSandboxOtp("123456");
+        setIsSandboxModalOpen(true);
+    };
 
     const [wholesaleProduct, setWholesaleProduct] = useState<Product | null>(null);
     const [wholesaleSupplierId, setWholesaleSupplierId] = useState<number | "">("");
@@ -1238,7 +1368,7 @@ export default function Dashboard() {
             return;
         }
 
-        const totalAmount = Number((checkoutProduct.numericPrice * orderQuantity).toFixed(2));
+        const totalAmount = isMultiCheckout ? cartTotalAmount : Number((checkoutProduct.numericPrice * orderQuantity).toFixed(2));
         const destination = deliveryAddress.trim() || user.address || "Main Operational Hub";
         const cleanCard = paymentMethod === "card"
             ? (cardNumber.trim() || "4000123456789010")
@@ -1280,6 +1410,86 @@ export default function Dashboard() {
                 }
             }
 
+            // If Multi-Product Cart Checkout
+            if (isMultiCheckout && cartItems.length > 0) {
+                const createdIds: number[] = [];
+                for (const item of cartItems) {
+                    const itemDest = item.deliveryAddress?.trim() || destination;
+                    const itemAmount = Number((item.product.numericPrice * item.quantity).toFixed(2));
+                    const itemPayload: any = {
+                        quantity: item.quantity,
+                        address: itemDest,
+                        status: "pending",
+                        product: { id: item.product.id },
+                        payment: {
+                            cardNumber: cleanCard,
+                            cardType: cleanType,
+                            amount: itemAmount,
+                            status: "completed",
+                        },
+                    };
+
+                    if (item.sourcingChoice === "supplier") {
+                        itemPayload.supplier = { id: Number(item.selectedPartyId || availableSuppliers[0]?.id || 1) };
+                    } else {
+                        itemPayload.dealer = { id: Number(item.selectedPartyId || availableDealers[0]?.id || 1) };
+                    }
+
+                    try {
+                        const itemRes = await axios.post(
+                            `http://localhost:8000/customer/${user.id}/orders`,
+                            itemPayload,
+                            { withCredentials: true, validateStatus: (status) => status < 500 }
+                        );
+                        if (itemRes.status === 200 || itemRes.status === 201) {
+                            if (itemRes.data?.id) createdIds.push(itemRes.data.id);
+                        }
+                    } catch (itemErr) {
+                        console.warn("Sub-order creation error for item:", item.product.name, itemErr);
+                    }
+                }
+
+                if (createdIds.length > 0) {
+                    setCreatedOrderId(createdIds[0]);
+                    try {
+                        const itemsListText = cartItems.map((it, idx) =>
+                            `${idx + 1}. ${it.product.name} (Qty: ${it.quantity}) @ $${it.product.price} = $${(it.product.numericPrice * it.quantity).toFixed(2)} [Sourced: ${it.sourcingChoice.toUpperCase()}] -> Destination: ${it.deliveryAddress || destination}`
+                        ).join("\n");
+
+                        await axios.post(
+                            "http://localhost:8000/customer/send-email",
+                            {
+                                to: user.email,
+                                subject: `Multi-Product Order & Sandbox Payment Receipt (${cartItems.length} Products)`,
+                                text: `Dear ${user.userName},\n\nYour consolidated multi-product order has been confirmed and paid via Sandbox Payment Gateway!\n\nOrder Items Breakdown:\n${itemsListText}\n\nTotal Settled: $${totalAmount} USD\nPayment Instrument: ${cleanType} (${cleanCard})\nTransaction ID: ${sandboxTxnId}\nAuthorization Code: ${sandboxAuthCode}\n\nThank you for choosing Oil Supply & Delivery Network!`,
+                            },
+                            { withCredentials: true, validateStatus: (status) => status < 500 }
+                        );
+                    } catch (mailErr) {
+                        console.warn("Mail dispatch error:", mailErr);
+                    }
+
+                    setSandboxProcessingLogs((prev) => [
+                        ...prev,
+                        `Created ${createdIds.length} orders in distribution network: Order IDs #${createdIds.join(", #")}`,
+                        "Consolidated email receipt dispatched to buyer.",
+                        "Sandbox payment settled and verified.",
+                    ]);
+
+                    handleClearCart();
+
+                    setTimeout(() => {
+                        setSandboxStep("success");
+                        fetchOrders(user.id, user.title);
+                    }, 1000);
+                } else {
+                    setSandboxStep("declined");
+                    alert("Failed to create multi-product orders.");
+                }
+                return;
+            }
+
+            // Single Product Checkout
             const orderPayload: any = {
                 quantity: orderQuantity,
                 address: destination,
@@ -1348,6 +1558,8 @@ export default function Dashboard() {
 
     const handleFinishSandboxPayment = () => {
         setIsSandboxModalOpen(false);
+        setIsMultiCheckout(false);
+        setIsCartModalOpen(false);
         setCheckoutProduct(null);
         if (user && user.id) {
             fetchOrders(user.id, user.title);
@@ -2043,17 +2255,37 @@ export default function Dashboard() {
                                 }
                             </p>
                         </div>
-                        {(isDealer || isSupplier) && !isAdmin && (
-                            <button
-                                onClick={() => setIsPostProductModalOpen(true)}
-                                className="flex items-center justify-center gap-2 bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-sm cursor-pointer whitespace-nowrap self-start sm:self-auto border-none"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                                </svg>
-                                <span> Post New Product</span>
-                            </button>
-                        )}
+                        <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+                            {isCustomer && (
+                                <button
+                                    onClick={() => setIsCartModalOpen(true)}
+                                    className="flex items-center justify-center gap-2.5 bg-primary hover:bg-[#163860] text-white font-bold px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm transition-all shadow-md cursor-pointer whitespace-nowrap border border-blue-900/40 relative"
+                                    title="Open multi-product delivery cart"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-[#F59E0B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                    <span>Delivery Cart</span>
+                                    {cartTotalItems > 0 && (
+                                        <span className="bg-[#F59E0B] text-[#1E293B] text-[11px] font-black px-2 py-0.5 rounded-full shadow-sm animate-pulse">
+                                            {cartTotalItems}
+                                        </span>
+                                    )}
+                                </button>
+                            )}
+
+                            {(isDealer || isSupplier) && !isAdmin && (
+                                <button
+                                    onClick={() => setIsPostProductModalOpen(true)}
+                                    className="flex items-center justify-center gap-2 bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-sm cursor-pointer whitespace-nowrap border-none"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    <span> Post New Product</span>
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     <div className="bg-card-white border border-[#E2E8F0] p-4 sm:p-5 rounded-2xl mb-6 shadow-sm">
@@ -2237,12 +2469,30 @@ export default function Dashboard() {
                                                         </button>
                                                     </div>
                                                 ) : (
-                                                    <button
-                                                        onClick={() => handleOpenCheckout(product)}
-                                                        className="btn bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold border-none rounded-xl text-xs sm:text-sm"
-                                                    >
-                                                        Buy Now
-                                                    </button>
+                                                    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleAddToCart(product)}
+                                                            className="btn btn-sm bg-primary hover:bg-[#163860] text-white font-bold border-none rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                                                            title="Add product to multi-delivery cart"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-[#F59E0B]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+                                                            </svg>
+                                                            <span>
+                                                                {cartItems.some((ci) => ci.product.id === product.id)
+                                                                    ? `In Cart (${cartItems.find((ci) => ci.product.id === product.id)?.quantity})`
+                                                                    : "Add to Cart"}
+                                                            </span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleOpenCheckout(product)}
+                                                            className="btn btn-sm bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold border-none rounded-xl text-xs cursor-pointer shadow-xs"
+                                                        >
+                                                            Buy Now
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
@@ -2478,7 +2728,7 @@ export default function Dashboard() {
                                         </p>
                                     </div>
 
-                                    {trackedOrderId === item.id && trackedOrderStatus && (
+                                    {trackedOrderId === item.id && trackedOrderStatus && item.status?.toLowerCase() !== "delivered" && item.status?.toLowerCase() !== "completed" && (
                                         <div className="bg-blue-50 border border-blue-200 text-primary px-4 py-2 rounded text-xs">
                                             <span className="font-bold block mb-0.5">Tracking Status:</span>
                                             {trackedOrderStatus}
@@ -2508,22 +2758,44 @@ export default function Dashboard() {
                                             </div>
                                         ) : isCustomer ? (
                                             <>
-                                                <button
-                                                    onClick={() => handleTrackOrder(item.id, item)}
-                                                    className="bg-primary text-white text-xs font-semibold px-4 py-2 rounded hover:bg-primary/90 transition-colors cursor-pointer"
-                                                >
-                                                    Track Delivery
-                                                </button>
-                                                <button
-                                                    onClick={() => handleCancelOrder(item.id)}
-                                                    className="bg-error-red text-white text-xs font-semibold px-4 py-2 rounded hover:bg-error-red/90 transition-colors cursor-pointer"
-                                                >
-                                                    Cancel Order
-                                                </button>
+                                                {item.status?.toLowerCase() === "delivered" || item.status?.toLowerCase() === "completed" ? (
+                                                    <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-300 text-emerald-700 px-3.5 py-2 rounded-lg text-xs font-bold shadow-xs">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-emerald-600" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                        </svg>
+                                                        <span>Delivery Complete</span>
+                                                    </div>
+                                                ) : item.status?.toLowerCase() === "cancelled" || item.status?.toLowerCase() === "canceled" ? (
+                                                    <span className="bg-red-50 text-red-700 text-xs font-bold px-3 py-2 rounded border border-red-200">
+                                                        Order Cancelled
+                                                    </span>
+                                                ) : (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleTrackOrder(item.id, item)}
+                                                            className="bg-primary text-white text-xs font-semibold px-4 py-2 rounded hover:bg-primary/90 transition-colors cursor-pointer"
+                                                        >
+                                                            Track Delivery
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleCancelOrder(item.id)}
+                                                            className="bg-error-red text-white text-xs font-semibold px-4 py-2 rounded hover:bg-error-red/90 transition-colors cursor-pointer"
+                                                        >
+                                                            Cancel Order
+                                                        </button>
+                                                    </>
+                                                )}
                                             </>
                                         ) : (
                                             <div className="flex flex-wrap items-center gap-2">
-                                                {item.status?.toLowerCase() === "confirmed" ? (
+                                                {item.status?.toLowerCase() === "delivered" || item.status?.toLowerCase() === "completed" ? (
+                                                    <span className="bg-green-100 text-green-700 text-xs font-bold px-3.5 py-2 rounded border border-green-300 flex items-center gap-1.5">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                        </svg>
+                                                        <span>Delivery Complete</span>
+                                                    </span>
+                                                ) : item.status?.toLowerCase() === "confirmed" ? (
                                                     <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-2 rounded border border-green-300">
                                                         Confirmed
                                                     </span>
@@ -2544,7 +2816,7 @@ export default function Dashboard() {
                                                     </button>
                                                 )}
 
-                                                {item.status?.toLowerCase() !== "rejected" && (
+                                                {item.status?.toLowerCase() !== "rejected" && item.status?.toLowerCase() !== "delivered" && item.status?.toLowerCase() !== "completed" && (
                                                     <button
                                                         onClick={() => handleConfirmOrRejectOrder(item.id, "rejected", item.customerEmail)}
                                                         className="bg-red-600 text-white text-xs font-semibold px-3 py-2 rounded hover:bg-red-700 transition-colors cursor-pointer"
@@ -2562,30 +2834,34 @@ export default function Dashboard() {
                                                     </button>
                                                 )}
 
-                                                <div className="flex items-center border border-secondary-gray rounded overflow-hidden">
-                                                    <input
-                                                        type="date"
-                                                        value={deliveryDates[item.id] || item.deliveryDate || ""}
-                                                        onChange={(e) => setDeliveryDates({
-                                                             ...deliveryDates,
-                                                            [item.id]: e.target.value
-                                                        })}
-                                                        className="p-1 text-xs outline-none bg-card-white text-dark-slate border-r border-secondary-gray"
-                                                    />
-                                                    <button
-                                                        onClick={() => handleScheduleDelivery(item.id, item.customerEmail)}
-                                                        className="bg-teal-600 text-white text-xs font-semibold px-3 py-2 hover:bg-teal-700 transition-colors cursor-pointer"
-                                                    >
-                                                        {item.status?.toLowerCase() === "scheduled" ? "Reschedule (POST)" : "Schedule (POST)"}
-                                                    </button>
-                                                </div>
+                                                {item.status?.toLowerCase() !== "delivered" && item.status?.toLowerCase() !== "completed" && (
+                                                    <div className="flex items-center border border-secondary-gray rounded overflow-hidden">
+                                                        <input
+                                                            type="date"
+                                                            value={deliveryDates[item.id] || item.deliveryDate || ""}
+                                                            onChange={(e) => setDeliveryDates({
+                                                                ...deliveryDates,
+                                                                [item.id]: e.target.value
+                                                            })}
+                                                            className="p-1 text-xs outline-none bg-card-white text-dark-slate border-r border-secondary-gray"
+                                                        />
+                                                        <button
+                                                            onClick={() => handleScheduleDelivery(item.id, item.customerEmail)}
+                                                            className="bg-teal-600 text-white text-xs font-semibold px-3 py-2 hover:bg-teal-700 transition-colors cursor-pointer"
+                                                        >
+                                                            {item.status?.toLowerCase() === "scheduled" ? "Reschedule (POST)" : "Schedule (POST)"}
+                                                        </button>
+                                                    </div>
+                                                )}
 
-                                                <button
-                                                    onClick={() => handleTrackOrder(item.id, item)}
-                                                    className="bg-primary text-white text-xs font-semibold px-3 py-2 rounded hover:bg-primary/90 transition-colors cursor-pointer"
-                                                >
-                                                    Track (GET)
-                                                </button>
+                                                {item.status?.toLowerCase() !== "delivered" && item.status?.toLowerCase() !== "completed" && (
+                                                    <button
+                                                        onClick={() => handleTrackOrder(item.id, item)}
+                                                        className="bg-primary text-white text-xs font-semibold px-3 py-2 rounded hover:bg-primary/90 transition-colors cursor-pointer"
+                                                    >
+                                                        Track (GET)
+                                                    </button>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -3716,9 +3992,9 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {isSandboxModalOpen && checkoutProduct && (
+            {isSandboxModalOpen && (checkoutProduct || isMultiCheckout) && (
                 <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
-                    <div className="bg-card-white rounded-2xl shadow-2xl border border-[#E2E8F0] w-full max-w-[560px] overflow-hidden text-left">
+                    <div className="bg-card-white rounded-2xl shadow-2xl border border-[#E2E8F0] w-full max-w-[580px] overflow-hidden text-left">
                         <div className="bg-[#0F2747] text-white p-5 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
@@ -3728,7 +4004,9 @@ export default function Dashboard() {
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <h3 className="font-extrabold text-base text-white tracking-wide">SANDBOX PAYMENT GATEWAY</h3>
+                                        <h3 className="font-extrabold text-base text-white tracking-wide">
+                                            {isMultiCheckout ? `SANDBOX MULTI-DELIVERY (${cartTotalItems} ITEMS)` : "SANDBOX PAYMENT GATEWAY"}
+                                        </h3>
                                         <span className="bg-[#059669] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">TEST MODE</span>
                                     </div>
                                     <p className="text-xs text-slate-300">SSL 256-Bit Encrypted Sandbox Transaction</p>
@@ -3756,14 +4034,31 @@ export default function Dashboard() {
                                     <div className="text-right">
                                         <span className="text-[11px] font-bold text-secondary-gray uppercase block">Amount Due</span>
                                         <span className="text-lg font-black text-primary block">
-                                            ${(checkoutProduct.numericPrice * orderQuantity).toFixed(2)} USD
+                                            ${(isMultiCheckout ? cartTotalAmount : (checkoutProduct ? checkoutProduct.numericPrice * orderQuantity : 0)).toFixed(2)} USD
                                         </span>
                                     </div>
                                 </div>
                                 <div className="pt-2 border-t border-[#E2E8F0] flex justify-between text-xs text-secondary-gray">
-                                    <span>Product: <strong className="text-dark-slate">{checkoutProduct.name}</strong> (Qty: {orderQuantity})</span>
+                                    {isMultiCheckout ? (
+                                        <span>
+                                            Consolidated Cart: <strong className="text-dark-slate">{cartItems.length} Petroleum Products</strong> ({cartTotalItems} Units)
+                                        </span>
+                                    ) : (
+                                        <span>Product: <strong className="text-dark-slate">{checkoutProduct?.name}</strong> (Qty: {orderQuantity})</span>
+                                    )}
                                     <span className="font-mono text-primary font-semibold">{sandboxTxnId}</span>
                                 </div>
+
+                                {isMultiCheckout && (
+                                    <div className="mt-2.5 pt-2 border-t border-[#E2E8F0] max-h-28 overflow-y-auto space-y-1 text-[11px]">
+                                        {cartItems.map((ci) => (
+                                            <div key={ci.product.id} className="flex justify-between text-secondary-gray">
+                                                <span className="truncate pr-2">• {ci.product.name} (x{ci.quantity})</span>
+                                                <span className="font-bold text-dark-slate">${(ci.product.numericPrice * ci.quantity).toFixed(2)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             {sandboxStep === "gateway" && (
@@ -3780,7 +4075,7 @@ export default function Dashboard() {
                                             </span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-secondary-gray">Sourcing Destination:</span>
+                                            <span className="text-secondary-gray">Destination:</span>
                                             <span className="font-semibold text-dark-slate">{deliveryAddress || "Operational Depot"}</span>
                                         </div>
                                         <div className="flex justify-between">
@@ -3814,7 +4109,11 @@ export default function Dashboard() {
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                                             </svg>
-                                            <span>Authorize & Complete Sandbox Payment</span>
+                                            <span>
+                                                {isMultiCheckout
+                                                    ? `Authorize All Deliveries ($${cartTotalAmount} USD)`
+                                                    : "Authorize & Complete Sandbox Payment"}
+                                            </span>
                                         </button>
 
                                         <button
@@ -3822,7 +4121,7 @@ export default function Dashboard() {
                                             onClick={() => handleExecuteSandboxAuthorization(true)}
                                             className="w-full py-2.5 rounded-xl border border-error-red/40 text-error-red hover:bg-red-50 font-semibold text-xs transition-colors cursor-pointer"
                                         >
-                                            Simulate Decline (Test Insufficient Balance / Error Handling)
+                                            Simulate Decline (Test Error Handling)
                                         </button>
 
                                         <button
@@ -3830,7 +4129,7 @@ export default function Dashboard() {
                                             onClick={() => setIsSandboxModalOpen(false)}
                                             className="w-full py-2 text-xs text-secondary-gray hover:text-dark-slate font-medium cursor-pointer"
                                         >
-                                            Cancel and Return to Order
+                                            Cancel and Return
                                         </button>
                                     </div>
                                 </div>
@@ -3862,7 +4161,9 @@ export default function Dashboard() {
                                     <div>
                                         <h4 className="text-lg font-black text-dark-slate">Sandbox Payment Authorized</h4>
                                         <p className="text-xs text-secondary-gray mt-0.5">
-                                            Transaction validated via backend service and order confirmed.
+                                            {isMultiCheckout
+                                                ? "All multi-product orders confirmed & recorded in network."
+                                                : "Transaction validated via backend service and order confirmed."}
                                         </p>
                                     </div>
 
@@ -3876,8 +4177,10 @@ export default function Dashboard() {
                                             <span className="font-bold text-dark-slate">{sandboxAuthCode}</span>
                                         </div>
                                         <div className="flex justify-between border-b border-[#E2E8F0] pb-1.5">
-                                            <span className="text-secondary-gray font-sans">Amount Paid:</span>
-                                            <span className="font-bold text-success-green">${(checkoutProduct.numericPrice * orderQuantity).toFixed(2)} USD</span>
+                                            <span className="text-secondary-gray font-sans">Total Paid:</span>
+                                            <span className="font-bold text-success-green">
+                                                ${(isMultiCheckout ? cartTotalAmount : (checkoutProduct ? checkoutProduct.numericPrice * orderQuantity : 0)).toFixed(2)} USD
+                                            </span>
                                         </div>
                                         <div className="flex justify-between border-b border-[#E2E8F0] pb-1.5">
                                             <span className="text-secondary-gray font-sans">Ledger Record:</span>
@@ -3885,7 +4188,7 @@ export default function Dashboard() {
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-secondary-gray font-sans">Order ID:</span>
-                                            <span className="font-bold text-dark-slate">#{createdOrderId || "Confirmed"}</span>
+                                            <span className="font-bold text-dark-slate">#{createdOrderId || "Multi-Order Confirmed"}</span>
                                         </div>
                                     </div>
 
@@ -3894,7 +4197,7 @@ export default function Dashboard() {
                                         onClick={handleFinishSandboxPayment}
                                         className="w-full py-3.5 rounded-xl bg-success-green hover:bg-emerald-700 text-white font-bold text-sm transition-colors cursor-pointer shadow-md border-none"
                                     >
-                                        View Order in Live Tracking
+                                        View Orders & Live GPS Tracking
                                     </button>
                                 </div>
                             )}
@@ -3936,6 +4239,306 @@ export default function Dashboard() {
                     </div>
                 </div>
             )}
+
+            {/* Multi-Product Delivery Cart Modal / Drawer */}
+            {isCartModalOpen && (
+                <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 z-50 animate-fadeIn">
+                    <div className="bg-card-white rounded-2xl shadow-2xl border border-[#E2E8F0] w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden text-left">
+                        {/* Cart Header */}
+                        <div className="bg-[#0F2747] text-white p-4 sm:p-5 flex items-center justify-between border-b border-blue-950">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-[#F59E0B]">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-extrabold text-base sm:text-lg text-white tracking-wide">
+                                            Petroleum Delivery Cart
+                                        </h3>
+                                        <span className="bg-[#F59E0B] text-[#1E293B] text-xs font-black px-2.5 py-0.5 rounded-full shadow-sm">
+                                            {cartTotalItems} Barrels / Units
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-slate-300">
+                                        Multi-product bulk procurement with dedicated pipeline & tanker routing
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setIsCartModalOpen(false)}
+                                className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* Cart Body */}
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+                            {cartItems.length === 0 ? (
+                                <div className="text-center py-12 space-y-4">
+                                    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-secondary-gray">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-base font-bold text-dark-slate">Your Delivery Cart is Empty</h4>
+                                        <p className="text-xs text-secondary-gray mt-1">
+                                            Add multiple fuel grades from the catalog to place consolidated multi-product dispatches.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsCartModalOpen(false);
+                                            setActiveTab("products");
+                                        }}
+                                        className="px-5 py-2.5 bg-primary hover:bg-[#163860] text-white font-bold text-xs rounded-xl shadow-sm transition-colors cursor-pointer"
+                                    >
+                                        Browse Petroleum Catalog
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between text-xs text-secondary-gray border-b border-[#E2E8F0] pb-2">
+                                        <span className="font-bold text-dark-slate uppercase tracking-wider text-[11px]">
+                                            Selected Fuel Items ({cartItems.length})
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={handleClearCart}
+                                            className="text-error-red hover:underline font-bold cursor-pointer text-xs"
+                                        >
+                                            Clear Cart
+                                        </button>
+                                    </div>
+
+                                    {cartItems.map((item) => (
+                                        <div
+                                            key={item.product.id}
+                                            className="p-3.5 sm:p-4 rounded-xl border border-[#E2E8F0] bg-[#FAFBFD] hover:border-primary/40 transition-colors flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
+                                        >
+                                            <div className="flex items-center gap-3 min-w-[200px]">
+                                                <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-200 shrink-0 border border-slate-300">
+                                                    <img
+                                                        src={item.product.image || getProductImage(item.product.name, item.product.image, item.product.id)}
+                                                        alt={item.product.name}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </div>
+                                                <div className="space-y-0.5">
+                                                    <span className="text-[10px] font-bold text-secondary-gray bg-white px-2 py-0.5 rounded border border-[#E2E8F0]">
+                                                        {item.product.category}
+                                                    </span>
+                                                    <h4 className="text-sm font-bold text-dark-slate">{item.product.name}</h4>
+                                                    <p className="text-xs font-semibold text-primary">{item.product.price} / unit</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Sourcing & Destination Selector per Item */}
+                                            <div className="flex-1 w-full md:w-auto grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-secondary-gray uppercase mb-0.5">
+                                                        Sourcing Origin:
+                                                    </label>
+                                                    <div className="flex gap-1">
+                                                        <select
+                                                            value={item.sourcingChoice}
+                                                            onChange={(e) => {
+                                                                const choice = e.target.value as "supplier" | "dealer";
+                                                                const defaultParty = choice === "supplier" ? (availableSuppliers[0]?.id || 1) : (availableDealers[0]?.id || 1);
+                                                                handleUpdateCartSourcing(item.product.id, choice, defaultParty);
+                                                            }}
+                                                            className="p-1.5 border border-secondary-gray rounded-lg bg-white text-dark-slate text-xs outline-none"
+                                                        >
+                                                            <option value="supplier">Refinery Supplier</option>
+                                                            <option value="dealer">Local Dealer</option>
+                                                        </select>
+                                                        <select
+                                                            value={item.selectedPartyId}
+                                                            onChange={(e) => handleUpdateCartSourcing(item.product.id, item.sourcingChoice, e.target.value)}
+                                                            className="p-1.5 border border-secondary-gray rounded-lg bg-white text-dark-slate text-xs outline-none flex-1 truncate"
+                                                        >
+                                                            {item.sourcingChoice === "supplier"
+                                                                ? availableSuppliers.map((s) => (
+                                                                      <option key={s.id} value={s.id}>
+                                                                          {s.userName || `Supplier #${s.id}`}
+                                                                      </option>
+                                                                  ))
+                                                                : availableDealers.map((d) => (
+                                                                      <option key={d.id} value={d.id}>
+                                                                          {d.userName || `Dealer #${d.id}`}
+                                                                      </option>
+                                                                  ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-secondary-gray uppercase mb-0.5">
+                                                        Delivery Site:
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={item.deliveryAddress || deliveryAddress || ""}
+                                                        onChange={(e) => handleUpdateCartAddress(item.product.id, e.target.value)}
+                                                        placeholder="Site address..."
+                                                        className="w-full p-1.5 border border-secondary-gray rounded-lg bg-white text-dark-slate text-xs outline-none"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Quantity & Subtotal Controls */}
+                                            <div className="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto pt-2 md:pt-0 border-t md:border-t-0 border-[#E2E8F0]">
+                                                <div className="flex items-center border border-secondary-gray rounded-lg bg-white overflow-hidden shadow-2xs">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleUpdateCartQty(item.product.id, item.quantity - 1)}
+                                                        className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 text-dark-slate font-bold cursor-pointer"
+                                                    >
+                                                        -
+                                                    </button>
+                                                    <span className="w-8 text-center text-xs font-bold text-dark-slate">
+                                                        {item.quantity}
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleUpdateCartQty(item.product.id, item.quantity + 1)}
+                                                        className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 text-dark-slate font-bold cursor-pointer"
+                                                    >
+                                                        +
+                                                    </button>
+                                                </div>
+
+                                                <div className="text-right min-w-[75px]">
+                                                    <span className="text-xs font-black text-primary block">
+                                                        ${(item.product.numericPrice * item.quantity).toFixed(2)}
+                                                    </span>
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveFromCart(item.product.id)}
+                                                    className="w-7 h-7 rounded-lg text-slate-400 hover:text-error-red hover:bg-red-50 flex items-center justify-center transition-colors cursor-pointer"
+                                                    title="Remove from cart"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Consolidated Order Summary */}
+                            {cartItems.length > 0 && (
+                                <div className="bg-[#FAFBFD] p-4 rounded-xl border border-[#E2E8F0] space-y-3 text-xs">
+                                    <h4 className="font-bold text-dark-slate text-xs uppercase tracking-wider border-b border-[#E2E8F0] pb-2">
+                                        Consolidated Multi-Delivery Logistics Summary
+                                    </h4>
+
+                                    <div className="space-y-1.5">
+                                        <div className="flex justify-between text-secondary-gray">
+                                            <span>Procurement Items:</span>
+                                            <span className="font-bold text-dark-slate">{cartItems.length} Petroleum Grades</span>
+                                        </div>
+                                        <div className="flex justify-between text-secondary-gray">
+                                            <span>Total Fuel Quantity:</span>
+                                            <span className="font-bold text-dark-slate">{cartTotalItems} Barrels / Units</span>
+                                        </div>
+                                        <div className="flex justify-between text-secondary-gray">
+                                            <span>Subtotal:</span>
+                                            <span className="font-bold text-dark-slate">${cartSubtotal.toFixed(2)} USD</span>
+                                        </div>
+                                        <div className="flex justify-between text-secondary-gray">
+                                            <span>Enterprise Road Tanker Logistics:</span>
+                                            <span className="font-bold text-success-green">FREE (Institutional Promo)</span>
+                                        </div>
+                                        <div className="flex justify-between border-t border-[#E2E8F0] pt-2 text-sm">
+                                            <span className="font-bold text-dark-slate">Total Amount Due:</span>
+                                            <span className="font-black text-primary">${cartTotalAmount.toFixed(2)} USD</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Cart Footer */}
+                        {cartItems.length > 0 && (
+                            <div className="p-4 sm:p-5 bg-white border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-3">
+                                <div>
+                                    <span className="text-[11px] text-secondary-gray block font-medium">Consolidated Grand Total:</span>
+                                    <span className="text-lg font-black text-primary">${cartTotalAmount.toFixed(2)} USD</span>
+                                </div>
+
+                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsCartModalOpen(false)}
+                                        className="w-1/3 sm:w-auto px-4 py-3 rounded-xl border border-secondary-gray text-dark-slate font-semibold text-xs hover:bg-gray-50 transition-colors cursor-pointer"
+                                    >
+                                        Keep Browsing
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={handleLaunchMultiCartSandbox}
+                                        className="w-2/3 sm:w-auto px-6 py-3 rounded-xl bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold text-xs sm:text-sm transition-all shadow-md cursor-pointer border-none flex items-center justify-center gap-2"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                        </svg>
+                                        <span>Proceed to Multi-Delivery Sandbox Payment (${cartTotalAmount.toFixed(2)})</span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Floating Quick-Access Cart Button for Customers */}
+            {isCustomer && cartTotalItems > 0 && !isCartModalOpen && !isSandboxModalOpen && (
+                <div className="fixed bottom-6 right-6 z-40 animate-fadeIn">
+                    <button
+                        type="button"
+                        onClick={() => setIsCartModalOpen(true)}
+                        className="flex items-center gap-3 bg-[#0F2747] hover:bg-[#163860] text-white p-3.5 sm:px-5 sm:py-3.5 rounded-full shadow-2xl border-2 border-[#F59E0B] transition-all transform hover:scale-105 cursor-pointer group"
+                    >
+                        <div className="relative">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-[#F59E0B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            <span className="absolute -top-2 -right-2 bg-[#F59E0B] text-[#1E293B] text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-md">
+                                {cartTotalItems}
+                            </span>
+                        </div>
+                        <div className="hidden sm:block text-left">
+                            <span className="text-[10px] uppercase font-bold text-slate-300 block leading-tight">Delivery Cart</span>
+                            <span className="text-xs font-black text-[#F59E0B] block leading-tight">${cartTotalAmount.toFixed(2)} USD</span>
+                        </div>
+                    </button>
+                </div>
+            )}
+
+            {/* Toast Notification when adding items */}
+            {cartToast && (
+                <div className="fixed bottom-6 left-6 z-50 animate-fadeIn">
+                    <div className="bg-[#0F2747] text-white px-4 py-3 rounded-xl border border-emerald-500 shadow-2xl flex items-center gap-2.5 text-xs font-bold">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                        <span className="text-emerald-300">{cartToast}</span>
+                    </div>
+                </div>
+            )}
+
             {isPostProductModalOpen && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
                     <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[620px] max-h-[90vh] overflow-y-auto text-left p-6 md:p-8">

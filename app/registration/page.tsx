@@ -8,11 +8,17 @@ import MyNavigation from "@/components/navigation";
 import MyHeader from "@/components/header";
 import { checkEmailUniqueness } from "@/lib/email-checker";
 
+const mobileNumberRegex = /^\+?[1-9][0-9\s\-().]{6,19}$/;
+
 const registrationSchema = z
     .object({
         username: z.string().min(3, "Username must be at least 3 characters"),
         email: z.string().min(1, "Email is required").email("Invalid email address"),
-        phoneNumber: z.string().min(1, "Phone number is required"),
+        phoneNumber: z
+            .string()
+            .trim()
+            .min(1, "Phone number is required")
+            .regex(mobileNumberRegex, "Enter a valid international phone number"),
         address: z.string().min(1, "Address is required"),
         title: z.string().min(1, "Title is required"),
         photo: z.any().refine((file) => file instanceof File, "Photo is required"),

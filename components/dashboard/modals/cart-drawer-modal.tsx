@@ -44,9 +44,9 @@ export const CartDrawerModal: React.FC<CartDrawerModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 z-50 animate-fadeIn">
+        <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-3 sm:p-4 z-50 animate-fadeIn">
             <div className="bg-card-white rounded-2xl shadow-2xl border border-[#E2E8F0] w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden text-left">
-                {}
+                { }
                 <div className="bg-[#0F2747] text-white p-4 sm:p-5 flex items-center justify-between border-b border-blue-950">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-[#F59E0B]">
@@ -80,7 +80,7 @@ export const CartDrawerModal: React.FC<CartDrawerModalProps> = ({
                     </button>
                 </div>
 
-                {}
+                { }
                 <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
                     {cartItems.length === 0 ? (
                         <div className="text-center py-12 space-y-4">
@@ -123,7 +123,7 @@ export const CartDrawerModal: React.FC<CartDrawerModalProps> = ({
                                     key={item.product.id}
                                     className="p-3.5 sm:p-4 rounded-xl border border-[#E2E8F0] bg-white hover:border-primary/40 transition-all shadow-xs space-y-3"
                                 >
-                                    {}
+                                    { }
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                         <div className="flex items-center gap-3 min-w-0">
                                             <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden bg-slate-100 shrink-0 border border-slate-200">
@@ -142,7 +142,7 @@ export const CartDrawerModal: React.FC<CartDrawerModalProps> = ({
                                             </div>
                                         </div>
 
-                                        {}
+                                        { }
                                         <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                                             <div className="flex items-center border border-slate-200 rounded-lg bg-slate-50 overflow-hidden shadow-2xs">
                                                 <button
@@ -183,7 +183,7 @@ export const CartDrawerModal: React.FC<CartDrawerModalProps> = ({
                                         </div>
                                     </div>
 
-                                    {}
+                                    { }
                                     <div className="bg-[#FAFBFD] p-2.5 sm:p-3 rounded-lg border border-[#E2E8F0] grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs">
                                         <div>
                                             <label className="block text-[10px] font-bold text-secondary-gray uppercase mb-1">
@@ -209,15 +209,15 @@ export const CartDrawerModal: React.FC<CartDrawerModalProps> = ({
                                                 >
                                                     {item.sourcingChoice === "supplier"
                                                         ? availableSuppliers.map((s) => (
-                                                              <option key={s.id} value={s.id}>
-                                                                  {s.userName || `Supplier #${s.id}`}
-                                                              </option>
-                                                          ))
+                                                            <option key={s.id} value={s.id}>
+                                                                {s.userName || `Supplier #${s.id}`}
+                                                            </option>
+                                                        ))
                                                         : availableDealers.map((d) => (
-                                                              <option key={d.id} value={d.id}>
-                                                                  {d.userName || `Dealer #${d.id}`}
-                                                              </option>
-                                                          ))}
+                                                            <option key={d.id} value={d.id}>
+                                                                {d.userName || `Dealer #${d.id}`}
+                                                            </option>
+                                                        ))}
                                                 </select>
                                             </div>
                                         </div>
@@ -240,7 +240,7 @@ export const CartDrawerModal: React.FC<CartDrawerModalProps> = ({
                         </div>
                     )}
 
-                    {}
+                    { }
                     {cartItems.length > 0 && (
                         <div className="bg-[#FAFBFD] p-4 rounded-xl border border-[#E2E8F0] space-y-3 text-xs">
                             <h4 className="font-bold text-dark-slate text-xs uppercase tracking-wider border-b border-[#E2E8F0] pb-2">
@@ -273,7 +273,7 @@ export const CartDrawerModal: React.FC<CartDrawerModalProps> = ({
                     )}
                 </div>
 
-                {}
+                { }
                 {cartItems.length > 0 && (
                     <div className="p-4 sm:p-5 bg-white border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-3">
                         <div>

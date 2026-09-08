@@ -35,15 +35,15 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         {isCustomer
           ? "My Order History & Live Tracking"
           : isAdmin
-          ? "Global Order Control & Modification"
-          : "Fulfill Customer & Dealer Orders"}
+            ? "Global Order Control & Modification"
+            : "Fulfill Customer & Dealer Orders"}
       </h1>
       <p className="text-sm text-secondary-gray mb-6">
         {isCustomer
           ? "View past orders, delivery channel selections, payment invoices, and real-time status updates."
           : isAdmin
-          ? "Global authority to edit order details or delete orders (with automatic cascade clean-up of OrderDetails, Payments, and Deliveries)."
-          : "Confirm or reject retail/wholesale orders, schedule deliveries, and dispatch email updates to buyers."}
+            ? "Global authority to edit order details or delete orders (with automatic cascade clean-up of OrderDetails, Payments, and Deliveries)."
+            : "Confirm or reject retail/wholesale orders, schedule deliveries, and dispatch email updates to buyers."}
       </p>
 
       {loadingOrders ? (
@@ -81,17 +81,16 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                       Order #{item.id}
                     </h3>
                     <span
-                      className={`text-xs px-2.5 py-0.5 rounded font-bold uppercase ${
-                        isConfirmed
-                          ? "bg-green-100 text-success-green border border-green-200"
-                          : isRejected
+                      className={`text-xs px-2.5 py-0.5 rounded font-bold uppercase ${isConfirmed
+                        ? "bg-green-100 text-success-green border border-green-200"
+                        : isRejected
                           ? "bg-red-100 text-error-red border border-red-200"
                           : isDelivered
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                          : isScheduled
-                          ? "bg-teal-100 text-teal-800 border border-teal-200"
-                          : "bg-blue-50 text-primary border border-blue-100"
-                      }`}
+                            ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                            : isScheduled
+                              ? "bg-teal-100 text-teal-800 border border-teal-200"
+                              : "bg-blue-50 text-primary border border-blue-100"
+                        }`}
                     >
                       {item.status ? item.status.toUpperCase() : "PENDING"}
                     </span>
@@ -141,12 +140,20 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                           </svg>
                           <span>Delivery Complete</span>
                         </div>
-                      ) : isCancelled ? (
+                      ) : isCancelled || isRejected ? (
                         <span className="bg-red-50 text-red-700 text-xs font-bold px-3 py-2 rounded border border-red-200">
-                          Order Cancelled
+                          {isRejected ? "Order Rejected" : "Order Cancelled"}
                         </span>
                       ) : (
                         <>
+                          {onUpdateOrderStatus && (
+                            <button
+                              onClick={() => onUpdateOrderStatus(item.id, "delivered")}
+                              className="bg-emerald-600 text-white text-xs font-semibold px-3 py-2 rounded-xl hover:bg-emerald-700 transition-colors cursor-pointer"
+                            >
+                              Mark Delivered
+                            </button>
+                          )}
                           <button
                             onClick={() => onOpenLiveTrack(item)}
                             className="bg-primary text-white text-xs font-semibold px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors cursor-pointer"
@@ -194,6 +201,19 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                             Confirm (PUT)
                           </button>
                         )
+                      )}
+
+                      {(isSupplier || isDealer) && onUpdateOrderStatus && !isDelivered && !isRejected && (
+                        <select
+                          value={item.status || "Pending"}
+                          onChange={(event) => onUpdateOrderStatus(item.id, event.target.value)}
+                          className="select select-bordered select-sm text-xs font-semibold border-slate-300 rounded-lg"
+                          aria-label={`Update status for order ${item.id}`}
+                        >
+                          <option value="Pending">Pending</option>
+                          <option value="Confirmed">Confirmed</option>
+                          <option value="Out for Delivery">Out for Delivery</option>
+                        </select>
                       )}
 
                       {!isRejected && !isDelivered && onUpdateOrderStatus && (

@@ -65,6 +65,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
               item.status?.toLowerCase() === "cancelled" ||
               item.status?.toLowerCase() === "canceled";
             const isRejected = item.status?.toLowerCase() === "rejected";
+            const isPending = !item.status || item.status.toLowerCase() === "pending";
             const isConfirmed = item.status?.toLowerCase() === "confirmed";
             const isProcessing = item.status?.toLowerCase() === "processing";
             const isScheduled =
@@ -148,12 +149,14 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                         </span>
                       ) : (
                         <>
-                          <button
-                            onClick={() => onOpenLiveTrack(item)}
-                            className="bg-primary text-white text-xs font-semibold px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors cursor-pointer"
-                          >
-                            Track Delivery
-                          </button>
+                          {!isPending && (
+                            <button
+                              onClick={() => onOpenLiveTrack(item)}
+                              className="bg-primary text-white text-xs font-semibold px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors cursor-pointer"
+                            >
+                              Track Delivery
+                            </button>
+                          )}
                           {onCancelOrder && (
                             <button
                               onClick={() => onCancelOrder(item.id)}

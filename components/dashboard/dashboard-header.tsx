@@ -56,13 +56,13 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-3">
-        {/* Cart Drawer Trigger Button */}
+        {}
         {isCustomer && (
           <button
             onClick={onOpenCart}
             className="relative flex items-center gap-2.5 px-4 py-2 bg-gradient-to-r from-amber-500/20 to-yellow-500/10 border border-amber-500/40 hover:border-amber-400 text-amber-300 hover:text-white rounded-xl transition shadow-lg shadow-amber-500/10 group"
           >
-            <span className="text-lg group-hover:scale-110 transition-transform">🛒</span>
+            <span className="text-lg group-hover:scale-110 transition-transform"></span>
             <span className="text-xs font-bold hidden sm:inline">Delivery Cart</span>
             {cartCount > 0 ? (
               <span className="bg-amber-500 text-slate-950 text-xs font-black px-2 py-0.5 rounded-full animate-pulse">
@@ -76,7 +76,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           </button>
         )}
 
-        {/* Live GPS quick jump badge */}
+        {}
         <button
           onClick={() => setActiveTab("tracking")}
           className="flex items-center gap-2 px-3 py-2 bg-slate-800/80 border border-slate-700/80 hover:border-slate-600 rounded-xl text-xs text-slate-300 hover:text-white transition"
@@ -88,7 +88,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           <span className="hidden md:inline font-medium">GPS Dispatch</span>
         </button>
 
-        {/* Profile Pill */}
+        {}
         <button
           onClick={() => setActiveTab("profile")}
           className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-xl text-xs font-semibold text-slate-200 hover:text-white transition"

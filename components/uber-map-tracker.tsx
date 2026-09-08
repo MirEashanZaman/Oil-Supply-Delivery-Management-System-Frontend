@@ -42,16 +42,15 @@ interface UberMapTrackerProps {
     isEmbedded?: boolean;
 }
 
-// Real-world reference coordinates (e.g. Fuel Depot to City Hub)
-const DEFAULT_DEPOT_COORDS: [number, number] = [23.8340, 90.4195]; // Dhaka Depot
-const DEFAULT_DEST_COORDS: [number, number] = [23.7465, 90.3750];  // Customer Destination
+const DEFAULT_DEPOT_COORDS: [number, number] = [23.8340, 90.4195]; 
+const DEFAULT_DEST_COORDS: [number, number] = [23.7465, 90.3750];  
 const DEFAULT_ROUTE_COORDS: [number, number][] = [
-    [23.8340, 90.4195], // Kuril Depot
-    [23.8180, 90.4150], // Airport Road
-    [23.7940, 90.4045], // Banani Link
-    [23.7780, 90.3980], // Mohakhali Flyover
-    [23.7590, 90.3900], // Bijoy Sarani
-    [23.7465, 90.3750], // Dhanmondi Terminal
+    [23.8340, 90.4195], 
+    [23.8180, 90.4150], 
+    [23.7940, 90.4045], 
+    [23.7780, 90.3980], 
+    [23.7590, 90.3900], 
+    [23.7465, 90.3750], 
 ];
 
 const MAP_TILES = {
@@ -73,9 +72,8 @@ const MAP_TILES = {
     },
 };
 
-// Calculate Haversine distance in kilometers
 function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371; // Earth radius in KM
+    const R = 6371; 
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
     const dLon = ((lon2 - lon1) * Math.PI) / 180;
     const a =
@@ -89,14 +87,13 @@ function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: num
 }
 
 export default function UberMapTracker({ order, userRole = "customer", onClose, isEmbedded = false }: UberMapTrackerProps) {
-    // Tracking Modes: "device-gps" (real phone/laptop GPS), "live-stream" (backend/synced GPS), "route-sim" (smooth route telemetry)
+
     const [trackingMode, setTrackingMode] = useState<"device-gps" | "live-stream" | "route-sim">("device-gps");
     const [mapTheme, setMapTheme] = useState<keyof typeof MAP_TILES>("dark");
     const [isBroadcastingGps, setIsBroadcastingGps] = useState<boolean>(false);
     const [gpsPermissionState, setGpsPermissionState] = useState<string>("prompt");
     const [gpsError, setGpsError] = useState<string | null>(null);
 
-    // Live Telemetry
     const [currentCoords, setCurrentCoords] = useState<[number, number]>(DEFAULT_ROUTE_COORDS[2]);
     const [gpsAccuracy, setGpsAccuracy] = useState<number>(8.5);
     const [gpsSpeed, setGpsSpeed] = useState<number>(48);
@@ -107,7 +104,6 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
     const [callAlert, setCallAlert] = useState<string | null>(null);
     const [simProgress, setSimProgress] = useState<number>(45);
 
-    // Leaflet map refs
     const mapContainerRef = useRef<HTMLDivElement | null>(null);
     const leafletMapRef = useRef<LeafletType.Map | null>(null);
     const vehicleMarkerRef = useRef<LeafletType.Marker | null>(null);
@@ -116,7 +112,6 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
     const tileLayerRef = useRef<LeafletType.TileLayer | null>(null);
     const geoWatchIdRef = useRef<number | null>(null);
 
-    // Calculate real distance & ETA
     const destCoords = DEFAULT_DEST_COORDS;
     const remainingDistanceKm = useMemo(() => {
         return calculateDistanceKm(currentCoords[0], currentCoords[1], destCoords[0], destCoords[1]);
@@ -128,7 +123,6 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
         return Math.max(1, Math.round(hours * 60));
     }, [remainingDistanceKm, gpsSpeed]);
 
-    // Backend order status fetch
     const fetchLiveTracking = async () => {
         if (!order) return;
         setIsRefreshing(true);
@@ -141,8 +135,7 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
             if (res.status === 200 && res.data) {
                 const s = res.data.order?.status || res.data.status || res.data.message || order.status || "In Transit";
                 setBackendTrackingStatus(typeof s === "string" ? s.toUpperCase() : "IN TRANSIT");
-                
-                // If backend provides real lat/lng coordinates
+
                 if (res.data.latitude && res.data.longitude) {
                     setCurrentCoords([Number(res.data.latitude), Number(res.data.longitude)]);
                     if (res.data.speed) setGpsSpeed(Number(res.data.speed));
@@ -162,7 +155,6 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
         fetchLiveTracking();
     }, [order?.id]);
 
-    // 1. Initialize Real Leaflet Map
     useEffect(() => {
         let isMounted = true;
 
@@ -174,7 +166,6 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
 
             if (!isMounted || !mapContainerRef.current) return;
 
-            // Fix default marker icon issues in Webpack/Next.js
             delete ((L.Icon.Default.prototype as unknown) as { _getIconUrl?: unknown })._getIconUrl;
             L.Icon.Default.mergeOptions({
                 iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -182,7 +173,6 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
                 shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
             });
 
-            // Create Leaflet Map Instance
             const map = L.map(mapContainerRef.current, {
                 center: currentCoords,
                 zoom: 13,
@@ -190,17 +180,14 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
                 attributionControl: false,
             });
 
-            // Add Custom Zoom Control on Bottom-Right
             L.control.zoom({ position: "bottomright" }).addTo(map);
 
-            // Add Tile Layer
             const tileLayer = L.tileLayer(MAP_TILES[mapTheme].url, {
                 maxZoom: 19,
                 subdomains: "abcd",
             }).addTo(map);
             tileLayerRef.current = tileLayer;
 
-            // Add Depot Marker
             const depotIcon = L.divIcon({
                 className: "custom-depot-icon",
                 html: `
@@ -215,7 +202,6 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
                 .addTo(map)
                 .bindPopup("<b>Eastern Refinery Fuel Terminal</b><br>Refinery Dispatch Origin Hub");
 
-            // Add Destination Marker
             const destIcon = L.divIcon({
                 className: "custom-dest-icon",
                 html: `
@@ -230,7 +216,6 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
                 .addTo(map)
                 .bindPopup(`<b>Customer Facility</b><br>${order?.address || "Delivery Site"}`);
 
-            // Add Route Polyline
             const polyline = L.polyline(DEFAULT_ROUTE_COORDS, {
                 color: "#3B82F6",
                 weight: 5,
@@ -240,7 +225,6 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
             }).addTo(map);
             routePolylineRef.current = polyline;
 
-            // Vehicle Custom Live Marker with Pulsing Ripple & Directional Arrow
             const vehicleIcon = L.divIcon({
                 className: "custom-vehicle-marker",
                 html: `
@@ -267,7 +251,6 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
             `);
             vehicleMarkerRef.current = vehicleMarker;
 
-            // GPS Accuracy Circle
             const accuracyCircle = L.circle(currentCoords, {
                 radius: gpsAccuracy,
                 color: "#38BDF8",
@@ -291,7 +274,6 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
         };
     }, []);
 
-    // 2. Change Tile Layer on Map Theme Switch
     useEffect(() => {
         if (!leafletMapRef.current || !tileLayerRef.current) return;
         import("leaflet").then((L) => {
@@ -306,7 +288,6 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
         });
     }, [mapTheme]);
 
-    // 3. Update Vehicle Marker & Circle on Coords / Heading Change
     useEffect(() => {
         if (!leafletMapRef.current || !vehicleMarkerRef.current) return;
 
@@ -315,7 +296,6 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
 
         vehicleMarkerRef.current.setLatLng(newLatLng);
 
-        // Update custom marker icon with dynamic heading
         import("leaflet").then((Leaflet) => {
             const vehicleIcon = Leaflet.divIcon({
                 className: "custom-vehicle-marker",
@@ -347,7 +327,6 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
         }
     }, [currentCoords, gpsHeading, gpsAccuracy, trackingMode]);
 
-    // 4. Real Device GPS Telemetry Handler (`navigator.geolocation`)
     useEffect(() => {
         if (trackingMode !== "device-gps") {
             if (geoWatchIdRef.current !== null) {
@@ -380,12 +359,10 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
             setLastUpdated(new Date());
             setGpsPermissionState("granted");
 
-            // Pan map to keep live position in focus
             if (leafletMapRef.current) {
                 leafletMapRef.current.panTo([lat, lng], { animate: true });
             }
 
-            // If Driver is Broadcasting GPS, sync with server or local shared channel
             if (isBroadcastingGps && order) {
                 try {
                     localStorage.setItem(`live_gps_order_${order.id}`, JSON.stringify({
@@ -397,7 +374,7 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
                         timestamp: Date.now(),
                     }));
                 } catch {
-                    // Ignore storage quota errors
+
                 }
             }
         };
@@ -406,7 +383,7 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
             console.warn("Geolocation watch warning:", err.message);
             setGpsPermissionState("denied");
             setGpsError(err.message || "GPS location permission was denied. Switched to high-precision telematics stream.");
-            // Fall back smoothly to real-time route simulation
+
             setTrackingMode("route-sim");
         };
 
@@ -426,15 +403,13 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
         };
     }, [trackingMode, isBroadcastingGps, order]);
 
-    // 5. Route Simulation Fallback (Interpolating along actual Dhaka GPS Waypoints)
     useEffect(() => {
         if (trackingMode !== "route-sim") return;
 
         const interval = setInterval(() => {
             setSimProgress((prev) => {
                 const next = prev >= 100 ? 0 : prev + 0.5;
-                
-                // Calculate point along real GPS route
+
                 const waypoints = DEFAULT_ROUTE_COORDS;
                 const totalSegments = waypoints.length - 1;
                 const segmentProgress = (next / 100) * totalSegments;
@@ -464,14 +439,12 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
         return () => clearInterval(interval);
     }, [trackingMode]);
 
-    // Re-center map to vehicle
     const handleCenterVehicle = () => {
         if (leafletMapRef.current) {
             leafletMapRef.current.setView(currentCoords, 15, { animate: true });
         }
     };
 
-    // Fit entire route bounds
     const handleFitRoute = () => {
         if (leafletMapRef.current && routePolylineRef.current) {
             leafletMapRef.current.fitBounds(routePolylineRef.current.getBounds(), { padding: [40, 40] });
@@ -487,7 +460,7 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
     const content = (
         <div className={`bg-[#0F172A] rounded-2xl shadow-2xl border border-[#334155] w-full ${isEmbedded ? "" : "max-w-6xl max-h-[96vh]"} flex flex-col overflow-hidden text-white`}>
             
-            {/* Header Bar */}
+            {}
             <div className="bg-[#0B1329] border-b border-[#1E293B] px-4 py-3 flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-black border border-[#334155] flex items-center justify-center text-white font-black text-xs tracking-tighter shadow-md">
@@ -519,9 +492,9 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
                         </div>
                     </div>
 
-                    {/* Mode & Theme Controls */}
+                    {}
                     <div className="flex items-center gap-2 flex-wrap">
-                        {/* Tracking Mode Switcher */}
+                        {}
                         <div className="flex items-center bg-[#1E293B] p-1 rounded-xl border border-[#334155]">
                             <button
                                 type="button"
@@ -551,7 +524,7 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
                             </button>
                         </div>
 
-                        {/* Map Tile Theme Switcher */}
+                        {}
                         <select
                             value={mapTheme}
                             onChange={(e) => setMapTheme(e.target.value as keyof typeof MAP_TILES)}
@@ -588,7 +561,7 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
                     </div>
                 </div>
 
-                {/* Real-Time Guidance Strip */}
+                {}
                 <div className="bg-[#059669] px-4 py-2.5 flex items-center justify-between text-white shadow-md flex-wrap gap-2">
                     <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-xl bg-black/25 flex items-center justify-center">
@@ -620,7 +593,7 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
                 {gpsError && (
                     <div className="bg-amber-900/60 border-b border-amber-600/50 px-4 py-1.5 text-xs text-amber-200 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <span>⚠️</span>
+                            <span>️</span>
                             <span>{gpsError}</span>
                         </div>
                         <button
@@ -633,19 +606,19 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
                     </div>
                 )}
 
-                {/* Main Body */}
+                {}
                 <div className="grid grid-cols-1 lg:grid-cols-12 flex-1 overflow-y-auto min-h-[380px]">
                     
-                    {/* Left: Leaflet Real Map Display */}
+                    {}
                     <div className="lg:col-span-8 flex flex-col border-b lg:border-b-0 lg:border-r border-[#1E293B] relative">
                         
-                        {/* Leaflet Map Canvas Container */}
+                        {}
                         <div
                             ref={mapContainerRef}
                             className="w-full h-[340px] sm:h-[420px] bg-[#0B1120] relative z-0"
                         />
 
-                        {/* Map Overlay Badges */}
+                        {}
                         <div className="absolute top-3 left-3 z-10 flex flex-col gap-2 pointer-events-none">
                             <div className="bg-black/85 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700 text-xs font-mono flex items-center gap-2 shadow-lg">
                                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
@@ -659,7 +632,7 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
                             </div>
                         </div>
 
-                        {/* Floating Quick Action Buttons on Map (Top-Right) */}
+                        {}
                         <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
                             <button
                                 type="button"
@@ -686,7 +659,7 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
                             </button>
                         </div>
 
-                        {/* Real-time Telemetry Status Bar */}
+                        {}
                         <div className="p-3.5 bg-[#0B1329] border-t border-[#1E293B] space-y-2">
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
                                 <div className="bg-[#1E293B] p-2 rounded-xl border border-[#334155]">
@@ -709,11 +682,11 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
                         </div>
                     </div>
 
-                    {/* Right: Telematics Details & Driver Hub */}
+                    {}
                     <div className="lg:col-span-4 p-5 bg-[#0F172A] flex flex-col justify-between space-y-4 text-xs">
                         <div className="space-y-4">
                             
-                            {/* Driver Broadcast Mode (For Drivers/Dealers) */}
+                            {}
                             {(userRole.toLowerCase() === "dealer" || userRole.toLowerCase() === "supplier" || userRole.toLowerCase() === "admin") && (
                                 <div className="bg-[#1E293B] p-3.5 rounded-xl border border-[#334155] space-y-2">
                                     <div className="flex items-center justify-between">
@@ -739,7 +712,7 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
                                 </div>
                             )}
 
-                            {/* Driver Profile Card */}
+                            {}
                             <div className="bg-[#1E293B] p-4 rounded-xl border border-[#334155] space-y-3">
                                 <div className="flex items-center justify-between border-b border-[#334155] pb-2">
                                     <span className="font-bold text-slate-300 uppercase tracking-wider text-[11px]">
@@ -758,7 +731,7 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
                                         <div className="flex items-center gap-1.5">
                                             <h4 className="font-bold text-sm text-white">Md. Rafiqul Islam</h4>
                                             <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold">
-                                                4.9 ★
+                                                4.9 
                                             </span>
                                         </div>
                                         <p className="text-[11px] text-slate-400">
@@ -801,7 +774,7 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
                                 )}
                             </div>
 
-                            {/* Cargo Details */}
+                            {}
                             <div className="bg-[#1E293B] p-4 rounded-xl border border-[#334155] space-y-2.5">
                                 <span className="font-bold text-slate-300 uppercase tracking-wider text-[11px] block border-b border-[#334155] pb-1.5">
                                     Fuel Cargo & Route Details

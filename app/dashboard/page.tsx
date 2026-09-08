@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import MyNavigation from "@/components/navigation";
 import MyHeader from "@/components/header";
+import UberMapTracker from "@/components/uber-map-tracker";
 import { getPusherClient, ChatMessage } from "@/lib/pusher";
 import { checkEmailUniqueness } from "@/lib/email-checker";
 
@@ -184,6 +185,8 @@ export default function Dashboard() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [trackedOrderStatus, setTrackedOrderStatus] = useState<string | null>(null);
     const [trackedOrderId, setTrackedOrderId] = useState<number | null>(null);
+    const [isUberMapOpen, setIsUberMapOpen] = useState<boolean>(false);
+    const [uberTrackingOrder, setUberTrackingOrder] = useState<Order | null>(null);
     const [deliveryDates, setDeliveryDates] = useState<{ [orderId: number]: string }>({});
 
     const [monitorMetrics, setMonitorMetrics] = useState<any>(null);
@@ -1350,6 +1353,9 @@ export default function Dashboard() {
             fetchOrders(user.id, user.title);
         }
         setActiveTab("orders");
+        if (createdOrderId) {
+            handleTrackOrder(createdOrderId);
+        }
     };
 
     const handleCompleteOrder = async () => {
@@ -1464,9 +1470,20 @@ export default function Dashboard() {
         }
     };
 
-    const handleTrackOrder = async (orderId: number) => {
+    const handleTrackOrder = async (orderId: number, targetOrder?: Order) => {
         setTrackedOrderId(orderId);
         setTrackedOrderStatus("Connecting to delivery tracker...");
+
+        const matchedOrder: Order = targetOrder || orders.find(o => o.id === orderId) || {
+            id: orderId,
+            quantity: 1,
+            status: "in-transit",
+            address: user?.address || "Customer Terminal Facility",
+            product: { id: 1, name: "Petroleum Fuel" },
+        };
+        setUberTrackingOrder(matchedOrder);
+        setIsUberMapOpen(true);
+
         const r = getRolePath(user?.title);
         const trackingRole = r === "dealer" ? "dealer" : "customer";
         try {
@@ -1478,6 +1495,12 @@ export default function Dashboard() {
                 const liveStatus = res.data.order?.status || res.data.status || res.data.message || "In Transit / Scheduled";
                 const display = typeof liveStatus === "string" ? (liveStatus.charAt(0).toUpperCase() + liveStatus.slice(1)) : "In Transit / Scheduled";
                 setTrackedOrderStatus(display);
+                if (res.data.order) {
+                    setUberTrackingOrder((prev) => ({
+                        ...(prev || matchedOrder),
+                        status: res.data.order.status || prev?.status || "in-transit",
+                    }));
+                }
             } else {
                 setTrackedOrderStatus("In Transit / Carrier Processing");
             }
@@ -2486,7 +2509,7 @@ export default function Dashboard() {
                                         ) : isCustomer ? (
                                             <>
                                                 <button
-                                                    onClick={() => handleTrackOrder(item.id)}
+                                                    onClick={() => handleTrackOrder(item.id, item)}
                                                     className="bg-primary text-white text-xs font-semibold px-4 py-2 rounded hover:bg-primary/90 transition-colors cursor-pointer"
                                                 >
                                                     Track Delivery
@@ -2544,7 +2567,7 @@ export default function Dashboard() {
                                                         type="date"
                                                         value={deliveryDates[item.id] || item.deliveryDate || ""}
                                                         onChange={(e) => setDeliveryDates({
-                                                            ...deliveryDates,
+                                                             ...deliveryDates,
                                                             [item.id]: e.target.value
                                                         })}
                                                         className="p-1 text-xs outline-none bg-card-white text-dark-slate border-r border-secondary-gray"
@@ -2558,7 +2581,7 @@ export default function Dashboard() {
                                                 </div>
 
                                                 <button
-                                                    onClick={() => handleTrackOrder(item.id)}
+                                                    onClick={() => handleTrackOrder(item.id, item)}
                                                     className="bg-primary text-white text-xs font-semibold px-3 py-2 rounded hover:bg-primary/90 transition-colors cursor-pointer"
                                                 >
                                                     Track (GET)
@@ -4096,6 +4119,17 @@ export default function Dashboard() {
                         </form>
                     </div>
                 </div>
+            )}
+
+            {isUberMapOpen && uberTrackingOrder && (
+                <UberMapTracker
+                    order={uberTrackingOrder}
+                    userRole={user?.title || "customer"}
+                    onClose={() => {
+                        setIsUberMapOpen(false);
+                        setUberTrackingOrder(null);
+                    }}
+                />
             )}
         </>
     );

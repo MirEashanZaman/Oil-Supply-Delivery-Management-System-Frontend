@@ -123,17 +123,22 @@ export default function Dashboard() {
         try {
             const saved = localStorage.getItem("petroleum_cart");
             if (saved) setCartItems(JSON.parse(saved));
-        } catch {}
+        } catch { }
     }, []);
 
     const updateCartState = (newCart: CartItem[]) => {
         setCartItems(newCart);
         try {
             localStorage.setItem("petroleum_cart", JSON.stringify(newCart));
-        } catch {}
+        } catch { }
     };
 
     const handleAddToCart = (product: Product, quantity: number = 1, sourcing: "supplier" | "dealer" = "supplier") => {
+        if (user?.role === "Admin" || user?.title === "Admin") {
+            alert("Admins cannot place customer orders.");
+            return;
+        }
+
         const defaultParty = sourcing === "supplier" ? (availableSuppliers[0]?.id || 1) : (availableDealers[0]?.id || 1);
         const defaultDest = deliveryAddress.trim() || user?.address || "Main Operational Hub";
 
@@ -171,6 +176,11 @@ export default function Dashboard() {
     };
 
     const handleLaunchMultiCartSandbox = () => {
+        if (user?.role === "Admin" || user?.title === "Admin") {
+            alert("Admins cannot place customer orders.");
+            return;
+        }
+
         if (cartItems.length === 0) {
             alert("Your delivery cart is empty.");
             return;
@@ -372,6 +382,11 @@ export default function Dashboard() {
     };
 
     const handleOpenCheckout = (product: Product) => {
+        if (user?.role === "Admin" || user?.title === "Admin") {
+            alert("Admins cannot place customer orders.");
+            return;
+        }
+
         setCheckoutProduct(product);
         setOrderQuantity(1);
         if (user?.address) setDeliveryAddress(user.address);
@@ -542,6 +557,79 @@ export default function Dashboard() {
         }
     };
 
+    const handleOpenEditOrder = (order: Order) => {
+        setEditingOrder(order);
+        setEditOrderForm({
+            status: order.status || "Pending",
+            quantity: String(order.quantity || 1),
+            totalAmount: String(order.totalAmount ?? 0),
+            deliveryAddress: order.deliveryAddress || order.address || "",
+        });
+    };
+
+    const handleDeleteOrder = async (orderId: number) => {
+        if (!user) return;
+        if (!window.confirm("Are you sure you want to delete this order?")) return;
+
+        const targetOrder = orders.find((order) => order.id === orderId);
+        const customerId = targetOrder?.customerId || user.id;
+        if (!customerId) {
+            alert("Order owner not found.");
+            return;
+        }
+
+        try {
+            const res = await axios.delete(`http://localhost:8000/customer/${customerId}/orders/${orderId}`, {
+                withCredentials: true,
+                validateStatus: (status) => status < 500,
+            });
+
+            if (res.status === 200 || res.status === 204) {
+                alert("Order deleted successfully.");
+                fetchOrders(customerId, user.title || user.role);
+            }
+        } catch (err) {
+            alert("Failed to delete order.");
+        }
+    };
+
+    const handleSubmitEditOrder = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingOrder || !user) return;
+
+        const customerId = editingOrder.customerId || user.id;
+        if (!customerId) {
+            alert("Order owner not found.");
+            return;
+        }
+
+        try {
+            const res = await axios.patch(
+                `http://localhost:8000/customer/${customerId}/orders/${editingOrder.id}`,
+                {
+                    quantity: Number(editOrderForm.quantity) || 1,
+                    status: editOrderForm.status,
+                    address: editOrderForm.deliveryAddress,
+                    payment: {
+                        amount: Number(editOrderForm.totalAmount) || 0,
+                        status: "completed",
+                    },
+                },
+                { withCredentials: true, validateStatus: (status) => status < 500 }
+            );
+
+            if (res.status === 200 || res.status === 204) {
+                alert("Order updated successfully!");
+                setEditingOrder(null);
+                fetchOrders(customerId, user.title || user.role);
+            } else {
+                alert("Failed to update order.");
+            }
+        } catch (err) {
+            alert("Failed to update order.");
+        }
+    };
+
     const handleAdminCreateUser = async (newUser: any) => {
         setIsCreatingUser(true);
         try {
@@ -648,9 +736,9 @@ export default function Dashboard() {
             <MyHeader name="Dashboard" message="Oil Supply & Delivery Operations Portal" />
             <MyNavigation />
 
-            {}
+            { }
             <div className="flex-1 flex flex-col items-center p-4 sm:p-6 w-full">
-                {}
+                { }
                 <div className="w-full max-w-[1200px] card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-6 mb-8 text-left">
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-[#E2E8F0] pb-6">
                         <div className="flex items-center gap-4">
@@ -708,49 +796,45 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    {}
+                    { }
                     <div className="flex items-center gap-2 overflow-x-auto pt-4 no-scrollbar">
                         <button
                             type="button"
                             onClick={() => setActiveTab("overview")}
-                            className={`btn btn-sm rounded-xl font-bold transition-all ${
-                                activeTab === "overview"
-                                    ? "btn-primary shadow-sm"
-                                    : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
-                            }`}
+                            className={`btn btn-sm rounded-xl font-bold transition-all ${activeTab === "overview"
+                                ? "btn-primary shadow-sm"
+                                : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
+                                }`}
                         >
-                             Overview
+                            Overview
                         </button>
                         <button
                             type="button"
                             onClick={() => setActiveTab("products")}
-                            className={`btn btn-sm rounded-xl font-bold transition-all ${
-                                activeTab === "products"
-                                    ? "btn-primary shadow-sm"
-                                    : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
-                            }`}
+                            className={`btn btn-sm rounded-xl font-bold transition-all ${activeTab === "products"
+                                ? "btn-primary shadow-sm"
+                                : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
+                                }`}
                         >
-                             Products ({products.length})
+                            Products ({products.length})
                         </button>
                         <button
                             type="button"
                             onClick={() => setActiveTab("orders")}
-                            className={`btn btn-sm rounded-xl font-bold transition-all ${
-                                activeTab === "orders"
-                                    ? "btn-primary shadow-sm"
-                                    : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
-                            }`}
+                            className={`btn btn-sm rounded-xl font-bold transition-all ${activeTab === "orders"
+                                ? "btn-primary shadow-sm"
+                                : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
+                                }`}
                         >
-                             Orders ({orders.length})
+                            Orders ({orders.length})
                         </button>
                         <button
                             type="button"
                             onClick={() => setActiveTab("tracking")}
-                            className={`btn btn-sm rounded-xl font-bold transition-all ${
-                                activeTab === "tracking"
-                                    ? "btn-primary shadow-sm"
-                                    : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
-                            }`}
+                            className={`btn btn-sm rounded-xl font-bold transition-all ${activeTab === "tracking"
+                                ? "btn-primary shadow-sm"
+                                : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
+                                }`}
                         >
                             ️ Live Tracking
                         </button>
@@ -758,24 +842,22 @@ export default function Dashboard() {
                             <button
                                 type="button"
                                 onClick={() => setActiveTab("inventory")}
-                                className={`btn btn-sm rounded-xl font-bold transition-all ${
-                                    activeTab === "inventory"
-                                        ? "btn-primary shadow-sm"
-                                        : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
-                                }`}
+                                className={`btn btn-sm rounded-xl font-bold transition-all ${activeTab === "inventory"
+                                    ? "btn-primary shadow-sm"
+                                    : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
+                                    }`}
                             >
-                                 Stock Reserve
+                                Stock Reserve
                             </button>
                         )}
                         {(user.role === "Admin" || user.title === "Admin") && (
                             <button
                                 type="button"
                                 onClick={() => setActiveTab("admin-monitoring")}
-                                className={`btn btn-sm rounded-xl font-bold transition-all ${
-                                    activeTab === "admin-monitoring"
-                                        ? "btn-primary shadow-sm"
-                                        : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
-                                }`}
+                                className={`btn btn-sm rounded-xl font-bold transition-all ${activeTab === "admin-monitoring"
+                                    ? "btn-primary shadow-sm"
+                                    : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
+                                    }`}
                             >
                                 ️ Admin Monitoring
                             </button>
@@ -783,29 +865,27 @@ export default function Dashboard() {
                         <button
                             type="button"
                             onClick={() => setActiveTab("chat")}
-                            className={`btn btn-sm rounded-xl font-bold transition-all ${
-                                activeTab === "chat"
-                                    ? "btn-primary shadow-sm"
-                                    : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
-                            }`}
+                            className={`btn btn-sm rounded-xl font-bold transition-all ${activeTab === "chat"
+                                ? "btn-primary shadow-sm"
+                                : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
+                                }`}
                         >
-                             Realtime Chat
+                            Realtime Chat
                         </button>
                         <button
                             type="button"
                             onClick={() => setActiveTab("profile")}
-                            className={`btn btn-sm rounded-xl font-bold transition-all ${
-                                activeTab === "profile"
-                                    ? "btn-primary shadow-sm"
-                                    : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
-                            }`}
+                            className={`btn btn-sm rounded-xl font-bold transition-all ${activeTab === "profile"
+                                ? "btn-primary shadow-sm"
+                                : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
+                                }`}
                         >
-                             Profile
+                            Profile
                         </button>
                     </div>
                 </div>
 
-                {}
+                { }
                 <div className="w-full max-w-[1200px] mb-12">
                     {activeTab === "overview" && (
                         <OverviewTab
@@ -841,6 +921,8 @@ export default function Dashboard() {
                             onOpenLiveTrack={(ord) => handleTrackOrder(ord.id, ord)}
                             onCancelOrder={handleCancelOrder}
                             onUpdateOrderStatus={handleUpdateOrderStatus}
+                            onEditOrder={handleOpenEditOrder}
+                            onDeleteOrder={handleDeleteOrder}
                         />
                     )}
 
@@ -896,7 +978,7 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {}
+            { }
             <CartDrawerModal
                 isOpen={isCartModalOpen}
                 onClose={() => setIsCartModalOpen(false)}
@@ -1071,11 +1153,7 @@ export default function Dashboard() {
                 order={editingOrder}
                 editOrderForm={editOrderForm}
                 setEditOrderForm={setEditOrderForm}
-                onSubmit={(e) => {
-                    e.preventDefault();
-                    alert("Order updated!");
-                    setEditingOrder(null);
-                }}
+                onSubmit={handleSubmitEditOrder}
                 submitting={isEditingOrderSubmitting}
             />
 

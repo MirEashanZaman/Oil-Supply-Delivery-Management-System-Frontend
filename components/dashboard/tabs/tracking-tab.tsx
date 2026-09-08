@@ -73,6 +73,7 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({
             order={selectedTrackingOrder as any}
             userRole={userRole}
             onClose={onClose}
+            isEmbedded={true}
           />
         </div>
       ) : (

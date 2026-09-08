@@ -802,6 +802,11 @@ export default function Dashboard() {
                             orders={orders}
                             onSelectOrder={(ord) => setUberTrackingOrder(ord)}
                             userRole={user.title || user.role}
+                            onClose={() => {
+                                setIsUberMapOpen(false);
+                                setUberTrackingOrder(null);
+                                setActiveTab("orders");
+                            }}
                         />
                     )}
 

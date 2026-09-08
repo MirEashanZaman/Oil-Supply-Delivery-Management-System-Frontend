@@ -39,6 +39,7 @@ interface UberMapTrackerProps {
     order: TrackingOrderData | null;
     userRole?: string;
     onClose: () => void;
+    isEmbedded?: boolean;
 }
 
 // Real-world reference coordinates (e.g. Fuel Depot to City Hub)
@@ -87,7 +88,7 @@ function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: num
     return R * c;
 }
 
-export default function UberMapTracker({ order, userRole = "customer", onClose }: UberMapTrackerProps) {
+export default function UberMapTracker({ order, userRole = "customer", onClose, isEmbedded = false }: UberMapTrackerProps) {
     // Tracking Modes: "device-gps" (real phone/laptop GPS), "live-stream" (backend/synced GPS), "route-sim" (smooth route telemetry)
     const [trackingMode, setTrackingMode] = useState<"device-gps" | "live-stream" | "route-sim">("device-gps");
     const [mapTheme, setMapTheme] = useState<keyof typeof MAP_TILES>("dark");
@@ -483,16 +484,15 @@ export default function UberMapTracker({ order, userRole = "customer", onClose }
     const originLocation = order.supplier ? "Eastern Fuel Refinery Terminal" : "Metropolitan Oil Logistics Depot";
     const destinationLocation = order.address || "Customer Terminal Facility";
 
-    return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 z-50 animate-fadeIn">
-            <div className="bg-[#0F172A] rounded-2xl shadow-2xl border border-[#334155] w-full max-w-6xl max-h-[96vh] flex flex-col overflow-hidden text-white">
-                
-                {/* Header Bar */}
-                <div className="bg-[#0B1329] border-b border-[#1E293B] px-4 py-3 flex items-center justify-between flex-wrap gap-3">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-black border border-[#334155] flex items-center justify-center text-white font-black text-xs tracking-tighter shadow-md">
-                            UBER
-                        </div>
+    const content = (
+        <div className={`bg-[#0F172A] rounded-2xl shadow-2xl border border-[#334155] w-full ${isEmbedded ? "" : "max-w-6xl max-h-[96vh]"} flex flex-col overflow-hidden text-white`}>
+            
+            {/* Header Bar */}
+            <div className="bg-[#0B1329] border-b border-[#1E293B] px-4 py-3 flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-black border border-[#334155] flex items-center justify-center text-white font-black text-xs tracking-tighter shadow-md">
+                        UBER
+                    </div>
                         <div>
                             <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="text-sm sm:text-base font-black text-white tracking-wide">
@@ -850,6 +850,15 @@ export default function UberMapTracker({ order, userRole = "customer", onClose }
                     </div>
                 </div>
             </div>
+    );
+
+    if (isEmbedded) {
+        return content;
+    }
+
+    return (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 z-50 animate-fadeIn">
+            {content}
         </div>
     );
 }

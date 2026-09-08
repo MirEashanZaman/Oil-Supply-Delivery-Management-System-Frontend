@@ -75,7 +75,14 @@ export default function Dashboard() {
     const [orderingWholesale, setOrderingWholesale] = useState<boolean>(false);
 
     const [isPostProductModalOpen, setIsPostProductModalOpen] = useState<boolean>(false);
-    const [newProductForm, setNewProductForm] = useState({ name: "", description: "", price: "", stock: "", category: "Octane" });
+    const [newProductForm, setNewProductForm] = useState({
+        name: "",
+        description: "",
+        price: "",
+        stock: "",
+        category: "Octane",
+        photo: null as File | null,
+    });
     const [isSubmittingNewProduct, setIsSubmittingNewProduct] = useState<boolean>(false);
 
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -274,14 +281,26 @@ export default function Dashboard() {
         const role = getRolePath(user.title || user.role);
 
         try {
+            const formData = new FormData();
+            formData.append("name", newProductForm.name.trim());
+            formData.append("description", newProductForm.description.trim());
+            formData.append("price", String(Number(newProductForm.price)));
+            formData.append("quantity", String(Number(newProductForm.stock)));
+            formData.append("category", newProductForm.category);
+
+            if (newProductForm.photo) {
+                formData.append("photo", newProductForm.photo);
+            }
+
             const createRes = await axios.post(
                 `${API_ENDPOINT}/product/create`,
+                formData,
                 {
-                    name: newProductForm.name.trim(),
-                    price: Number(newProductForm.price),
-                    quantity: Number(newProductForm.stock),
-                },
-                { withCredentials: true }
+                    withCredentials: true,
+                    headers: {
+                        "Content-Type": "multipart/form-data",
+                    },
+                }
             );
 
             const createdProduct = createRes.data;
@@ -298,7 +317,14 @@ export default function Dashboard() {
             }
 
             alert(`Product "${newProductForm.name.trim()}" published successfully!`);
-            setNewProductForm({ name: "", description: "", price: "", stock: "", category: "Octane" });
+            setNewProductForm({
+                name: "",
+                description: "",
+                price: "",
+                stock: "",
+                category: "Octane",
+                photo: null,
+            });
             setIsPostProductModalOpen(false);
             await fetchCatalogProducts();
         } catch (err: any) {

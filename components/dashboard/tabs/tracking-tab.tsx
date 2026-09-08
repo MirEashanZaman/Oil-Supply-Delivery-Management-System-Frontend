@@ -22,7 +22,7 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({
   const activeOrders = orders.filter(
     (o) => {
       const status = (o.status || "").toLowerCase();
-      return status !== "cancelled" && status !== "rejected" && status !== "delivered" && status !== "completed";
+      return status !== "pending" && status !== "cancelled" && status !== "rejected" && status !== "delivered" && status !== "completed";
     }
   );
   const selectedOrderIsTrackable = selectedTrackingOrder

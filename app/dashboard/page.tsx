@@ -1411,18 +1411,22 @@ export default function Dashboard() {
                 const createdIds: (number | string)[] = [];
                 const defaultSupplierId = availableSuppliers[0]?.id ? Number(availableSuppliers[0].id) : 1;
                 const defaultDealerId = availableDealers[0]?.id ? Number(availableDealers[0].id) : 1;
+                let lastErrorMsg = "";
 
                 for (const item of cartItems) {
                     const itemDest = item.deliveryAddress?.trim() || destination || user.address || "Main Operational Hub";
                     const itemQty = Math.max(1, parseInt(String(item.quantity)) || 1);
                     const itemAmount = Number((item.product.numericPrice * itemQty).toFixed(2));
-                    const prodId = Number(item.product.id) || 1;
+                    
+                    const rawProdId = Number(item.product.id) || 1;
+                    const matchedProd = products.find((p) => p.id === rawProdId);
+                    const safeProdId = matchedProd?.id || rawProdId;
 
                     const itemPayload: any = {
                         quantity: itemQty,
                         address: itemDest,
                         status: "pending",
-                        product: { id: prodId },
+                        product: { id: safeProdId },
                         payment: {
                             cardNumber: cleanCard,
                             cardType: cleanType,
@@ -1431,8 +1435,10 @@ export default function Dashboard() {
                         },
                     };
 
+                    const chosenSourcing = item.sourcingChoice === "dealer" ? "dealer" : "supplier";
                     const partyIdNum = Number(item.selectedPartyId);
-                    if (item.sourcingChoice === "supplier") {
+
+                    if (chosenSourcing === "supplier") {
                         itemPayload.supplier = { id: (partyIdNum > 0 && !isNaN(partyIdNum)) ? partyIdNum : defaultSupplierId };
                     } else {
                         itemPayload.dealer = { id: (partyIdNum > 0 && !isNaN(partyIdNum)) ? partyIdNum : defaultDealerId };
@@ -1448,9 +1454,11 @@ export default function Dashboard() {
                             const newId = itemRes.data?.id || (Array.isArray(itemRes.data) && itemRes.data[0]?.id) || (`ORD-${Date.now()}-${Math.floor(Math.random()*1000)}`);
                             createdIds.push(newId);
                         } else {
+                            lastErrorMsg = itemRes.data?.message || itemRes.data?.error || `Server HTTP ${itemRes.status}`;
                             console.warn("Sub-order response status:", itemRes.status, itemRes.data);
                         }
-                    } catch (itemErr) {
+                    } catch (itemErr: any) {
+                        lastErrorMsg = itemErr.message || "Network request error";
                         console.warn("Sub-order creation error for item:", item.product.name, itemErr);
                     }
                 }
@@ -1460,7 +1468,7 @@ export default function Dashboard() {
                     setCreatedOrderId(firstNumId || null);
                     try {
                         const itemsListText = cartItems.map((it, idx) =>
-                            `${idx + 1}. ${it.product.name} (Qty: ${it.quantity}) @ $${it.product.price} = $${(it.product.numericPrice * it.quantity).toFixed(2)} [Sourced: ${it.sourcingChoice.toUpperCase()}] -> Destination: ${it.deliveryAddress || destination}`
+                            `${idx + 1}. ${it.product.name} (Qty: ${it.quantity}) @ $${it.product.price} = $${(it.product.numericPrice * it.quantity).toFixed(2)} [Sourced: ${(it.sourcingChoice || "supplier").toUpperCase()}] -> Destination: ${it.deliveryAddress || destination}`
                         ).join("\n");
 
                         await axios.post(
@@ -1491,7 +1499,7 @@ export default function Dashboard() {
                     }, 1000);
                 } else {
                     setSandboxStep("declined");
-                    alert("Failed to create multi-product orders. Please check your backend connection.");
+                    alert(`Failed to create multi-product orders. Reason: ${lastErrorMsg || "Backend service returned an error"}`);
                 }
                 return;
             }

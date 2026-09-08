@@ -79,7 +79,6 @@ const getProductImage = (name?: string, img?: string, id?: number | string) => {
     return "/Brent Crude Oil.jpg";
 };
 
-
 export default function ProductDetails({
     params,
 }: {

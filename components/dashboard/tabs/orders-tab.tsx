@@ -148,14 +148,6 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                         </span>
                       ) : (
                         <>
-                          {onUpdateOrderStatus && (
-                            <button
-                              onClick={() => onUpdateOrderStatus(item.id, "delivered")}
-                              className="bg-emerald-600 text-white text-xs font-semibold px-3 py-2 rounded-xl hover:bg-emerald-700 transition-colors cursor-pointer"
-                            >
-                              Mark Delivered
-                            </button>
-                          )}
                           <button
                             onClick={() => onOpenLiveTrack(item)}
                             className="bg-primary text-white text-xs font-semibold px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors cursor-pointer"
@@ -199,6 +191,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                           <option value="out for delivery">Out for Delivery</option>
                           <option value="cancelled">Cancelled</option>
                           <option value="rejected">Rejected</option>
+                          <option value="delivered">Delivered</option>
                         </select>
                       ) : (
                         onUpdateOrderStatus && (

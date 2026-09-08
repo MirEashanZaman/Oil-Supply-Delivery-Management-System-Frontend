@@ -43,7 +43,7 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
           onClick={onClose}
           className="absolute top-4 right-4 text-slate-400 hover:text-white"
         >
-          ✕
+          
         </button>
         <h3 className="text-xl font-bold text-white mb-2">Edit Order Details</h3>
         <p className="text-xs text-amber-400 mb-4">

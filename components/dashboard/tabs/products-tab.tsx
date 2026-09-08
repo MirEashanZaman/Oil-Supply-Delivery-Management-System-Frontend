@@ -34,6 +34,7 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
   const isAdmin = userData?.role === "Admin" || userData?.title === "Admin";
   const isSupplier = userData?.role === "Supplier" || userData?.title === "Supplier";
   const isDealer = userData?.role === "Dealer" || userData?.title === "Dealer";
+  const canPlaceOrder = isCustomer || isDealer;
 
   const productCategories = [
     "All",
@@ -131,11 +132,10 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                 key={cat}
                 type="button"
                 onClick={() => setSelectedProductCategory(cat)}
-                className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  selectedProductCategory === cat
-                    ? "bg-[#0F2747] text-white shadow-sm"
-                    : "bg-[#F1F5F9] text-secondary-gray hover:bg-[#E2E8F0] hover:text-dark-slate"
-                }`}
+                className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${selectedProductCategory === cat
+                  ? "bg-[#0F2747] text-white shadow-sm"
+                  : "bg-[#F1F5F9] text-secondary-gray hover:bg-[#E2E8F0] hover:text-dark-slate"
+                  }`}
               >
                 {cat}
               </button>
@@ -177,7 +177,7 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
           {filteredProducts.map((product) => (
             <div
               key={product.id}
-              className="card bg-white w-96 max-w-full shadow-sm border border-[#E2E8F0] overflow-hidden hover:shadow-md transition-shadow rounded-2xl"
+              className="card bg-white w-96 max-w-full border border-slate-200 overflow-hidden rounded-2xl"
             >
               <figure className="h-48 w-full overflow-hidden bg-[#F5F7FA]">
                 <img
@@ -196,11 +196,10 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                       {product.category}
                     </span>
                     <span
-                      className={`text-xs font-semibold px-2 py-0.5 rounded ${
-                        product.stockLevel === "In Stock"
-                          ? "bg-green-100 text-success-green"
-                          : "bg-amber-100 text-[#D97706]"
-                      }`}
+                      className={`text-xs font-semibold px-2 py-0.5 rounded ${product.stockLevel === "In Stock"
+                        ? "bg-green-100 text-success-green"
+                        : "bg-amber-100 text-[#D97706]"
+                        }`}
                     >
                       {product.stockLevel}
                     </span>
@@ -238,7 +237,7 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                       >
                         Bulk Source
                       </button>
-                    ) : (
+                    ) : canPlaceOrder ? (
                       <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                         <button
                           type="button"
@@ -259,6 +258,10 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                           Buy Now
                         </button>
                       </div>
+                    ) : (
+                      <span className="text-xs bg-slate-100 text-secondary-gray font-medium px-3 py-1.5 rounded">
+                        View only
+                      </span>
                     )}
                   </div>
                 </div>

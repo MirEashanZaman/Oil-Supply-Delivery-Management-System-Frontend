@@ -36,7 +36,7 @@ export const PostProductModal: React.FC<PostProductModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
       <div className="bg-card-white border border-[#E2E8F0] w-full max-w-lg rounded-2xl shadow-2xl p-6 relative">
         <button
           onClick={onClose}

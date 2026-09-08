@@ -39,7 +39,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
   if (!isOpen || !user) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
       <div className="bg-[#0F172A] border border-slate-700 w-full max-w-lg rounded-2xl shadow-2xl p-6 relative">
         <button
           onClick={onClose}
@@ -134,7 +134,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 rounded-xl text-sm font-bold shadow-lg shadow-amber-500/20 transition disabled:opacity-50"
+              className="px-5 py-2.5 bg-accent hover:bg-accent-hover text-slate-950 rounded-xl text-sm font-bold transition disabled:opacity-50"
             >
               {submitting ? "Saving..." : "Save User"}
             </button>

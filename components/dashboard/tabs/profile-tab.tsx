@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { UserData } from "../types";
+import { getRoleBadgeColor } from "../utils";
 
 interface ProfileTabProps {
   userData: UserData | null;
@@ -17,69 +18,184 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   const [name, setName] = useState(userData?.userName || userData?.name || "");
   const [phone, setPhone] = useState(userData?.phoneNumber || userData?.phone || "");
   const [address, setAddress] = useState(userData?.address || "");
+  const [photoPreview, setPhotoPreview] = useState<string | undefined>(userData?.photoUrl);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [saved, setSaved] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (onUpdateProfile) {
-      onUpdateProfile({ userName: name, phoneNumber: phone, address });
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPhotoFile(file);
+      const objectUrl = URL.createObjectURL(file);
+      setPhotoPreview(objectUrl);
     }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUploading(true);
+    try {
+      if (onUpdateProfile) {
+        onUpdateProfile({
+          userName: name,
+          name: name,
+          phoneNumber: phone,
+          phone: phone,
+          address,
+          photoUrl: photoPreview,
+        });
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
-    <div className="w-full text-left animate-fadeIn">
-      <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-sm max-w-2xl mx-auto">
-        <h2 className="text-xl font-bold text-dark-slate mb-4">Edit Profile Settings</h2>
+    <div className="w-full text-left animate-fadeIn max-w-4xl mx-auto space-y-6">
+      {/* Profile Overview Card with Photo / Avatar */}
+      <div className="card bg-card-white border border-[#E2E8F0] shadow-sm rounded-2xl p-6">
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+          {/* Avatar / Photo Display */}
+          <div className="relative group">
+            {photoPreview ? (
+              <img
+                src={photoPreview}
+                alt="Profile photo"
+                className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-2 border-[#E2E8F0] shadow-md"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            ) : (
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-[#0F2747] text-white flex items-center justify-center font-black text-4xl shadow-md">
+                {(userData?.userName || userData?.name || userData?.email || "U")[0].toUpperCase()}
+              </div>
+            )}
+            <label className="absolute -bottom-2 -right-2 bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] p-2 rounded-xl cursor-pointer shadow-lg transition-transform hover:scale-105">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+            </label>
+          </div>
+
+          <div className="text-center sm:text-left flex-1 space-y-2">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
+              <h3 className="text-2xl font-black text-[#0F2747]">
+                {userData?.userName || userData?.name || "System User"}
+              </h3>
+              <span className={`badge border-none font-bold text-xs px-3 py-1 ${getRoleBadgeColor(userData?.title || userData?.role || "")}`}>
+                {userData?.title || userData?.role || "Customer"}
+              </span>
+            </div>
+            <p className="text-sm font-medium text-secondary-gray">{userData?.email}</p>
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 pt-1 text-xs text-secondary-gray">
+              <span>📍 {userData?.address || "Address not registered"}</span>
+              <span>📞 {userData?.phoneNumber || userData?.phone || "Phone not registered"}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Edit Profile Form */}
+      <div className="card bg-card-white border border-[#E2E8F0] shadow-sm rounded-2xl p-6">
+        <h3 className="text-lg font-bold text-[#0F2747] mb-4">Edit Profile & Account Details</h3>
+
         {saved && (
-          <div className="p-3 mb-4 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
+          <div className="p-3 mb-4 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold animate-fadeIn">
             ✓ Profile details updated successfully!
           </div>
         )}
+
         <form onSubmit={handleSave} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-dark-slate mb-1">Username / Legal Name</label>
+            <label className="block text-xs font-bold text-[#1E293B] mb-1">
+              Profile Photo URL / Upload
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                type="text"
+                placeholder="https://example.com/my-photo.jpg or upload below"
+                value={photoPreview || ""}
+                onChange={(e) => setPhotoPreview(e.target.value)}
+                className="input input-bordered w-full text-sm bg-white text-[#1E293B] rounded-xl border-[#E2E8F0] focus:border-[#F59E0B]"
+              />
+              <label className="btn btn-outline btn-sm rounded-xl font-bold border-[#E2E8F0] text-[#0F2747] hover:bg-slate-50 cursor-pointer whitespace-nowrap">
+                Browse
+                <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-[#1E293B] mb-1">Username / Legal Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full p-2.5 border border-secondary-gray rounded-lg text-sm bg-white text-dark-slate outline-none"
+              className="input input-bordered w-full text-sm bg-white text-[#1E293B] rounded-xl border-[#E2E8F0] focus:border-[#F59E0B]"
+              required
             />
           </div>
+
           <div>
-            <label className="block text-xs font-bold text-dark-slate mb-1">Phone Number</label>
+            <label className="block text-xs font-bold text-[#1E293B] mb-1">
+              Registered Email (Account Identifier)
+            </label>
             <input
-              type="text"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full p-2.5 border border-secondary-gray rounded-lg text-sm bg-white text-dark-slate outline-none"
+              type="email"
+              disabled
+              value={userData?.email || ""}
+              className="input input-bordered w-full text-sm bg-slate-100 text-secondary-gray rounded-xl border-[#E2E8F0] cursor-not-allowed"
             />
           </div>
-          <div>
-            <label className="block text-xs font-bold text-dark-slate mb-1">Primary Operational Address</label>
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className="w-full p-2.5 border border-secondary-gray rounded-lg text-sm bg-white text-dark-slate outline-none"
-            />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-[#1E293B] mb-1">Phone Number</label>
+              <input
+                type="text"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+880 1700-000000"
+                className="input input-bordered w-full text-sm bg-white text-[#1E293B] rounded-xl border-[#E2E8F0] focus:border-[#F59E0B]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#1E293B] mb-1">Primary Operational Address</label>
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Terminal 4, Depot Gate A, Dhaka"
+                className="input input-bordered w-full text-sm bg-white text-[#1E293B] rounded-xl border-[#E2E8F0] focus:border-[#F59E0B]"
+              />
+            </div>
           </div>
-          <div className="flex justify-between items-center pt-4 border-t border-[#F1F5F9]">
-            {onDeleteAccount && (
+
+          <div className="flex justify-between items-center pt-4 border-t border-[#E2E8F0]">
+            {onDeleteAccount ? (
               <button
                 type="button"
                 onClick={onDeleteAccount}
-                className="text-xs text-rose-600 hover:underline font-bold cursor-pointer"
+                className="text-xs text-[#DC2626] hover:underline font-bold cursor-pointer"
               >
-                Delete Account
+                Permanently Delete Account
               </button>
+            ) : (
+              <span />
             )}
             <button
               type="submit"
-              className="bg-[#0F2747] text-white font-bold text-xs px-6 py-2.5 rounded-xl hover:bg-[#163860] transition cursor-pointer shadow-sm ml-auto"
+              disabled={isUploading}
+              className="btn btn-primary font-bold text-xs rounded-xl shadow-sm px-6"
             >
-              Save Changes
+              {isUploading ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </form>

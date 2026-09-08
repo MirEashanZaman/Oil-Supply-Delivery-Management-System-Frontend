@@ -582,6 +582,51 @@ export default function Dashboard() {
         }
     };
 
+    const handleUpdateProfile = async (updated: Partial<UserData>) => {
+        if (!user) return;
+        const r = getRolePath(user.title || user.role);
+        try {
+            if (user.id) {
+                await axios.patch(
+                    `http://localhost:8000/${r}/${user.id}`,
+                    {
+                        userName: updated.userName || user.userName,
+                        phoneNumber: updated.phoneNumber || user.phoneNumber,
+                        address: updated.address || user.address,
+                    },
+                    { withCredentials: true, validateStatus: (status) => status < 500 }
+                );
+            }
+            const mergedUser: UserData = { ...user, ...updated };
+            setUser(mergedUser);
+            localStorage.setItem("user", JSON.stringify(mergedUser));
+            if (user.email) fetchFullProfile(user.email, user.title);
+        } catch (err) {
+            console.warn("Failed to persist profile to backend:", err);
+            const mergedUser: UserData = { ...user, ...updated };
+            setUser(mergedUser);
+            localStorage.setItem("user", JSON.stringify(mergedUser));
+        }
+    };
+
+    const handleDeleteOwnAccount = async () => {
+        if (!user) return;
+        if (!window.confirm(`Are you sure you want to permanently delete your ${user.title || user.role || "user"} account?`)) return;
+        const r = getRolePath(user.title || user.role);
+        try {
+            let url = `http://localhost:8000/customer/${user.userName}`;
+            if (r === "supplier" || r === "dealer" || r === "admin") {
+                url = `http://localhost:8000/${r}/${user.id || 1}`;
+            }
+            await axios.delete(url, { withCredentials: true, validateStatus: (status) => status < 500 });
+            localStorage.removeItem("user");
+            alert("Account deleted successfully.");
+            router.push("/login");
+        } catch (err) {
+            alert("Failed to delete account.");
+        }
+    };
+
     const handleLogout = () => {
         localStorage.removeItem("user");
         router.push("/login");
@@ -617,9 +662,20 @@ export default function Dashboard() {
                 <div className="w-full max-w-[1200px] card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-6 mb-8 text-left">
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-[#E2E8F0] pb-6">
                         <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 rounded-2xl bg-[#0F2747] text-white flex items-center justify-center font-black text-2xl shadow-md">
-                                {user.userName?.charAt(0)?.toUpperCase() || "U"}
-                            </div>
+                            {user.photoUrl ? (
+                                <img
+                                    src={user.photoUrl}
+                                    alt="User photo"
+                                    className="w-14 h-14 rounded-2xl object-cover border-2 border-[#E2E8F0] shadow-md"
+                                    onError={(e) => {
+                                        e.currentTarget.style.display = "none";
+                                    }}
+                                />
+                            ) : (
+                                <div className="w-14 h-14 rounded-2xl bg-[#0F2747] text-white flex items-center justify-center font-black text-2xl shadow-md">
+                                    {(user.userName || user.name || user.email || "U")[0].toUpperCase()}
+                                </div>
+                            )}
                             <div>
                                 <div className="flex items-center gap-3">
                                     <h2 className="text-xl font-extrabold text-[#0F2747]">
@@ -838,7 +894,13 @@ export default function Dashboard() {
 
                     {activeTab === "chat" && <LiveChatTab userData={user} />}
 
-                    {activeTab === "profile" && <ProfileTab userData={user} />}
+                    {activeTab === "profile" && (
+                        <ProfileTab
+                            userData={user}
+                            onUpdateProfile={handleUpdateProfile}
+                            onDeleteAccount={handleDeleteOwnAccount}
+                        />
+                    )}
                 </div>
             </div>
 

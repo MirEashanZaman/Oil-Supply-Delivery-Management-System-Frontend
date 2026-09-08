@@ -39,7 +39,7 @@ export const WholesaleOrderModal: React.FC<WholesaleOrderModalProps> = ({
           onClick={onClose}
           className="absolute top-4 right-4 text-slate-400 hover:text-white"
         >
-          ✕
+          
         </button>
         <h3 className="text-xl font-bold text-white mb-2">
           Place Wholesale Sourcing Order

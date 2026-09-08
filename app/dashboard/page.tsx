@@ -239,6 +239,20 @@ export default function Dashboard() {
     const [cardExpiry, setCardExpiry] = useState<string>("");
     const [cardCvv, setCardCvv] = useState<string>("");
     const [isSubmittingOrder, setIsSubmittingOrder] = useState<boolean>(false);
+    const [paymentMethod, setPaymentMethod] = useState<"card" | "mobile" | "bank">("card");
+    const [mobileOperator, setMobileOperator] = useState<string>("bKash");
+    const [mobileWalletNumber, setMobileWalletNumber] = useState<string>("01700-000000");
+    const [mobileWalletPin, setMobileWalletPin] = useState<string>("12345");
+    const [bankName, setBankName] = useState<string>("Eastern Bank Limited");
+    const [bankAccountNumber, setBankAccountNumber] = useState<string>("EBL-10029384");
+    const [isSandboxModalOpen, setIsSandboxModalOpen] = useState<boolean>(false);
+    const [sandboxStep, setSandboxStep] = useState<"gateway" | "processing" | "otp_challenge" | "success" | "declined">("gateway");
+    const [sandboxOtp, setSandboxOtp] = useState<string>("123456");
+    const [sandboxTxnId, setSandboxTxnId] = useState<string>("");
+    const [sandboxAuthCode, setSandboxAuthCode] = useState<string>("");
+    const [sandboxProcessingLogs, setSandboxProcessingLogs] = useState<string[]>([]);
+    const [createdPaymentRecord, setCreatedPaymentRecord] = useState<any>(null);
+    const [createdOrderId, setCreatedOrderId] = useState<number | null>(null);
 
     const [wholesaleProduct, setWholesaleProduct] = useState<Product | null>(null);
     const [wholesaleSupplierId, setWholesaleSupplierId] = useState<number | "">("");
@@ -1064,7 +1078,7 @@ export default function Dashboard() {
         }
     };
 
-    const fetchOrders = async (id: number, title?: string) => {
+    const fetchOrders = async (id?: number, title?: string) => {
         const r = getRolePath(title);
         if (r === "customer") {
             if (!id) return;
@@ -1114,6 +1128,44 @@ export default function Dashboard() {
         }
     };
 
+    const applySandboxCardPreset = (type: "Visa" | "MasterCard" | "Amex") => {
+        setPaymentMethod("card");
+        if (type === "Visa") {
+            setCardType("Visa");
+            setCardNumber("4000-1234-5678-9010");
+            setCardHolder((user?.userName || "John Doe").toUpperCase() + " / SANDBOX TEST");
+            setCardExpiry("12/28");
+            setCardCvv("123");
+        } else if (type === "MasterCard") {
+            setCardType("MasterCard");
+            setCardNumber("5555-4444-3333-2222");
+            setCardHolder((user?.userName || "Jane Smith").toUpperCase() + " / SANDBOX TEST");
+            setCardExpiry("08/29");
+            setCardCvv("456");
+        } else {
+            setCardType("American Express");
+            setCardNumber("3782-8224-6310-005");
+            setCardHolder((user?.userName || "Acme Oil Corp").toUpperCase() + " / SANDBOX TEST");
+            setCardExpiry("10/27");
+            setCardCvv("7890");
+        }
+    };
+
+    const applySandboxMobilePreset = (op: "bKash" | "Nagad" | "Rocket") => {
+        setPaymentMethod("mobile");
+        setMobileOperator(op);
+        if (op === "bKash") {
+            setMobileWalletNumber("01700-000000");
+            setMobileWalletPin("12345");
+        } else if (op === "Nagad") {
+            setMobileWalletNumber("01800-000000");
+            setMobileWalletPin("1234");
+        } else {
+            setMobileWalletNumber("01900-000000");
+            setMobileWalletPin("54321");
+        }
+    };
+
     const handleOpenCheckout = (product: Product) => {
         setCheckoutProduct(product);
         setOrderQuantity(1);
@@ -1123,9 +1175,14 @@ export default function Dashboard() {
         } else if (sourcingChoice === "dealer" && availableDealers.length > 0) {
             setSelectedPartyId(availableDealers[0].id);
         }
+        applySandboxCardPreset("Visa");
+        setIsSandboxModalOpen(false);
+        setSandboxStep("gateway");
+        setCreatedPaymentRecord(null);
+        setCreatedOrderId(null);
     };
 
-    const handleCompleteOrder = async () => {
+    const handleLaunchSandboxGateway = () => {
         if (!user || !user.id || !checkoutProduct) return;
 
         if (!selectedPartyId) {
@@ -1139,41 +1196,114 @@ export default function Dashboard() {
             return;
         }
 
-        if (!cardNumber.trim()) {
-            alert("Please provide a valid card number for payment processing.");
+        if (paymentMethod === "card" && !cardNumber.trim()) {
+            alert("Please provide a valid card number or select a test card preset.");
             return;
         }
 
-        setIsSubmittingOrder(true);
-        const totalAmount = Number((checkoutProduct.numericPrice * orderQuantity).toFixed(2));
-
-        const orderPayload: any = {
-            quantity: orderQuantity,
-            address: destination,
-            status: "pending",
-            product: { id: checkoutProduct.id },
-            payment: {
-                cardNumber: cardNumber.trim(),
-                cardType: cardType,
-                amount: totalAmount,
-                status: "completed",
-            },
-        };
-
-        if (sourcingChoice === "supplier") {
-            orderPayload.supplier = { id: Number(selectedPartyId) };
-        } else {
-            orderPayload.dealer = { id: Number(selectedPartyId) };
+        if (paymentMethod === "mobile" && !mobileWalletNumber.trim()) {
+            alert("Please provide a valid mobile wallet number or select a test wallet preset.");
+            return;
         }
 
+        const generatedTxn = "SB-TXN-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+        const generatedAuth = "AUTH-" + Math.floor(100000 + Math.random() * 900000);
+        setSandboxTxnId(generatedTxn);
+        setSandboxAuthCode(generatedAuth);
+        setSandboxOtp("123456");
+        setSandboxStep("gateway");
+        setIsSandboxModalOpen(true);
+    };
+
+    const handleExecuteSandboxAuthorization = async (forceSimulateDecline: boolean = false) => {
+        if (!user || !user.id || !checkoutProduct) return;
+
+        setSandboxStep("processing");
+        setSandboxProcessingLogs([
+            "Initializing Sandbox Payment Gateway Handshake (TLS 1.3)...",
+            "Encrypting tokenized test credentials with 256-bit AES...",
+        ]);
+
+        if (forceSimulateDecline) {
+            setTimeout(() => {
+                setSandboxProcessingLogs((prev) => [
+                    ...prev,
+                    "Sandbox Issuer simulated decline: 51_INSUFFICIENT_FUNDS_OR_EXPIRED_TOKEN",
+                ]);
+                setSandboxStep("declined");
+            }, 1200);
+            return;
+        }
+
+        const totalAmount = Number((checkoutProduct.numericPrice * orderQuantity).toFixed(2));
+        const destination = deliveryAddress.trim() || user.address || "Main Operational Hub";
+        const cleanCard = paymentMethod === "card"
+            ? (cardNumber.trim() || "4000123456789010")
+            : paymentMethod === "mobile"
+                ? (mobileWalletNumber.trim() || "01700000000")
+                : (bankAccountNumber.trim() || "EBL-10029384");
+        const cleanType = paymentMethod === "card"
+            ? cardType
+            : paymentMethod === "mobile"
+                ? `${mobileOperator} Sandbox`
+                : `${bankName} Wire Sandbox`;
+
         try {
-            const res = await axios.post(
+            const paymentRes = await axios.post(
+                "http://localhost:8000/payment/process",
+                {
+                    cardNumber: cleanCard,
+                    cardType: cleanType,
+                    amount: totalAmount,
+                    status: "completed",
+                },
+                { withCredentials: true, validateStatus: (status) => status < 500 }
+            );
+
+            setSandboxProcessingLogs((prev) => [
+                ...prev,
+                `Sandbox payment ledger generated: HTTP ${paymentRes.status} (Payment ID #${paymentRes.data?.id || 1})`,
+                "Querying GET /payment/status for ledger confirmation...",
+            ]);
+
+            if (paymentRes.status === 200 || paymentRes.status === 201) {
+                setCreatedPaymentRecord(paymentRes.data);
+                try {
+                    await axios.get(`http://localhost:8000/payment/status/${paymentRes.data.id}`, {
+                        withCredentials: true,
+                        validateStatus: (status) => status < 500,
+                    });
+                } catch {
+                }
+            }
+
+            const orderPayload: any = {
+                quantity: orderQuantity,
+                address: destination,
+                status: "pending",
+                product: { id: checkoutProduct.id },
+                payment: {
+                    cardNumber: cleanCard,
+                    cardType: cleanType,
+                    amount: totalAmount,
+                    status: "completed",
+                },
+            };
+
+            if (sourcingChoice === "supplier") {
+                orderPayload.supplier = { id: Number(selectedPartyId) };
+            } else {
+                orderPayload.dealer = { id: Number(selectedPartyId) };
+            }
+
+            const orderRes = await axios.post(
                 `http://localhost:8000/customer/${user.id}/orders`,
                 orderPayload,
                 { withCredentials: true, validateStatus: (status) => status < 500 }
             );
 
-            if (res.status === 200 || res.status === 201) {
+            if (orderRes.status === 200 || orderRes.status === 201) {
+                setCreatedOrderId(orderRes.data?.id || null);
                 try {
                     const partnerName = sourcingChoice === "supplier"
                         ? (availableSuppliers.find(s => s.id === Number(selectedPartyId))?.userName || "Direct Refinery Supplier")
@@ -1183,8 +1313,8 @@ export default function Dashboard() {
                         "http://localhost:8000/customer/send-email",
                         {
                             to: user.email,
-                            subject: `Order Confirmed - ${checkoutProduct.name}`,
-                            text: `Dear ${user.userName},\n\nYour order has been placed successfully!\n\nProduct: ${checkoutProduct.name}\nQuantity: ${orderQuantity}\nSourced From: ${sourcingChoice.toUpperCase()} (${partnerName})\nTotal Paid: $${totalAmount}\nDelivery Address: ${deliveryAddress}\n\nThank you!`,
+                            subject: `Order & Sandbox Payment Receipt - ${checkoutProduct.name}`,
+                            text: `Dear ${user.userName},\n\nYour order has been placed and paid via Sandbox Payment Gateway!\n\nProduct: ${checkoutProduct.name}\nQuantity: ${orderQuantity}\nSourced From: ${sourcingChoice.toUpperCase()} (${partnerName})\nTotal Paid: $${totalAmount}\nPayment Method: ${cleanType} (${cleanCard})\nTransaction ID: ${sandboxTxnId}\nAuthorization Code: ${sandboxAuthCode}\nDelivery Address: ${destination}\n\nThank you for choosing Oil Supply & Delivery Network!`,
                         },
                         { withCredentials: true, validateStatus: (status) => status < 500 }
                     );
@@ -1192,19 +1322,38 @@ export default function Dashboard() {
                     console.warn("Mail dispatch error:", mailErr);
                 }
 
-                alert(`Order placed successfully!\nTotal: $${totalAmount}\nEmail receipt sent to ${user.email}`);
-                setCheckoutProduct(null);
-                fetchOrders(user.id, user.title);
-                setActiveTab("orders");
+                setSandboxProcessingLogs((prev) => [
+                    ...prev,
+                    `Order recorded in distribution network: Order ID #${orderRes.data?.id || "Live"}`,
+                    "Email receipt dispatched to buyer.",
+                    "Sandbox payment settled and verified.",
+                ]);
+
+                setTimeout(() => {
+                    setSandboxStep("success");
+                    fetchOrders(user.id, user.title);
+                }, 1000);
             } else {
-                alert(res.data?.message || "Order placement failed.");
+                setSandboxStep("declined");
+                alert(orderRes.data?.message || "Order placement failed.");
             }
         } catch (err: any) {
-            console.warn("Order submission failed:", err);
-            alert(err.response?.data?.message || "Order placement failed.");
-        } finally {
-            setIsSubmittingOrder(false);
+            console.warn("Sandbox payment/order error:", err);
+            setSandboxStep("declined");
         }
+    };
+
+    const handleFinishSandboxPayment = () => {
+        setIsSandboxModalOpen(false);
+        setCheckoutProduct(null);
+        if (user && user.id) {
+            fetchOrders(user.id, user.title);
+        }
+        setActiveTab("orders");
+    };
+
+    const handleCompleteOrder = async () => {
+        handleLaunchSandboxGateway();
     };
 
     const handleConfirmOrRejectOrder = async (orderId: number, status: "confirmed" | "rejected", customerEmail?: string) => {
@@ -3163,15 +3312,15 @@ export default function Dashboard() {
 
             {checkoutProduct && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-                    <div className="bg-card-white rounded-xl shadow-2xl border border-[#E2E8F0] w-full max-w-[650px] max-h-[90vh] overflow-y-auto text-left p-6 md:p-8">
-                        <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-6">
+                    <div className="bg-card-white rounded-2xl shadow-2xl border border-[#E2E8F0] w-full max-w-[650px] max-h-[90vh] overflow-y-auto text-left p-6 md:p-8">
+                        <div className="flex justify-between items-center border-b border-[#E2E8F0] pb-4 mb-5">
                             <div>
-                                <h2 className="text-xl font-extrabold text-dark-slate">Integrated Checkout & Sourcing</h2>
-                                <p className="text-xs text-secondary-gray">Complete your order with direct supplier or dealer sourcing choice.</p>
+                                <h2 className="text-xl font-extrabold text-dark-slate">Petroleum Checkout & Sourcing</h2>
+                                <p className="text-xs text-secondary-gray">Verified procurement with Sandbox Payment Gateway.</p>
                             </div>
                             <button
                                 onClick={() => setCheckoutProduct(null)}
-                                className="text-gray-400 hover:text-dark-slate p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                                className="text-gray-400 hover:text-dark-slate p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
                                 aria-label="Close"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -3180,11 +3329,11 @@ export default function Dashboard() {
                             </button>
                         </div>
 
-                        <div className="bg-[#FAFBFD] p-4 rounded-lg border border-[#E2E8F0] mb-6 flex gap-4 items-center">
+                        <div className="bg-[#FAFBFD] p-4 rounded-xl border border-[#E2E8F0] mb-5 flex gap-4 items-center">
                             <img
                                 src={checkoutProduct.image || getProductImage(checkoutProduct.name, checkoutProduct.image, checkoutProduct.id)}
                                 alt={checkoutProduct.name}
-                                className="w-16 h-16 rounded-lg object-cover border border-[#CBD5E1] shrink-0"
+                                className="w-16 h-16 rounded-xl object-cover border border-[#CBD5E1] shrink-0"
                                 onError={(e) => {
                                     e.currentTarget.src = getProductImage(checkoutProduct.name, undefined, checkoutProduct.id);
                                 }}
@@ -3204,22 +3353,22 @@ export default function Dashboard() {
                                             max="100"
                                             value={orderQuantity}
                                             onChange={(e) => setOrderQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                                            className="w-20 p-1.5 border border-secondary-gray rounded text-center font-bold bg-white text-dark-slate outline-none"
+                                            className="w-20 p-1.5 border border-secondary-gray rounded-lg text-center font-bold bg-white text-dark-slate outline-none"
                                         />
                                     </div>
                                 </div>
                                 <div className="border-t border-gray-200 mt-3 pt-2 flex justify-between items-center">
-                                    <span className="text-xs font-semibold text-dark-slate">Subtotal:</span>
+                                    <span className="text-xs font-semibold text-dark-slate">Total Payable:</span>
                                     <span className="text-base font-extrabold text-primary">
-                                        ${(checkoutProduct.numericPrice * orderQuantity).toFixed(2)}
+                                        ${(checkoutProduct.numericPrice * orderQuantity).toFixed(2)} USD
                                     </span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="mb-6">
-                            <label className="block text-sm font-bold text-dark-slate mb-2">
-                                Choose Sourcing Channel:
+                        <div className="mb-5">
+                            <label className="block text-xs font-bold text-dark-slate mb-2">
+                                Select Sourcing Distribution Channel:
                             </label>
                             <div className="grid grid-cols-2 gap-3 mb-3">
                                 <button
@@ -3228,13 +3377,13 @@ export default function Dashboard() {
                                         setSourcingChoice("supplier");
                                         if (availableSuppliers.length > 0) setSelectedPartyId(availableSuppliers[0].id);
                                     }}
-                                    className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${sourcingChoice === "supplier"
+                                    className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${sourcingChoice === "supplier"
                                             ? "border-primary bg-blue-50/50 ring-2 ring-primary/20"
                                             : "border-[#E2E8F0] bg-white hover:bg-gray-50"
                                         }`}
                                 >
-                                    <span className="block font-bold text-sm text-dark-slate">Direct from Supplier</span>
-                                    <span className="block text-xs text-secondary-gray">Refinery direct wholesale</span>
+                                    <span className="block font-bold text-xs text-dark-slate">Refinery Direct Supplier</span>
+                                    <span className="block text-[11px] text-secondary-gray">Pipeline & Depot wholesale</span>
                                 </button>
 
                                 <button
@@ -3243,24 +3392,24 @@ export default function Dashboard() {
                                         setSourcingChoice("dealer");
                                         if (availableDealers.length > 0) setSelectedPartyId(availableDealers[0].id);
                                     }}
-                                    className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${sourcingChoice === "dealer"
+                                    className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${sourcingChoice === "dealer"
                                             ? "border-primary bg-blue-50/50 ring-2 ring-primary/20"
                                             : "border-[#E2E8F0] bg-white hover:bg-gray-50"
                                         }`}
                                 >
-                                    <span className="block font-bold text-sm text-dark-slate">Via Local Dealer</span>
-                                    <span className="block text-xs text-secondary-gray">Regional distributor hub</span>
+                                    <span className="block font-bold text-xs text-dark-slate">Authorized Local Dealer</span>
+                                    <span className="block text-[11px] text-secondary-gray">Regional distributor hub</span>
                                 </button>
                             </div>
 
                             <div>
                                 <label className="block text-xs font-semibold text-secondary-gray mb-1">
-                                    Select {sourcingChoice === "supplier" ? "Supplier Refinery" : "Authorized Dealer"}:
+                                    Assigned {sourcingChoice === "supplier" ? "Supplier Partner" : "Dealer Depot"}:
                                 </label>
                                 <select
                                     value={selectedPartyId}
                                     onChange={(e) => setSelectedPartyId(Number(e.target.value))}
-                                    className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate outline-none"
+                                    className="w-full p-2.5 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none"
                                 >
                                     {sourcingChoice === "supplier" ? (
                                         availableSuppliers.length > 0 ? (
@@ -3287,101 +3436,479 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="mb-6">
-                            <label className="block text-sm font-bold text-dark-slate mb-1">Delivery Destination Address</label>
+                        <div className="mb-5">
+                            <label className="block text-xs font-bold text-dark-slate mb-1">Delivery Destination Address</label>
                             <input
                                 type="text"
                                 value={deliveryAddress}
-                                placeholder="Enter full delivery address..."
+                                placeholder="Enter full delivery destination address..."
                                 onChange={(e) => setDeliveryAddress(e.target.value)}
-                                className="w-full p-2.5 border border-secondary-gray rounded bg-white text-dark-slate outline-none"
+                                className="w-full p-2.5 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none"
                             />
                         </div>
 
-                        <div className="border-t border-gray-100 pt-5 mb-6">
-                            <h4 className="text-sm font-bold text-dark-slate mb-3">Payment Information</h4>
-                            <div className="space-y-3">
-                                <div className="grid grid-cols-2 gap-3">
+                        <div className="border-t border-[#E2E8F0] pt-4 mb-5">
+                            <div className="bg-[#1E3A8A]/5 border border-[#1E3A8A]/20 p-3 rounded-xl mb-4 flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-[#059669] animate-pulse shrink-0"></span>
                                     <div>
-                                        <label className="block text-xs font-semibold text-secondary-gray mb-1">Card Type</label>
-                                        <select
-                                            value={cardType}
-                                            onChange={(e) => setCardType(e.target.value)}
-                                            className="w-full p-2 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none"
-                                        >
-                                            <option value="Visa">Visa</option>
-                                            <option value="MasterCard">MasterCard</option>
-                                            <option value="American Express">American Express</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-semibold text-secondary-gray mb-1">Cardholder Name</label>
-                                        <input
-                                            type="text"
-                                            value={cardHolder}
-                                            placeholder="Name on card"
-                                            onChange={(e) => setCardHolder(e.target.value)}
-                                            className="w-full p-2 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none"
-                                        />
+                                        <span className="text-xs font-bold text-[#0F172A] block">Sandbox Payment Gateway Active</span>
+                                        <span className="text-[11px] text-[#64748B] block">Safe test environment. Simulates real-time card and mobile banking authorization.</span>
                                     </div>
                                 </div>
-
-                                <div>
-                                    <label className="block text-xs font-semibold text-secondary-gray mb-1">Card Number</label>
-                                    <input
-                                        type="text"
-                                        value={cardNumber}
-                                        placeholder="XXXX-XXXX-XXXX-XXXX"
-                                        onChange={(e) => setCardNumber(e.target.value)}
-                                        className="w-full p-2 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none font-mono"
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-xs font-semibold text-secondary-gray mb-1">Expiry Date</label>
-                                        <input
-                                            type="text"
-                                            value={cardExpiry}
-                                            placeholder="MM/YY"
-                                            onChange={(e) => setCardExpiry(e.target.value)}
-                                            className="w-full p-2 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none text-center"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-semibold text-secondary-gray mb-1">CVV / Security Code</label>
-                                        <input
-                                            type="password"
-                                            maxLength={4}
-                                            value={cardCvv}
-                                            placeholder="***"
-                                            onChange={(e) => setCardCvv(e.target.value)}
-                                            className="w-full p-2 border border-secondary-gray rounded bg-white text-dark-slate text-sm outline-none text-center font-mono"
-                                        />
-                                    </div>
-                                </div>
+                                <span className="text-[10px] font-bold bg-[#D97706]/15 text-[#D97706] border border-[#D97706]/30 px-2 py-0.5 rounded uppercase shrink-0">
+                                    Sandbox
+                                </span>
                             </div>
+
+                            <div className="flex gap-2 mb-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setPaymentMethod("card")}
+                                    className={`flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${
+                                        paymentMethod === "card"
+                                            ? "bg-primary text-white shadow-sm"
+                                            : "bg-[#F1F5F9] text-secondary-gray hover:bg-[#E2E8F0] hover:text-dark-slate"
+                                    }`}
+                                >
+                                    Credit / Debit Card
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setPaymentMethod("mobile")}
+                                    className={`flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${
+                                        paymentMethod === "mobile"
+                                            ? "bg-primary text-white shadow-sm"
+                                            : "bg-[#F1F5F9] text-secondary-gray hover:bg-[#E2E8F0] hover:text-dark-slate"
+                                    }`}
+                                >
+                                    Mobile Banking
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setPaymentMethod("bank")}
+                                    className={`flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${
+                                        paymentMethod === "bank"
+                                            ? "bg-primary text-white shadow-sm"
+                                            : "bg-[#F1F5F9] text-secondary-gray hover:bg-[#E2E8F0] hover:text-dark-slate"
+                                    }`}
+                                >
+                                    Bank Transfer
+                                </button>
+                            </div>
+
+                            {paymentMethod === "card" && (
+                                <div className="space-y-3">
+                                    <div className="flex flex-wrap items-center gap-1.5 p-2 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]">
+                                        <span className="text-[11px] font-bold text-secondary-gray mr-1">Autofill Test Cards:</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => applySandboxCardPreset("Visa")}
+                                            className="px-2.5 py-1 bg-white border border-[#CBD5E1] hover:border-primary text-dark-slate rounded-lg text-[11px] font-semibold cursor-pointer"
+                                        >
+                                            Visa Test Card
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => applySandboxCardPreset("MasterCard")}
+                                            className="px-2.5 py-1 bg-white border border-[#CBD5E1] hover:border-primary text-dark-slate rounded-lg text-[11px] font-semibold cursor-pointer"
+                                        >
+                                            MasterCard Test
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => applySandboxCardPreset("Amex")}
+                                            className="px-2.5 py-1 bg-white border border-[#CBD5E1] hover:border-primary text-dark-slate rounded-lg text-[11px] font-semibold cursor-pointer"
+                                        >
+                                            Amex Test
+                                        </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-secondary-gray mb-1">Card Network</label>
+                                            <select
+                                                value={cardType}
+                                                onChange={(e) => setCardType(e.target.value)}
+                                                className="w-full p-2 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none"
+                                            >
+                                                <option value="Visa">Visa (Sandbox)</option>
+                                                <option value="MasterCard">MasterCard (Sandbox)</option>
+                                                <option value="American Express">American Express (Sandbox)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-secondary-gray mb-1">Cardholder Name</label>
+                                            <input
+                                                type="text"
+                                                value={cardHolder}
+                                                placeholder="Name on card"
+                                                onChange={(e) => setCardHolder(e.target.value)}
+                                                className="w-full p-2 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-secondary-gray mb-1">Sandbox Card Number</label>
+                                        <input
+                                            type="text"
+                                            value={cardNumber}
+                                            placeholder="4000-XXXX-XXXX-XXXX"
+                                            onChange={(e) => setCardNumber(e.target.value)}
+                                            className="w-full p-2 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none font-mono"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-secondary-gray mb-1">Expiry Date</label>
+                                            <input
+                                                type="text"
+                                                value={cardExpiry}
+                                                placeholder="MM/YY"
+                                                onChange={(e) => setCardExpiry(e.target.value)}
+                                                className="w-full p-2 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none text-center"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-secondary-gray mb-1">CVV Security Code</label>
+                                            <input
+                                                type="password"
+                                                maxLength={4}
+                                                value={cardCvv}
+                                                placeholder="123"
+                                                onChange={(e) => setCardCvv(e.target.value)}
+                                                className="w-full p-2 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none text-center font-mono"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {paymentMethod === "mobile" && (
+                                <div className="space-y-3">
+                                    <div className="flex flex-wrap items-center gap-1.5 p-2 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]">
+                                        <span className="text-[11px] font-bold text-secondary-gray mr-1">Autofill Test Wallets:</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => applySandboxMobilePreset("bKash")}
+                                            className="px-2.5 py-1 bg-white border border-[#CBD5E1] hover:border-primary text-dark-slate rounded-lg text-[11px] font-semibold cursor-pointer"
+                                        >
+                                            bKash Sandbox
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => applySandboxMobilePreset("Nagad")}
+                                            className="px-2.5 py-1 bg-white border border-[#CBD5E1] hover:border-primary text-dark-slate rounded-lg text-[11px] font-semibold cursor-pointer"
+                                        >
+                                            Nagad Sandbox
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => applySandboxMobilePreset("Rocket")}
+                                            className="px-2.5 py-1 bg-white border border-[#CBD5E1] hover:border-primary text-dark-slate rounded-lg text-[11px] font-semibold cursor-pointer"
+                                        >
+                                            Rocket Sandbox
+                                        </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-secondary-gray mb-1">MFS Provider</label>
+                                            <select
+                                                value={mobileOperator}
+                                                onChange={(e) => setMobileOperator(e.target.value)}
+                                                className="w-full p-2 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none"
+                                            >
+                                                <option value="bKash">bKash (Sandbox)</option>
+                                                <option value="Nagad">Nagad (Sandbox)</option>
+                                                <option value="Rocket">Rocket (Sandbox)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-secondary-gray mb-1">Test Wallet Number</label>
+                                            <input
+                                                type="text"
+                                                value={mobileWalletNumber}
+                                                placeholder="01700-000000"
+                                                onChange={(e) => setMobileWalletNumber(e.target.value)}
+                                                className="w-full p-2 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none font-mono"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {paymentMethod === "bank" && (
+                                <div className="space-y-3">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-secondary-gray mb-1">Issuing Bank</label>
+                                            <select
+                                                value={bankName}
+                                                onChange={(e) => setBankName(e.target.value)}
+                                                className="w-full p-2 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none"
+                                            >
+                                                <option value="Eastern Bank Limited">Eastern Bank Limited</option>
+                                                <option value="City Bank Bangladesh">City Bank Bangladesh</option>
+                                                <option value="BRAC Bank Limited">BRAC Bank Limited</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-secondary-gray mb-1">Corporate Account Number</label>
+                                            <input
+                                                type="text"
+                                                value={bankAccountNumber}
+                                                placeholder="EBL-10029384"
+                                                onChange={(e) => setBankAccountNumber(e.target.value)}
+                                                className="w-full p-2 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none font-mono"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex gap-3 pt-2">
                             <button
                                 type="button"
                                 onClick={() => setCheckoutProduct(null)}
-                                className="w-1/3 py-3 rounded-lg border border-secondary-gray text-dark-slate font-semibold text-sm hover:bg-gray-50 transition-colors cursor-pointer"
+                                className="w-1/3 py-3 rounded-xl border border-secondary-gray text-dark-slate font-semibold text-xs sm:text-sm hover:bg-gray-50 transition-colors cursor-pointer"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="button"
-                                disabled={isSubmittingOrder}
-                                onClick={handleCompleteOrder}
-                                className="w-2/3 py-3 rounded-xl bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold text-sm transition-colors cursor-pointer shadow-sm border-none disabled:opacity-50"
+                                onClick={handleLaunchSandboxGateway}
+                                className="w-2/3 py-3 rounded-xl bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold text-xs sm:text-sm transition-colors cursor-pointer shadow-sm border-none flex items-center justify-center gap-2"
                             >
-                                {isSubmittingOrder
-                                    ? "Processing Order..."
-                                    : `Pay $${(checkoutProduct.numericPrice * orderQuantity).toFixed(2)} & Confirm Order`
-                                }
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                </svg>
+                                <span>Proceed to Sandbox Payment (${(checkoutProduct.numericPrice * orderQuantity).toFixed(2)})</span>
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {isSandboxModalOpen && checkoutProduct && (
+                <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className="bg-card-white rounded-2xl shadow-2xl border border-[#E2E8F0] w-full max-w-[560px] overflow-hidden text-left">
+                        <div className="bg-[#0F2747] text-white p-5 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-[#F59E0B]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-extrabold text-base text-white tracking-wide">SANDBOX PAYMENT GATEWAY</h3>
+                                        <span className="bg-[#059669] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">TEST MODE</span>
+                                    </div>
+                                    <p className="text-xs text-slate-300">SSL 256-Bit Encrypted Sandbox Transaction</p>
+                                </div>
+                            </div>
+                            {sandboxStep !== "processing" && (
+                                <button
+                                    onClick={() => setIsSandboxModalOpen(false)}
+                                    className="text-slate-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="p-6">
+                            <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-4 rounded-xl mb-5">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                        <span className="text-[11px] font-bold text-secondary-gray uppercase block">Merchant Reference</span>
+                                        <span className="text-xs font-bold text-dark-slate block">Oil Supply & Delivery Global Trading Ltd.</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-[11px] font-bold text-secondary-gray uppercase block">Amount Due</span>
+                                        <span className="text-lg font-black text-primary block">
+                                            ${(checkoutProduct.numericPrice * orderQuantity).toFixed(2)} USD
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="pt-2 border-t border-[#E2E8F0] flex justify-between text-xs text-secondary-gray">
+                                    <span>Product: <strong className="text-dark-slate">{checkoutProduct.name}</strong> (Qty: {orderQuantity})</span>
+                                    <span className="font-mono text-primary font-semibold">{sandboxTxnId}</span>
+                                </div>
+                            </div>
+
+                            {sandboxStep === "gateway" && (
+                                <div className="space-y-4">
+                                    <div className="p-4 rounded-xl border border-blue-100 bg-blue-50/50 space-y-2 text-xs">
+                                        <div className="flex justify-between">
+                                            <span className="text-secondary-gray">Payment Method:</span>
+                                            <span className="font-bold text-dark-slate">
+                                                {paymentMethod === "card"
+                                                    ? `${cardType} (${cardNumber.slice(-4)})`
+                                                    : paymentMethod === "mobile"
+                                                        ? `${mobileOperator} (${mobileWalletNumber})`
+                                                        : `${bankName} (${bankAccountNumber})`}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-secondary-gray">Sourcing Destination:</span>
+                                            <span className="font-semibold text-dark-slate">{deliveryAddress || "Operational Depot"}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-secondary-gray">Auth Code:</span>
+                                            <span className="font-mono text-dark-slate">{sandboxAuthCode}</span>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-dark-slate mb-1">
+                                            Sandbox Verification OTP (2-Factor Simulation)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={sandboxOtp}
+                                            onChange={(e) => setSandboxOtp(e.target.value)}
+                                            placeholder="Enter 123456"
+                                            className="w-full p-2.5 border border-secondary-gray rounded-xl bg-white text-dark-slate text-sm font-mono text-center tracking-widest outline-none focus:border-primary"
+                                        />
+                                        <span className="text-[11px] text-secondary-gray mt-1 block">
+                                            Default Test OTP: <strong>123456</strong> (Instant Sandbox Verification)
+                                        </span>
+                                    </div>
+
+                                    <div className="space-y-2 pt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleExecuteSandboxAuthorization(false)}
+                                            className="w-full py-3 rounded-xl bg-primary hover:bg-primary/95 text-white font-bold text-sm transition-colors cursor-pointer shadow-sm border-none flex items-center justify-center gap-2"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            <span>Authorize & Complete Sandbox Payment</span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => handleExecuteSandboxAuthorization(true)}
+                                            className="w-full py-2.5 rounded-xl border border-error-red/40 text-error-red hover:bg-red-50 font-semibold text-xs transition-colors cursor-pointer"
+                                        >
+                                            Simulate Decline (Test Insufficient Balance / Error Handling)
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsSandboxModalOpen(false)}
+                                            className="w-full py-2 text-xs text-secondary-gray hover:text-dark-slate font-medium cursor-pointer"
+                                        >
+                                            Cancel and Return to Order
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {sandboxStep === "processing" && (
+                                <div className="py-8 text-center space-y-4">
+                                    <span className="loading loading-spinner loading-lg text-primary"></span>
+                                    <h4 className="text-base font-bold text-dark-slate">Authorizing Sandbox Transaction...</h4>
+                                    <div className="bg-[#0F172A] text-emerald-400 p-4 rounded-xl text-left font-mono text-xs max-h-48 overflow-y-auto space-y-1.5 shadow-inner">
+                                        {sandboxProcessingLogs.map((log, i) => (
+                                            <p key={i} className="flex items-center gap-2">
+                                                <span className="text-slate-500">{`>`}</span>
+                                                <span>{log}</span>
+                                            </p>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {sandboxStep === "success" && (
+                                <div className="text-center py-2 space-y-4">
+                                    <div className="w-16 h-16 rounded-full bg-green-100 border-2 border-success-green flex items-center justify-center mx-auto text-success-green">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </div>
+
+                                    <div>
+                                        <h4 className="text-lg font-black text-dark-slate">Sandbox Payment Authorized</h4>
+                                        <p className="text-xs text-secondary-gray mt-0.5">
+                                            Transaction validated via backend service and order confirmed.
+                                        </p>
+                                    </div>
+
+                                    <div className="bg-[#FAFBFD] border border-[#E2E8F0] p-4 rounded-xl text-left text-xs space-y-2 font-mono">
+                                        <div className="flex justify-between border-b border-[#E2E8F0] pb-1.5">
+                                            <span className="text-secondary-gray font-sans">Transaction ID:</span>
+                                            <span className="font-bold text-primary">{sandboxTxnId}</span>
+                                        </div>
+                                        <div className="flex justify-between border-b border-[#E2E8F0] pb-1.5">
+                                            <span className="text-secondary-gray font-sans">Auth Code:</span>
+                                            <span className="font-bold text-dark-slate">{sandboxAuthCode}</span>
+                                        </div>
+                                        <div className="flex justify-between border-b border-[#E2E8F0] pb-1.5">
+                                            <span className="text-secondary-gray font-sans">Amount Paid:</span>
+                                            <span className="font-bold text-success-green">${(checkoutProduct.numericPrice * orderQuantity).toFixed(2)} USD</span>
+                                        </div>
+                                        <div className="flex justify-between border-b border-[#E2E8F0] pb-1.5">
+                                            <span className="text-secondary-gray font-sans">Ledger Record:</span>
+                                            <span className="font-bold text-dark-slate">Payment #{createdPaymentRecord?.id || 1} (POST /payment/process)</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-secondary-gray font-sans">Order ID:</span>
+                                            <span className="font-bold text-dark-slate">#{createdOrderId || "Confirmed"}</span>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={handleFinishSandboxPayment}
+                                        className="w-full py-3.5 rounded-xl bg-success-green hover:bg-emerald-700 text-white font-bold text-sm transition-colors cursor-pointer shadow-md border-none"
+                                    >
+                                        View Order in Live Tracking
+                                    </button>
+                                </div>
+                            )}
+
+                            {sandboxStep === "declined" && (
+                                <div className="text-center py-4 space-y-4">
+                                    <div className="w-14 h-14 rounded-full bg-red-100 border-2 border-error-red flex items-center justify-center mx-auto text-error-red">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </div>
+
+                                    <div>
+                                        <h4 className="text-base font-bold text-dark-slate">Payment Declined by Sandbox Issuer</h4>
+                                        <p className="text-xs text-secondary-gray mt-1">
+                                            Simulation completed: Test card issuer returned authorization failure code 51.
+                                        </p>
+                                    </div>
+
+                                    <div className="flex gap-2 pt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setSandboxStep("gateway")}
+                                            className="flex-1 py-2.5 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary/95 transition-colors cursor-pointer"
+                                        >
+                                            Retry with Test Card
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsSandboxModalOpen(false)}
+                                            className="py-2.5 px-4 rounded-xl border border-secondary-gray text-dark-slate font-semibold text-xs hover:bg-gray-50 transition-colors cursor-pointer"
+                                        >
+                                            Close
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

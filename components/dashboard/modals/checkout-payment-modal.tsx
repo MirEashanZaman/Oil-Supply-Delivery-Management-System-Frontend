@@ -120,7 +120,7 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
                     </button>
                 </div>
 
-                {/* If Multi-Product Checkout: Itemized Breakdown */}
+                {}
                 {isMultiCheckout ? (
                     <div className="bg-[#FAFBFD] p-4 rounded-xl border border-[#E2E8F0] mb-5 space-y-3">
                         <div className="flex justify-between items-center border-b border-[#E2E8F0] pb-2">
@@ -166,7 +166,7 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
                         </div>
                     </div>
                 ) : (
-                    /* Single Product Checkout */
+                    
                     checkoutProduct && (
                         <>
                             <div className="bg-[#FAFBFD] p-4 rounded-xl border border-[#E2E8F0] mb-5 flex gap-4 items-center">

@@ -69,11 +69,11 @@ export const SandboxGatewayModal: React.FC<SandboxGatewayModalProps> = ({
     const totalDue = isMultiCheckout
         ? cartTotalAmount
         : checkoutProduct
-        ? checkoutProduct.numericPrice * orderQuantity
-        : 0;
+            ? checkoutProduct.numericPrice * orderQuantity
+            : 0;
 
     return (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-[60] animate-fadeIn">
+        <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-[60] animate-fadeIn">
             <div className="bg-card-white rounded-2xl shadow-2xl border border-[#E2E8F0] w-full max-w-[580px] overflow-hidden text-left">
                 <div className="bg-[#0F2747] text-white p-5 flex items-center justify-between">
                     <div className="flex items-center gap-3">

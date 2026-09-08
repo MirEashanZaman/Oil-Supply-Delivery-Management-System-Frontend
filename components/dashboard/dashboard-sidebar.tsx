@@ -35,7 +35,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   return (
     <aside className="w-full lg:w-72 shrink-0 bg-slate-900 border-b lg:border-b-0 lg:border-r border-slate-800 p-4 lg:p-6 flex flex-col justify-between">
       <div>
-        {/* User Card */}
+        {}
         <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-slate-850/80 border border-slate-800/80 mb-6">
           <div className="relative">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center font-black text-slate-950 text-xl shadow-lg shadow-amber-500/20">
@@ -62,7 +62,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
           </div>
         </div>
 
-        {/* Nav Tabs */}
+        {}
         <nav className="space-y-1.5">
           <button
             onClick={() => setActiveTab("overview")}
@@ -73,7 +73,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             }`}
           >
             <div className="flex items-center gap-3">
-              <span>📊</span>
+              <span></span>
               <span>Overview</span>
             </div>
           </button>
@@ -87,7 +87,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             }`}
           >
             <div className="flex items-center gap-3">
-              <span>⛽</span>
+              <span></span>
               <span>{isCustomer ? "Order Petroleum" : "Products"}</span>
             </div>
             {productsCount > 0 && (
@@ -112,7 +112,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             }`}
           >
             <div className="flex items-center gap-3">
-              <span>📦</span>
+              <span></span>
               <span>
                 {isCustomer
                   ? "My Orders"
@@ -172,7 +172,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             }`}
           >
             <div className="flex items-center gap-3">
-              <span>🏭</span>
+              <span></span>
               <span>
                 {isSupplier
                   ? "Refinery Inventory"
@@ -194,7 +194,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
               }`}
             >
               <div className="flex items-center gap-3">
-                <span>🛡️</span>
+                <span>️</span>
                 <span>User Administration</span>
               </div>
               {usersCount > 0 && (
@@ -220,7 +220,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             }`}
           >
             <div className="flex items-center gap-3">
-              <span>💬</span>
+              <span></span>
               <span>Live Support Chat</span>
             </div>
           </button>
@@ -234,20 +234,20 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             }`}
           >
             <div className="flex items-center gap-3">
-              <span>👤</span>
+              <span></span>
               <span>My Profile</span>
             </div>
           </button>
         </nav>
       </div>
 
-      {/* Logout button */}
+      {}
       <div className="pt-6 border-t border-slate-800 mt-6">
         <button
           onClick={onLogout}
           className="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl text-sm font-semibold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition"
         >
-          <span>🚪</span>
+          <span></span>
           <span>Sign Out</span>
         </button>
       </div>

@@ -21,7 +21,7 @@ export default function ContactInfo() {
         if (!pusher) return;
 
         const channel = pusher.subscribe("oil-supply-chat");
-        
+
         channel.bind("pusher:subscription_succeeded", () => {
             setIsPusherConnected(true);
         });
@@ -93,7 +93,7 @@ export default function ContactInfo() {
                                         Support & Inquiries
                                     </span>
                                     <span className="badge bg-[#16A34A]/15 text-[#16A34A] font-bold text-xs border-none px-2.5 py-1 flex items-center gap-1.5">
-                                        <span className={`w-2 h-2 rounded-full ${isPusherConnected ? "bg-[#16A34A] animate-pulse" : "bg-[#64748B]"}`}></span>
+                                        <span className={`w-2 h-2 rounded-full ${isPusherConnected ? "bg-[#16A34A]" : "bg-[#64748B]"}`}></span>
                                         PusherJS Active
                                     </span>
                                 </div>

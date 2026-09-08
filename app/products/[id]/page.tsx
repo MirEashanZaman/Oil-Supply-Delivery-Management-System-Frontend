@@ -87,7 +87,6 @@ export default function ProductDetails({
     const resolvedParams = use(params);
     const productId = resolvedParams.id;
     const [product, setProduct] = useState<Product | null>(null);
-    const [loading, setLoading] = useState(true);
 
     const [isInquireModalOpen, setIsInquireModalOpen] = useState(false);
     const [inquiryName, setInquiryName] = useState("");
@@ -160,8 +159,6 @@ export default function ProductDetails({
                 }
             } catch (err) {
                 console.warn("Error fetching product details:", err);
-            } finally {
-                setLoading(false);
             }
         };
         fetchProduct();
@@ -184,14 +181,7 @@ export default function ProductDetails({
                     </ul>
                 </div>
 
-                {loading ? (
-                    <div className="card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-12 text-center">
-                        <div className="flex flex-col items-center justify-center gap-3">
-                            <span className="loading loading-spinner loading-lg text-[#0F2747]"></span>
-                            <span className="text-[#64748B] font-medium text-sm">Loading product details...</span>
-                        </div>
-                    </div>
-                ) : product ? (
+                {product ? (
                     <div className="card lg:card-side bg-[#FFFFFF] shadow-md border border-[#E2E8F0] rounded-2xl overflow-hidden">
                         <figure className="lg:w-1/2 h-72 lg:h-auto bg-[#F5F7FA] relative">
                             <img

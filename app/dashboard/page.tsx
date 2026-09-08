@@ -106,7 +106,7 @@ export default function Dashboard() {
     const [sandboxOtp, setSandboxOtp] = useState<string>("123456");
     const [sandboxTxnId, setSandboxTxnId] = useState<string>("");
     const [sandboxAuthCode, setSandboxAuthCode] = useState<string>("");
-    const [sandboxProcessingLogs, setSandboxProcessingLogs] = useState<string[]>([]);
+    const [sandboxLogs, setSandboxProcessingLogs] = useState<string[]>([]);
     const [createdPaymentRecord, setCreatedPaymentRecord] = useState<any>(null);
     const [createdOrderId, setCreatedOrderId] = useState<number | null>(null);
 
@@ -545,9 +545,23 @@ export default function Dashboard() {
 
     const handleUpdateOrderStatus = async (orderId: number, status: string) => {
         if (!user) return;
-        const r = getRolePath(user.title);
+        const role = getRolePath(user.title || user.role);
+        const normalizedStatus = status.trim().toLowerCase();
+        const allowedStatuses = role === "customer"
+            ? ["delivered"]
+            : ["pending", "confirmed", "out for delivery", "rejected"];
+
+        if (!allowedStatuses.includes(normalizedStatus)) {
+            alert(role === "customer"
+                ? "Customers can only mark an order as delivered."
+                : "Suppliers and dealers can update pending, confirmed, out for delivery, or rejected orders."
+            );
+            return;
+        }
+
+        const r = getRolePath(user.title || user.role);
         try {
-            const res = await axios.put(`http://localhost:8000/${r}/confirmorder/${orderId}`, { status: status.toLowerCase() }, { withCredentials: true, validateStatus: (status) => status < 500 });
+            const res = await axios.put(`http://localhost:8000/${r}/confirmorder/${orderId}`, { status: normalizedStatus }, { withCredentials: true, validateStatus: (status) => status < 500 });
             if (res.status === 200 || res.status === 204) {
                 alert(`Order marked as ${status} successfully!`);
                 fetchOrders(user.id || 1, user.title);
@@ -596,6 +610,11 @@ export default function Dashboard() {
     const handleSubmitEditOrder = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingOrder || !user) return;
+
+        if (editOrderForm.status.toLowerCase() === "delivered" && getRolePath(user.title || user.role) !== "customer") {
+            alert("Only customers can mark an order as delivered.");
+            return;
+        }
 
         const customerId = editingOrder.customerId || user.id;
         if (!customerId) {
@@ -1076,7 +1095,7 @@ export default function Dashboard() {
                 sandboxAuthCode={sandboxAuthCode}
                 sandboxOtp={sandboxOtp}
                 setSandboxOtp={setSandboxOtp}
-                sandboxProcessingLogs={sandboxProcessingLogs}
+                sandboxProcessingLogs={sandboxLogs}
                 createdPaymentRecord={createdPaymentRecord}
                 createdOrderId={createdOrderId}
                 onExecuteAuthorization={handleExecuteSandboxAuthorization}

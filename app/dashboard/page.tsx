@@ -1499,7 +1499,14 @@ export default function Dashboard() {
                     }, 1000);
                 } else {
                     setSandboxStep("declined");
-                    alert(`Failed to create multi-product orders. Reason: ${lastErrorMsg || "Backend service returned an error"}`);
+                    const isAuthError = lastErrorMsg.toLowerCase().includes("unauthorized") || lastErrorMsg.includes("401");
+                    if (isAuthError) {
+                        if (confirm("Your login session has expired on the backend server. Would you like to sign in again? (Your delivery cart items will remain saved)")) {
+                            router.push("/login");
+                        }
+                    } else {
+                        alert(`Failed to create multi-product orders. Reason: ${lastErrorMsg || "Backend service returned an error"}`);
+                    }
                 }
                 return;
             }
@@ -1563,7 +1570,14 @@ export default function Dashboard() {
                 }, 1000);
             } else {
                 setSandboxStep("declined");
-                alert(orderRes.data?.message || "Order placement failed.");
+                const msg = orderRes.data?.message || "Order placement failed.";
+                if (String(msg).toLowerCase().includes("unauthorized") || orderRes.status === 401) {
+                    if (confirm("Your login session has expired on the backend server. Would you like to sign in again?")) {
+                        router.push("/login");
+                    }
+                } else {
+                    alert(msg);
+                }
             }
         } catch (err: any) {
             console.warn("Sandbox payment/order error:", err);

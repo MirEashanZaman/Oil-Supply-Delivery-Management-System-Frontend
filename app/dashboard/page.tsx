@@ -9,7 +9,6 @@ import UberMapTracker from "@/components/uber-map-tracker";
 import { getPusherClient, ChatMessage } from "@/lib/pusher";
 import { checkEmailUniqueness } from "@/lib/email-checker";
 
-// Modular Dashboard Components
 import {
     UserData,
     Order,
@@ -25,7 +24,6 @@ import {
     getRoleBadgeColor,
 } from "@/components/dashboard/utils";
 
-// Modular Modals
 import { CartDrawerModal } from "@/components/dashboard/modals/cart-drawer-modal";
 import { CheckoutPaymentModal } from "@/components/dashboard/modals/checkout-payment-modal";
 import { SandboxGatewayModal } from "@/components/dashboard/modals/sandbox-gateway-modal";
@@ -35,7 +33,6 @@ import { EditProductModal } from "@/components/dashboard/modals/edit-product-mod
 import { EditUserModal } from "@/components/dashboard/modals/edit-user-modal";
 import { EditOrderModal } from "@/components/dashboard/modals/edit-order-modal";
 
-// Modular Tabs
 import { OverviewTab } from "@/components/dashboard/tabs/overview-tab";
 import { ProductsTab } from "@/components/dashboard/tabs/products-tab";
 import { OrdersTab } from "@/components/dashboard/tabs/orders-tab";
@@ -64,7 +61,6 @@ export default function Dashboard() {
     const [availableSuppliers, setAvailableSuppliers] = useState<any[]>([]);
     const [availableDealers, setAvailableDealers] = useState<any[]>([]);
 
-    // Modals state
     const [editingUser, setEditingUser] = useState<SystemUser | null>(null);
     const [editUserForm, setEditUserForm] = useState({ name: "", email: "", role: "Customer", phone: "", address: "" });
     const [isEditingUserSubmitting, setIsEditingUserSubmitting] = useState(false);
@@ -89,7 +85,6 @@ export default function Dashboard() {
 
     const [isCreatingUser, setIsCreatingUser] = useState(false);
 
-    // Checkout & Payment State
     const [checkoutProduct, setCheckoutProduct] = useState<Product | null>(null);
     const [sourcingChoice, setSourcingChoice] = useState<"supplier" | "dealer">("supplier");
     const [selectedPartyId, setSelectedPartyId] = useState<number | "">("");
@@ -106,7 +101,6 @@ export default function Dashboard() {
     const [bankName, setBankName] = useState<string>("Eastern Bank Limited");
     const [bankAccountNumber, setBankAccountNumber] = useState<string>("EBL-10029384");
 
-    // Sandbox Gateway State
     const [isSandboxModalOpen, setIsSandboxModalOpen] = useState<boolean>(false);
     const [sandboxStep, setSandboxStep] = useState<"gateway" | "processing" | "success" | "declined">("gateway");
     const [sandboxOtp, setSandboxOtp] = useState<string>("123456");
@@ -116,7 +110,6 @@ export default function Dashboard() {
     const [createdPaymentRecord, setCreatedPaymentRecord] = useState<any>(null);
     const [createdOrderId, setCreatedOrderId] = useState<number | null>(null);
 
-    // Cart state
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [isCartModalOpen, setIsCartModalOpen] = useState<boolean>(false);
     const [cartToast, setCartToast] = useState<string | null>(null);
@@ -156,7 +149,7 @@ export default function Dashboard() {
         }
 
         updateCartState(updated);
-        setCartToast(`✓ Added ${product.name} (${quantity} unit${quantity > 1 ? "s" : ""}) to delivery cart!`);
+        setCartToast(` Added ${product.name} (${quantity} unit${quantity > 1 ? "s" : ""}) to delivery cart!`);
         setTimeout(() => setCartToast(null), 3000);
     };
 
@@ -472,7 +465,6 @@ export default function Dashboard() {
                 return;
             }
 
-            // Single checkout
             const orderPayload: any = {
                 quantity: orderQuantity,
                 address: destination,
@@ -656,9 +648,9 @@ export default function Dashboard() {
             <MyHeader name="Dashboard" message="Oil Supply & Delivery Operations Portal" />
             <MyNavigation />
 
-            {/* Main Content Area */}
+            {}
             <div className="flex-1 flex flex-col items-center p-4 sm:p-6 w-full">
-                {/* Profile & Navigation Card */}
+                {}
                 <div className="w-full max-w-[1200px] card bg-[#FFFFFF] border border-[#E2E8F0] shadow-sm rounded-2xl p-6 mb-8 text-left">
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-[#E2E8F0] pb-6">
                         <div className="flex items-center gap-4">
@@ -698,7 +690,7 @@ export default function Dashboard() {
                                     onClick={() => setIsCartModalOpen(true)}
                                     className="btn btn-accent btn-sm rounded-xl font-bold flex items-center gap-2"
                                 >
-                                    <span>🛒 Delivery Cart</span>
+                                    <span> Delivery Cart</span>
                                     {cartTotalItems > 0 && (
                                         <span className="badge badge-sm bg-[#0F2747] text-white border-none font-bold">
                                             {cartTotalItems}
@@ -716,7 +708,7 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    {/* Horizontal Navigation Tabs */}
+                    {}
                     <div className="flex items-center gap-2 overflow-x-auto pt-4 no-scrollbar">
                         <button
                             type="button"
@@ -727,7 +719,7 @@ export default function Dashboard() {
                                     : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
                             }`}
                         >
-                            📊 Overview
+                             Overview
                         </button>
                         <button
                             type="button"
@@ -738,7 +730,7 @@ export default function Dashboard() {
                                     : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
                             }`}
                         >
-                            ⛽ Products ({products.length})
+                             Products ({products.length})
                         </button>
                         <button
                             type="button"
@@ -749,7 +741,7 @@ export default function Dashboard() {
                                     : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
                             }`}
                         >
-                            📦 Orders ({orders.length})
+                             Orders ({orders.length})
                         </button>
                         <button
                             type="button"
@@ -760,7 +752,7 @@ export default function Dashboard() {
                                     : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
                             }`}
                         >
-                            🛰️ Live Tracking
+                            ️ Live Tracking
                         </button>
                         {(user.role === "Dealer" || user.title === "Dealer" || user.role === "Supplier" || user.title === "Supplier") && (
                             <button
@@ -772,7 +764,7 @@ export default function Dashboard() {
                                         : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
                                 }`}
                             >
-                                🏭 Stock Reserve
+                                 Stock Reserve
                             </button>
                         )}
                         {(user.role === "Admin" || user.title === "Admin") && (
@@ -785,7 +777,7 @@ export default function Dashboard() {
                                         : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
                                 }`}
                             >
-                                🛡️ Admin Monitoring
+                                ️ Admin Monitoring
                             </button>
                         )}
                         <button
@@ -797,7 +789,7 @@ export default function Dashboard() {
                                     : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
                             }`}
                         >
-                            💬 Realtime Chat
+                             Realtime Chat
                         </button>
                         <button
                             type="button"
@@ -808,12 +800,12 @@ export default function Dashboard() {
                                     : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
                             }`}
                         >
-                            👤 Profile
+                             Profile
                         </button>
                     </div>
                 </div>
 
-                {/* Tab Content Display */}
+                {}
                 <div className="w-full max-w-[1200px] mb-12">
                     {activeTab === "overview" && (
                         <OverviewTab
@@ -904,7 +896,7 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* Modular Modals */}
+            {}
             <CartDrawerModal
                 isOpen={isCartModalOpen}
                 onClose={() => setIsCartModalOpen(false)}

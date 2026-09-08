@@ -230,7 +230,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       </span>
                     </td>
                     <td className="p-3 text-right">
-                      {order.status !== "Delivered" && order.status !== "Cancelled" && order.status !== "Rejected" && onOpenLiveTrack ? (
+                      {!(["delivered", "completed", "cancelled", "rejected"].includes((order.status || "").toLowerCase())) && onOpenLiveTrack ? (
                         <button
                           type="button"
                           onClick={() => onOpenLiveTrack(order)}

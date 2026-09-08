@@ -55,10 +55,8 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
 
   return (
     <div className="w-full text-left animate-fadeIn max-w-4xl mx-auto space-y-6">
-      {/* Profile Overview Card with Photo / Avatar */}
       <div className="card bg-card-white border border-[#E2E8F0] shadow-sm rounded-2xl p-6">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-          {/* Avatar / Photo Display */}
           <div className="relative group">
             {photoPreview ? (
               <img
@@ -94,43 +92,23 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
             </div>
             <p className="text-sm font-medium text-secondary-gray">{userData?.email}</p>
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 pt-1 text-xs text-secondary-gray">
-              <span>📍 {userData?.address || "Address not registered"}</span>
-              <span>📞 {userData?.phoneNumber || userData?.phone || "Phone not registered"}</span>
+              <span>{userData?.address || "Address not registered"}</span>
+              <span>{userData?.phoneNumber || userData?.phone || "Phone not registered"}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Edit Profile Form */}
       <div className="card bg-card-white border border-[#E2E8F0] shadow-sm rounded-2xl p-6">
         <h3 className="text-lg font-bold text-[#0F2747] mb-4">Edit Profile & Account Details</h3>
 
         {saved && (
           <div className="p-3 mb-4 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold animate-fadeIn">
-            ✓ Profile details updated successfully!
+            Profile details updated successfully!
           </div>
         )}
 
         <form onSubmit={handleSave} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-[#1E293B] mb-1">
-              Profile Photo URL / Upload
-            </label>
-            <div className="flex items-center gap-3">
-              <input
-                type="text"
-                placeholder="https://example.com/my-photo.jpg or upload below"
-                value={photoPreview || ""}
-                onChange={(e) => setPhotoPreview(e.target.value)}
-                className="input input-bordered w-full text-sm bg-white text-[#1E293B] rounded-xl border-[#E2E8F0] focus:border-[#F59E0B]"
-              />
-              <label className="btn btn-outline btn-sm rounded-xl font-bold border-[#E2E8F0] text-[#0F2747] hover:bg-slate-50 cursor-pointer whitespace-nowrap">
-                Browse
-                <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
-              </label>
-            </div>
-          </div>
-
           <div>
             <label className="block text-xs font-bold text-[#1E293B] mb-1">Username / Legal Name</label>
             <input

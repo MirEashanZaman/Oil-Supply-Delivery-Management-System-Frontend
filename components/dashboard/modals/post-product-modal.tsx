@@ -37,12 +37,12 @@ export const PostProductModal: React.FC<PostProductModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-850 border border-slate-700 w-full max-w-lg rounded-2xl shadow-2xl p-6 relative">
+      <div className="bg-[#0F172A] border border-slate-700 w-full max-w-lg rounded-2xl shadow-2xl p-6 relative">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-slate-400 hover:text-white"
         >
-          
+
         </button>
         <h3 className="text-xl font-bold text-white mb-4">Post New Product</h3>
         <form onSubmit={onSubmit} className="space-y-4">

@@ -604,26 +604,39 @@ export default function Dashboard() {
         const role = getRolePath(user.title || user.role);
         const normalizedStatus = status.trim().toLowerCase();
         const allowedStatuses = role === "customer"
-            ? ["delivered"]
-            : ["pending", "confirmed", "processing", "out for delivery", "cancelled", "rejected"];
+            ? []
+            : ["pending", "confirmed", "processing", "out for delivery", "cancelled", "rejected", "delivered"];
 
         if (!allowedStatuses.includes(normalizedStatus)) {
-            alert(role === "customer"
-                ? "Customers can only mark an order as delivered."
-                : "Suppliers and dealers can update every order status except delivered."
-            );
+            alert("Customers cannot update order status. Suppliers and dealers can update order statuses.");
             return;
         }
 
-        const r = getRolePath(user.title || user.role);
         try {
-            const res = await axios.put(`http://localhost:8000/${r}/confirmorder/${orderId}`, { status: normalizedStatus }, { withCredentials: true, validateStatus: (status) => status < 500 });
+            const res = await axios.put(
+                `http://localhost:8000/${role}/confirmorder/${orderId}`,
+                { status: normalizedStatus },
+                { withCredentials: true, validateStatus: (status) => status < 500 }
+            );
             if (res.status === 200 || res.status === 204) {
-                alert(`Order marked as ${status} successfully!`);
-                fetchOrders(user.id || 1, user.title);
+                const nextStatus = normalizedStatus === "delivered" ? "Delivered" : status;
+                setOrders((currentOrders) => currentOrders.map((order) => (
+                    order.id === orderId ? { ...order, status: nextStatus } : order
+                )));
+                setUberTrackingOrder((currentOrder) => (
+                    currentOrder?.id === orderId
+                        ? { ...currentOrder, status: nextStatus }
+                        : currentOrder
+                ));
+                alert(`Order marked as ${nextStatus} successfully!`);
+                if (role !== "customer") {
+                    fetchOrders(user.id || 1, user.title);
+                }
+            } else {
+                alert(res.data?.message || "The order status could not be updated.");
             }
         } catch (err) {
-            alert("Failed to update status.");
+            alert("Failed to update order status. Please try again.");
         }
     };
 
@@ -1003,7 +1016,10 @@ export default function Dashboard() {
 
                     {activeTab === "tracking" && (
                         <TrackingTab
-                            selectedTrackingOrder={uberTrackingOrder || orders[0] || null}
+                            selectedTrackingOrder={uberTrackingOrder || orders.find((order) => {
+                                const status = (order.status || "").toLowerCase();
+                                return status !== "delivered" && status !== "completed" && status !== "cancelled" && status !== "rejected";
+                            }) || null}
                             orders={orders}
                             onSelectOrder={(ord) => setUberTrackingOrder(ord)}
                             userRole={user.title || user.role}

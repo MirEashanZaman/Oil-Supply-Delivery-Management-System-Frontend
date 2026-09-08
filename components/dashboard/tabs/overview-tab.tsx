@@ -51,14 +51,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   return (
     <div className="space-y-6 text-left">
-      {/* Metrics Row */}
+      {}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card bg-card-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm hover:border-[#F59E0B] transition">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-secondary-gray">
               {isCustomer ? "Total Purchases" : "Gross Volume"}
             </span>
-            <span className="text-xl">💰</span>
+            <span className="text-xl"></span>
           </div>
           <div className="text-2xl font-black text-[#0F2747]">
             ${totalSpentOrRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -71,7 +71,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <span className="text-xs font-bold uppercase tracking-wider text-secondary-gray">
               Total Orders
             </span>
-            <span className="text-xl">📦</span>
+            <span className="text-xl"></span>
           </div>
           <div className="text-2xl font-black text-[#0F2747]">{orders.length}</div>
           <div className="text-xs text-secondary-gray mt-1">Consignments recorded</div>
@@ -82,7 +82,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <span className="text-xs font-bold uppercase tracking-wider text-secondary-gray">
               Active In-Transit
             </span>
-            <span className="text-xl">🚚</span>
+            <span className="text-xl"></span>
           </div>
           <div className="text-2xl font-black text-emerald-600">
             {activeDeliveries.length}
@@ -97,7 +97,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <span className="text-xs font-bold uppercase tracking-wider text-secondary-gray">
               Catalog Stock
             </span>
-            <span className="text-xl">⛽</span>
+            <span className="text-xl"></span>
           </div>
           <div className="text-2xl font-black text-[#F59E0B]">
             {products.length} Products
@@ -106,7 +106,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </div>
       </div>
 
-      {/* Quick Action Banner */}
+      {}
       <div className="p-6 rounded-2xl bg-[#0F2747] text-white border border-blue-900 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h3 className="text-lg font-bold text-white mb-1">
@@ -144,7 +144,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   onClick={onOpenCart}
                   className="btn bg-white/10 hover:bg-white/20 text-white border border-white/20 btn-sm text-xs font-bold rounded-xl"
                 >
-                  Open Delivery Cart 🛒
+                  Open Delivery Cart 
                 </button>
               )}
             </>
@@ -175,12 +175,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             onClick={() => setActiveTab("tracking")}
             className="btn bg-white/10 hover:bg-white/20 text-white border border-white/20 btn-sm text-xs font-bold rounded-xl"
           >
-            Live GPS Tracking 🛰️
+            Live GPS Tracking ️
           </button>
         </div>
       </div>
 
-      {/* Active Orders & Recent Activity */}
+      {}
       <div className="card bg-card-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -198,7 +198,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
         {orders.length === 0 ? (
           <div className="text-center py-10 bg-slate-50 rounded-xl border border-slate-200">
-            <span className="text-3xl mb-2 block">📦</span>
+            <span className="text-3xl mb-2 block"></span>
             <p className="text-sm font-semibold text-dark-slate">No active orders found</p>
             <p className="text-xs text-secondary-gray mt-1">
               {isCustomer ? "Order petroleum products from our catalog to get started." : "No consignments registered yet."}
@@ -236,7 +236,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                           onClick={() => onOpenLiveTrack(order)}
                           className="px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 rounded-lg font-bold text-[11px] transition"
                         >
-                          🛰️ Track Live
+                          ️ Track Live
                         </button>
                       ) : (
                         <span className="text-[11px] text-secondary-gray font-medium">Completed</span>

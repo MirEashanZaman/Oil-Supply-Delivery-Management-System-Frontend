@@ -267,11 +267,15 @@ export default function Dashboard() {
             alert("Please enter a valid product name.");
             return;
         }
-        if (!newProductForm.price || Number(newProductForm.price) <= 0) {
+
+        const parsedPrice = Number(newProductForm.price);
+        if (!newProductForm.price.trim() || !Number.isFinite(parsedPrice) || parsedPrice <= 0) {
             alert("Please enter a valid price greater than $0.");
             return;
         }
-        if (!newProductForm.stock || Number(newProductForm.stock) <= 0) {
+
+        const parsedStock = Number(newProductForm.stock);
+        if (!newProductForm.stock.trim() || !Number.isFinite(parsedStock) || parsedStock <= 0) {
             alert("Please enter a valid stock quantity greater than 0.");
             return;
         }

@@ -87,7 +87,7 @@ export const AdminMonitoringTab: React.FC<AdminMonitoringTabProps> = ({
         </div>
         <button
           onClick={() => setIsCreateUserModalOpen(true)}
-          className="bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-green-700 transition-colors cursor-pointer shadow-sm self-start sm:self-auto"
+          className="bg-[#0F2747] text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-[#163860] transition-colors cursor-pointer shadow-sm self-start sm:self-auto"
         >
           + Create New User
         </button>
@@ -148,11 +148,10 @@ export const AdminMonitoringTab: React.FC<AdminMonitoringTabProps> = ({
               key={roleOption}
               type="button"
               onClick={() => setSelectedUserRole(roleOption)}
-              className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                selectedUserRole === roleOption
-                  ? "bg-[#0F2747] text-white shadow-sm"
-                  : "bg-[#F1F5F9] text-secondary-gray hover:bg-[#E2E8F0] hover:text-dark-slate"
-              }`}
+              className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${selectedUserRole === roleOption
+                ? "bg-[#0F2747] text-white shadow-sm"
+                : "bg-[#F1F5F9] text-secondary-gray hover:bg-[#E2E8F0] hover:text-dark-slate"
+                }`}
             >
               {roleOption}
             </button>
@@ -227,6 +226,119 @@ export const AdminMonitoringTab: React.FC<AdminMonitoringTabProps> = ({
           </table>
         </div>
       </div>
+
+      {isCreateUserModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#EAF0F6]/90">
+          <div className="w-full max-w-[1400px] overflow-hidden rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] shadow-sm">
+            <div className="flex items-center justify-between border-b border-[#E2E8F0] px-6 py-4">
+              <div>
+                <h2 className="text-4xl font-extrabold leading-none tracking-[-0.04em] text-[#0F2747]">Create New User</h2>
+                <p className="mt-2 text-sm text-[#64748B]">Add a new account for any role in the system.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCreateUserModalOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-xl text-[#64748B] transition hover:bg-[#E2E8F0] hover:text-[#0F2747] cursor-pointer"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSubmit} className="space-y-4 p-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="block text-sm sm:col-span-1">
+                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-[#475569]">Username</span>
+                  <input
+                    type="text"
+                    value={newUserForm.name}
+                    onChange={(e) => setNewUserForm((prev) => ({ ...prev, name: e.target.value }))}
+                    className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#1E293B] placeholder:text-[#64748B] transition focus:border-[#0F2747] focus:bg-white focus:outline-none"
+                    placeholder="Enter username"
+                    required
+                  />
+                </label>
+
+                <label className="block text-sm sm:col-span-1">
+                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-[#475569]">Role</span>
+                  <select
+                    value={newUserForm.role}
+                    onChange={(e) => setNewUserForm((prev) => ({ ...prev, role: e.target.value }))}
+                    className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#1E293B] transition focus:border-[#0F2747] focus:bg-white focus:outline-none"
+                  >
+                    <option>Customer</option>
+                    <option>Dealer</option>
+                    <option>Supplier</option>
+                    <option>Admin</option>
+                  </select>
+                </label>
+
+                <label className="block text-sm sm:col-span-2">
+                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-[#475569]">Email</span>
+                  <input
+                    type="email"
+                    value={newUserForm.email}
+                    onChange={(e) => setNewUserForm((prev) => ({ ...prev, email: e.target.value }))}
+                    className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#1E293B] placeholder:text-[#64748B] transition focus:border-[#0F2747] focus:bg-white focus:outline-none"
+                    placeholder="Enter email"
+                    required
+                  />
+                </label>
+
+                <label className="block text-sm sm:col-span-2">
+                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-[#475569]">Password</span>
+                  <input
+                    type="password"
+                    value={newUserForm.password}
+                    onChange={(e) => setNewUserForm((prev) => ({ ...prev, password: e.target.value }))}
+                    className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#1E293B] placeholder:text-[#64748B] transition focus:border-[#0F2747] focus:bg-white focus:outline-none"
+                    placeholder="Enter password"
+                    required
+                  />
+                </label>
+
+                <label className="block text-sm sm:col-span-2">
+                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-[#475569]">Phone Number</span>
+                  <input
+                    type="text"
+                    value={newUserForm.phone}
+                    onChange={(e) => setNewUserForm((prev) => ({ ...prev, phone: e.target.value }))}
+                    className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#1E293B] placeholder:text-[#64748B] transition focus:border-[#0F2747] focus:bg-white focus:outline-none"
+                    placeholder="Enter phone number"
+                  />
+                </label>
+
+                <label className="block text-sm sm:col-span-2">
+                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-[#475569]">Address</span>
+                  <textarea
+                    value={newUserForm.address}
+                    onChange={(e) => setNewUserForm((prev) => ({ ...prev, address: e.target.value }))}
+                    className="min-h-[88px] w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#1E293B] placeholder:text-[#64748B] transition focus:border-[#0F2747] focus:bg-white focus:outline-none"
+                    placeholder="Enter address"
+                    required
+                  />
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateUserModalOpen(false)}
+                  className="rounded-xl border border-[#CBD5E1] bg-white px-5 py-2.5 text-sm font-bold text-[#475569] transition hover:bg-[#F8FAFC] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingUser}
+                  className="rounded-xl bg-[#0F2747] px-6 py-2.5 text-sm font-bold text-white transition hover:bg-[#163860] disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                >
+                  {creatingUser ? "Creating..." : "Create User"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

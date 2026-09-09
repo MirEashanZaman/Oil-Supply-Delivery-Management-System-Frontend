@@ -272,7 +272,6 @@ export default function Registration() {
                                         <option value="Customer">Customer</option>
                                         <option value="Supplier">Supplier</option>
                                         <option value="Dealer">Dealer</option>
-                                        <option value="Admin">Admin</option>
                                     </select>
                                     {errors.title && (
                                         <span className="text-[#DC2626] text-xs font-medium mt-1">{errors.title}</span>

@@ -16,6 +16,7 @@ interface AdminMonitoringTabProps {
     role: string;
     phone: string;
     address: string;
+    photo: File | null;
   }) => void;
   creatingUser: boolean;
 }
@@ -41,10 +42,15 @@ export const AdminMonitoringTab: React.FC<AdminMonitoringTabProps> = ({
     role: "Customer",
     phone: "",
     address: "",
+    photo: null as File | null,
   });
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (newUserForm.role === "Admin" && !newUserForm.photo) {
+      alert("Please select a profile photo.");
+      return;
+    }
     onCreateUser(newUserForm);
     setNewUserForm({
       name: "",
@@ -53,6 +59,7 @@ export const AdminMonitoringTab: React.FC<AdminMonitoringTabProps> = ({
       role: "Customer",
       phone: "",
       address: "",
+      photo: null,
     });
     setIsCreateUserModalOpen(false);
   };
@@ -254,7 +261,7 @@ export const AdminMonitoringTab: React.FC<AdminMonitoringTabProps> = ({
                     onChange={(e) => setNewUserForm((prev) => ({ ...prev, name: e.target.value }))}
                     className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#1E293B] placeholder:text-[#64748B] transition focus:border-[#0F2747] focus:bg-white focus:outline-none"
                     placeholder="Enter username"
-                    required
+                    required={newUserForm.role === "Admin"}
                   />
                 </label>
 
@@ -292,6 +299,17 @@ export const AdminMonitoringTab: React.FC<AdminMonitoringTabProps> = ({
                     onChange={(e) => setNewUserForm((prev) => ({ ...prev, password: e.target.value }))}
                     className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#1E293B] placeholder:text-[#64748B] transition focus:border-[#0F2747] focus:bg-white focus:outline-none"
                     placeholder="Enter password"
+                    required
+                  />
+                </label>
+
+                <label className="block text-sm sm:col-span-2">
+                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-[#475569]">Profile Photo</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setNewUserForm((prev) => ({ ...prev, photo: e.target.files?.[0] || null }))}
+                    className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#1E293B] file:mr-3 file:rounded-lg file:border-0 file:bg-[#0F2747] file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white"
                     required
                   />
                 </label>

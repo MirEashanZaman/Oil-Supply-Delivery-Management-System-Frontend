@@ -877,20 +877,45 @@ export default function Dashboard() {
     const handleAdminCreateUser = async (newUser: any) => {
         setIsCreatingUser(true);
         try {
-            const res = await axios.post(`http://localhost:8000/admin/${newUser.role.toLowerCase()}`, {
-                userName: newUser.name,
-                email: newUser.email,
-                password: newUser.password,
-                phoneNumber: newUser.phone,
-                address: newUser.address,
-                title: newUser.role,
-            }, { withCredentials: true, validateStatus: (status) => status < 500 });
+            const role = newUser.role.toLowerCase();
+            const endpoint = role === "admin"
+                ? "http://localhost:8000/admin/auth/register"
+                : `http://localhost:8000/admin/${role}`;
+            const payload = role === "admin"
+                ? (() => {
+                    const formData = new FormData();
+                    formData.append("userName", newUser.name);
+                    formData.append("email", newUser.email);
+                    formData.append("password", newUser.password);
+                    formData.append("phoneNumber", newUser.phone);
+                    formData.append("address", newUser.address);
+                    formData.append("title", newUser.role);
+                    if (newUser.photo) formData.append("photo", newUser.photo);
+                    return formData;
+                })()
+                : {
+                    userName: newUser.name,
+                    email: newUser.email,
+                    password: newUser.password,
+                    phoneNumber: newUser.phone,
+                    address: newUser.address,
+                    title: newUser.role,
+                };
+            const res = await axios.post(endpoint, payload, { withCredentials: true, validateStatus: (status) => status < 500 });
             if (res.status === 200 || res.status === 201) {
                 alert(`User ${newUser.name} created!`);
                 fetchAllMergedUsers();
+            } else {
+                const message = Array.isArray(res.data?.message)
+                    ? res.data.message.join(", ")
+                    : res.data?.message || `Failed to create ${newUser.role.toLowerCase()} account (${res.status}).`;
+                alert(message);
             }
-        } catch (err) {
-            alert("Failed to create user.");
+        } catch (err: any) {
+            const message = Array.isArray(err.response?.data?.message)
+                ? err.response.data.message.join(", ")
+                : err.response?.data?.message || "Failed to create user.";
+            alert(message);
         } finally {
             setIsCreatingUser(false);
         }
@@ -1081,7 +1106,7 @@ export default function Dashboard() {
                                 : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
                                 }`}
                         >
-                            ️ Live Tracking
+                            Live Tracking
                         </button>
                         {(user.role === "Dealer" || user.title === "Dealer" || user.role === "Supplier" || user.title === "Supplier") && (
                             <button
@@ -1104,7 +1129,7 @@ export default function Dashboard() {
                                     : "btn-ghost text-secondary-gray hover:text-[#0F2747]"
                                     }`}
                             >
-                                ️ Admin Monitoring
+                                Admin Monitoring
                             </button>
                         )}
                         <button

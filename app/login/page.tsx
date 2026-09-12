@@ -230,7 +230,7 @@ export default function Login() {
                                     id="email"
                                     type="email"
                                     value={email}
-                                    placeholder="user@example.com"
+                                    placeholder="Enter your email"
                                     onChange={(e) => setEmail(e.target.value)}
                                     className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none transition rounded-xl ${errors.email ? "border-[#DC2626]" : ""}`}
                                 />
@@ -247,7 +247,7 @@ export default function Login() {
                                     id="password"
                                     type="password"
                                     value={password}
-                                    placeholder="Enter password"
+                                    placeholder="Enter your password"
                                     onChange={(e) => setPassword(e.target.value)}
                                     className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none transition rounded-xl ${errors.password ? "border-[#DC2626]" : ""}`}
                                 />

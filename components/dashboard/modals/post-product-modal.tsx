@@ -67,7 +67,7 @@ export const PostProductModal: React.FC<PostProductModalProps> = ({
                 setNewProduct((prev) => ({ ...prev, name: e.target.value }))
               }
               className="w-full bg-white border border-[#CBD5E1] rounded-[18px] px-4 py-3 text-base text-[#1E293B] placeholder:text-[#64748B] focus:outline-none focus:border-[#0F2747] shadow-sm"
-              placeholder="e.g. Premium Unleaded Octane-95"
+              placeholder="Enter product name"
               required
             />
           </div>
@@ -107,7 +107,7 @@ export const PostProductModal: React.FC<PostProductModalProps> = ({
                   setNewProduct((prev) => ({ ...prev, price: e.target.value }))
                 }
                 className="w-full bg-white border border-[#CBD5E1] rounded-[18px] px-4 py-3 text-base text-[#1E293B] placeholder:text-[#64748B] focus:outline-none focus:border-[#0F2747] shadow-sm"
-                placeholder="1.25"
+                placeholder="Enter product price"
                 required
               />
             </div>
@@ -124,7 +124,7 @@ export const PostProductModal: React.FC<PostProductModalProps> = ({
                   setNewProduct((prev) => ({ ...prev, stock: e.target.value }))
                 }
                 className="w-full bg-white border border-[#CBD5E1] rounded-[18px] px-4 py-3 text-base text-[#1E293B] placeholder:text-[#64748B] focus:outline-none focus:border-[#0F2747] shadow-sm"
-                placeholder="50000"
+                placeholder="Enter stock quantity"
                 required
               />
             </div>
@@ -143,7 +143,7 @@ export const PostProductModal: React.FC<PostProductModalProps> = ({
                 }))
               }
               className="w-full bg-white border border-[#CBD5E1] rounded-xl px-3 py-2.5 text-sm text-[#1E293B] placeholder:text-[#64748B] focus:outline-none focus:border-[#0F2747] resize-none h-22 shadow-sm"
-              placeholder="High-grade refined fuel standard suitable for all modern commercial engines."
+              placeholder="Enter product description"
             />
           </div>
 

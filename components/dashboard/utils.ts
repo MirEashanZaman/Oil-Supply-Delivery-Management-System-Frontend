@@ -68,6 +68,11 @@ export const getRolePath = (title?: string): string => {
     return "customer";
 };
 
+export const normalizeRole = (role?: string): string => {
+    const path = getRolePath(role);
+    return path.charAt(0).toUpperCase() + path.slice(1);
+};
+
 export const getAllUsersUrl = (title?: string): string => {
     const r = getRolePath(title);
     if (r === "admin") return "http://localhost:8000/admin/getalladmin";

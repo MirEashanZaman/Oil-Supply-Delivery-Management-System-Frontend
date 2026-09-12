@@ -1278,12 +1278,27 @@ export default function Dashboard() {
     };
 
     const handleAdminDeleteUser = async (id: number) => {
+        const targetUser = allMergedUsers.find((user) => user.id === id);
+        const role = getRolePath(targetUser?.title || targetUser?.role);
+
+        if (role === "admin") {
+            alert("Admin accounts cannot be deleted from this panel.");
+            return;
+        }
+
         if (!window.confirm("Are you sure you want to delete this user?")) return;
+
         try {
-            await axios.delete(`http://localhost:8000/admin/customer/${id}`, { withCredentials: true, validateStatus: (status) => status < 500 });
-            fetchAllMergedUsers();
-        } catch (err) {
-            alert("Failed to delete user.");
+            await axios.delete(`http://localhost:8000/admin/${role}/${id}`, {
+                withCredentials: true,
+                validateStatus: (status) => status < 500,
+            });
+            await fetchAllMergedUsers();
+        } catch (err: any) {
+            const message = Array.isArray(err.response?.data?.message)
+                ? err.response.data.message.join(", ")
+                : err.response?.data?.message || "Failed to delete user.";
+            alert(message);
         }
     };
 

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Product, CartItem, SystemUser, UserData } from "../types";
-import { getProductImage } from "../utils";
+import { getProductImage, getProductSourcingConfig } from "../utils";
 
 interface CheckoutPaymentModalProps {
     isOpen: boolean;
@@ -95,11 +95,15 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
 }) => {
     if (!isOpen) return null;
 
-    const fixedSupplier = checkoutProduct?.supplier?.id ? checkoutProduct.supplier : null;
-    const fixedDealer = checkoutProduct?.dealer?.id ? checkoutProduct.dealer : null;
-    const hasFixedSource = Boolean(fixedSupplier) !== Boolean(fixedDealer);
-    const supplierOptions = fixedSupplier ? [fixedSupplier] : availableSuppliers;
-    const dealerOptions = fixedDealer ? [fixedDealer] : availableDealers;
+    const sourcingConfig = getProductSourcingConfig(checkoutProduct, availableSuppliers, availableDealers);
+    const {
+        allowedSuppliers,
+        allowedDealers,
+        canChooseBetweenSupplierAndDealer,
+        sourcingNotice,
+        posterParty,
+        posterRole,
+    } = sourcingConfig;
 
     return (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn">
@@ -213,73 +217,91 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
                             </div>
 
                             <div className="mb-5">
-                                <label className="block text-xs font-bold text-dark-slate mb-2">
-                                    Select Sourcing Distribution Channel:
+                                <label className="block text-xs font-bold text-dark-slate mb-1">
+                                    Sourcing Channel & Distribution Origin:
                                 </label>
-                                {!hasFixedSource && <div className="grid grid-cols-2 gap-3 mb-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setSourcingChoice("supplier");
-                                            if (availableSuppliers.length > 0) setSelectedPartyId(availableSuppliers[0].id);
-                                        }}
-                                        className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${sourcingChoice === "supplier"
-                                            ? "border-primary bg-blue-50/50 ring-2 ring-primary/20"
-                                            : "border-[#E2E8F0] bg-white hover:bg-gray-50"
-                                            }`}
-                                    >
-                                        <span className="block font-bold text-xs text-dark-slate">Refinery Direct Supplier</span>
-                                        <span className="block text-[11px] text-secondary-gray">Pipeline & Depot wholesale</span>
-                                    </button>
 
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setSourcingChoice("dealer");
-                                            if (availableDealers.length > 0) setSelectedPartyId(availableDealers[0].id);
-                                        }}
-                                        className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${sourcingChoice === "dealer"
-                                            ? "border-primary bg-blue-50/50 ring-2 ring-primary/20"
-                                            : "border-[#E2E8F0] bg-white hover:bg-gray-50"
-                                            }`}
-                                    >
-                                        <span className="block font-bold text-xs text-dark-slate">Authorized Local Dealer</span>
-                                        <span className="block text-[11px] text-secondary-gray">Regional distributor hub</span>
-                                    </button>
-                                </div>}
+                                {canChooseBetweenSupplierAndDealer ? (
+                                    <>
+                                        <p className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 mb-3 font-medium">
+                                            {sourcingNotice}
+                                        </p>
+                                        <div className="grid grid-cols-2 gap-3 mb-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setSourcingChoice("supplier");
+                                                    if (allowedSuppliers.length > 0) setSelectedPartyId(allowedSuppliers[0].id);
+                                                }}
+                                                className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${sourcingChoice === "supplier"
+                                                    ? "border-primary bg-blue-50/50 ring-2 ring-primary/20"
+                                                    : "border-[#E2E8F0] bg-white hover:bg-gray-50"
+                                                    }`}
+                                            >
+                                                <span className="block font-bold text-xs text-dark-slate">Refinery Supplier</span>
+                                                <span className="block text-[11px] text-secondary-gray">{allowedSuppliers[0]?.userName || "Refinery Direct"}</span>
+                                            </button>
 
-                                <div>
-                                    <label className="block text-xs font-semibold text-secondary-gray mb-1">
-                                        Assigned {sourcingChoice === "supplier" ? "Supplier Partner" : "Dealer Depot"}:
-                                    </label>
-                                    <select
-                                        value={selectedPartyId}
-                                        onChange={(e) => setSelectedPartyId(Number(e.target.value))}
-                                        className="w-full p-2.5 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none"
-                                    >
-                                        {sourcingChoice === "supplier" ? (
-                                            supplierOptions.length > 0 ? (
-                                                supplierOptions.map((s) => (
-                                                    <option key={s.id} value={s.id}>
-                                                        {s.userName || s.username || `Supplier Partner #${s.id}`} ({s.email || "Verified"})
-                                                    </option>
-                                                ))
-                                            ) : (
-                                                <option value="" disabled>No registered suppliers available</option>
-                                            )
-                                        ) : (
-                                            dealerOptions.length > 0 ? (
-                                                dealerOptions.map((d) => (
-                                                    <option key={d.id} value={d.id}>
-                                                        {d.userName || d.username || `Authorized Dealer #${d.id}`} ({d.email || "Verified"})
-                                                    </option>
-                                                ))
-                                            ) : (
-                                                <option value="" disabled>No authorized dealers available</option>
-                                            )
-                                        )}
-                                    </select>
-                                </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setSourcingChoice("dealer");
+                                                    if (allowedDealers.length > 0) setSelectedPartyId(allowedDealers[0].id);
+                                                }}
+                                                className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${sourcingChoice === "dealer"
+                                                    ? "border-primary bg-blue-50/50 ring-2 ring-primary/20"
+                                                    : "border-[#E2E8F0] bg-white hover:bg-gray-50"
+                                                    }`}
+                                            >
+                                                <span className="block font-bold text-xs text-dark-slate">Authorized Dealer</span>
+                                                <span className="block text-[11px] text-secondary-gray">{allowedDealers.length} profile dealer(s)</span>
+                                            </button>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-semibold text-secondary-gray mb-1">
+                                                Selected {sourcingChoice === "supplier" ? "Supplier Partner" : "Dealer Profile"}:
+                                            </label>
+                                            <select
+                                                value={selectedPartyId}
+                                                onChange={(e) => setSelectedPartyId(Number(e.target.value))}
+                                                className="w-full p-2.5 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none"
+                                            >
+                                                {sourcingChoice === "supplier" ? (
+                                                    allowedSuppliers.map((s) => (
+                                                        <option key={s.id} value={s.id}>
+                                                            {s.userName || s.username || `Supplier #${s.id}`} ({s.email || "Verified"})
+                                                        </option>
+                                                    ))
+                                                ) : (
+                                                    allowedDealers.map((d) => (
+                                                        <option key={d.id} value={d.id}>
+                                                            {d.userName || d.username || `Dealer #${d.id}`} ({d.email || "Profile Verified"})
+                                                        </option>
+                                                    ))
+                                                )}
+                                            </select>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 space-y-1">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-dark-slate flex items-center gap-1.5">
+                                                <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                                                {posterRole === "supplier" ? "Direct Refinery Supplier Fulfillment" : "Direct Dealer Lot Fulfillment"}
+                                            </span>
+                                            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-blue-100 text-blue-800">
+                                                {posterRole === "supplier" ? "Refinery Direct" : "Dealer Original"}
+                                            </span>
+                                        </div>
+                                        <p className="text-[11px] text-secondary-gray leading-relaxed">
+                                            {sourcingNotice}
+                                        </p>
+                                        <p className="text-xs font-bold text-primary pt-1">
+                                            Fulfilling Party: {posterParty.userName} ({posterParty.email})
+                                        </p>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="mb-5">

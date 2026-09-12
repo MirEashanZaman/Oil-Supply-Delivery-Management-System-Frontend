@@ -339,7 +339,7 @@ export default function ProductDetails({
                                         type="text"
                                         required
                                         value={inquiryName}
-                                        placeholder="e.g. Mohammad Ali"
+                                        placeholder="Enter your name"
                                         onChange={(e) => setInquiryName(e.target.value)}
                                         className="input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] text-xs rounded-xl"
                                     />
@@ -351,7 +351,7 @@ export default function ProductDetails({
                                         type="email"
                                         required
                                         value={inquiryEmail}
-                                        placeholder="user@example.com"
+                                        placeholder="Enter your email"
                                         onChange={(e) => setInquiryEmail(e.target.value)}
                                         className="input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] text-xs rounded-xl"
                                     />
@@ -363,7 +363,7 @@ export default function ProductDetails({
                                         required
                                         rows={3}
                                         value={inquiryMessage}
-                                        placeholder="Ask about batch volume, pipeline dispatch schedule, or testing reports..."
+                                        placeholder="Enter your message"
                                         onChange={(e) => setInquiryMessage(e.target.value)}
                                         className="textarea textarea-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] text-xs rounded-xl"
                                     />

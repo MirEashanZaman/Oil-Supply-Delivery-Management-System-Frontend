@@ -2,7 +2,7 @@
 
 import React from "react";
 import { CartItem, Product, SystemUser } from "../types";
-import { getProductImage } from "../utils";
+import { getProductImage, getProductSourcingConfig } from "../utils";
 
 interface CartDrawerModalProps {
     isOpen: boolean;
@@ -184,57 +184,74 @@ export const CartDrawerModal: React.FC<CartDrawerModalProps> = ({
                                     </div>
 
                                     { }
-                                    <div className="bg-[#FAFBFD] p-2.5 sm:p-3 rounded-lg border border-[#E2E8F0] grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-secondary-gray uppercase mb-1">
-                                                Sourcing Origin:
-                                            </label>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                                                <select
-                                                    value={item.sourcingChoice}
-                                                    onChange={(e) => {
-                                                        const choice = e.target.value as "supplier" | "dealer";
-                                                        const defaultParty = choice === "supplier" ? (availableSuppliers[0]?.id || 1) : (availableDealers[0]?.id || 1);
-                                                        onUpdateSourcing(item.product.id, choice, defaultParty);
-                                                    }}
-                                                    className="w-full p-1.5 sm:p-2 border border-secondary-gray rounded-lg bg-white text-dark-slate text-xs font-medium outline-none focus:border-primary"
-                                                >
-                                                    <option value="supplier">Refinery Supplier</option>
-                                                    <option value="dealer">Local Dealer</option>
-                                                </select>
-                                                <select
-                                                    value={item.selectedPartyId}
-                                                    onChange={(e) => onUpdateSourcing(item.product.id, item.sourcingChoice, e.target.value)}
-                                                    className="w-full p-1.5 sm:p-2 border border-secondary-gray rounded-lg bg-white text-dark-slate text-xs font-medium outline-none focus:border-primary truncate"
-                                                >
-                                                    {item.sourcingChoice === "supplier"
-                                                        ? availableSuppliers.map((s) => (
-                                                            <option key={s.id} value={s.id}>
-                                                                {s.userName || `Supplier #${s.id}`}
-                                                            </option>
-                                                        ))
-                                                        : availableDealers.map((d) => (
-                                                            <option key={d.id} value={d.id}>
-                                                                {d.userName || `Dealer #${d.id}`}
-                                                            </option>
-                                                        ))}
-                                                </select>
-                                            </div>
-                                        </div>
+                                    {(() => {
+                                        const config = getProductSourcingConfig(item.product, availableSuppliers, availableDealers);
+                                        return (
+                                            <div className="bg-[#FAFBFD] p-2.5 sm:p-3 rounded-lg border border-[#E2E8F0] grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs">
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-secondary-gray uppercase mb-1">
+                                                        Sourcing Origin:
+                                                    </label>
+                                                    {config.canChooseBetweenSupplierAndDealer ? (
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                                            <select
+                                                                value={item.sourcingChoice}
+                                                                onChange={(e) => {
+                                                                    const choice = e.target.value as "supplier" | "dealer";
+                                                                    const defaultParty = choice === "supplier" ? (config.allowedSuppliers[0]?.id || 1) : (config.allowedDealers[0]?.id || 1);
+                                                                    onUpdateSourcing(item.product.id, choice, defaultParty);
+                                                                }}
+                                                                className="w-full p-1.5 sm:p-2 border border-secondary-gray rounded-lg bg-white text-dark-slate text-xs font-medium outline-none focus:border-primary"
+                                                            >
+                                                                <option value="supplier">Refinery Supplier</option>
+                                                                <option value="dealer">Profile Dealer</option>
+                                                            </select>
+                                                            <select
+                                                                value={item.selectedPartyId}
+                                                                onChange={(e) => onUpdateSourcing(item.product.id, item.sourcingChoice, e.target.value)}
+                                                                className="w-full p-1.5 sm:p-2 border border-secondary-gray rounded-lg bg-white text-dark-slate text-xs font-medium outline-none focus:border-primary truncate"
+                                                            >
+                                                                {item.sourcingChoice === "supplier"
+                                                                    ? config.allowedSuppliers.map((s) => (
+                                                                        <option key={s.id} value={s.id}>
+                                                                            {s.userName || `Supplier #${s.id}`}
+                                                                        </option>
+                                                                    ))
+                                                                    : config.allowedDealers.map((d) => (
+                                                                        <option key={d.id} value={d.id}>
+                                                                            {d.userName || `Dealer #${d.id}`}
+                                                                        </option>
+                                                                    ))}
+                                                            </select>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="p-2 bg-white border border-slate-200 rounded-lg">
+                                                            <span className="font-bold text-dark-slate block text-[11px]">
+                                                                {config.posterRole === "supplier" ? "Refinery Supplier:" : "Exclusive Dealer:"}{" "}
+                                                                {config.posterParty.userName}
+                                                            </span>
+                                                            <span className="text-[10px] text-secondary-gray block">
+                                                                {config.posterRole === "supplier" ? "Direct supplier fulfillment (no dealers linked)" : "Direct dealer fulfillment"}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
 
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-secondary-gray uppercase mb-1">
-                                                Delivery Site:
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={item.deliveryAddress || deliveryAddress || ""}
-                                                onChange={(e) => onUpdateAddress(item.product.id, e.target.value)}
-                                                placeholder="Enter site delivery address..."
-                                                className="w-full p-1.5 sm:p-2 border border-secondary-gray rounded-lg bg-white text-dark-slate text-xs font-medium outline-none focus:border-primary"
-                                            />
-                                        </div>
-                                    </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-secondary-gray uppercase mb-1">
+                                                        Delivery Site:
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={item.deliveryAddress || deliveryAddress || ""}
+                                                        onChange={(e) => onUpdateAddress(item.product.id, e.target.value)}
+                                                        placeholder="Enter site delivery address..."
+                                                        className="w-full p-1.5 sm:p-2 border border-secondary-gray rounded-lg bg-white text-dark-slate text-xs font-medium outline-none focus:border-primary"
+                                                    />
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             ))}
                         </div>

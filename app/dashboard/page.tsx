@@ -268,11 +268,6 @@ export default function Dashboard() {
             alert("Please enter a valid product name.");
             return;
         }
-        if (!newProductForm.photo) {
-            alert("Please select a product photo.");
-            return;
-        }
-
         const parsedPrice = Number(newProductForm.price);
         if (!newProductForm.price.trim() || !Number.isFinite(parsedPrice) || parsedPrice <= 0) {
             alert("Please enter a valid price greater than $0.");
@@ -290,24 +285,14 @@ export default function Dashboard() {
         const role = getRolePath(user.title || user.role);
 
         try {
-            const formData = new FormData();
-            formData.append("name", newProductForm.name.trim());
-            formData.append("description", newProductForm.description.trim());
-            formData.append("price", String(Number(newProductForm.price)));
-            formData.append("quantity", String(Number(newProductForm.stock)));
-            formData.append("category", newProductForm.category);
-
-            formData.append("photo", newProductForm.photo);
-
             const createRes = await axios.post(
                 `${API_ENDPOINT}/product/create`,
-                formData,
                 {
-                    withCredentials: true,
-                    headers: {
-                        "Content-Type": "multipart/form-data",
-                    },
-                }
+                    name: newProductForm.name.trim(),
+                    price: Number(newProductForm.price),
+                    quantity: Number(newProductForm.stock),
+                },
+                { withCredentials: true }
             );
 
             const createdProduct = createRes.data;

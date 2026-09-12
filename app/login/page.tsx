@@ -6,6 +6,7 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import MyNavigation from "@/components/navigation";
 import MyHeader from "@/components/header";
+import { normalizeRole } from "@/components/dashboard/utils";
 
 const loginSchema = z.object({
     email: z.string().min(1, "Email is required").email("Invalid email address"),
@@ -108,7 +109,7 @@ export default function Login() {
                 id: apiUserData?.id || apiUserData?.user?.id,
                 email: apiUserData?.email || apiUserData?.user?.email || signInEmail,
                 userName: apiUserData?.userName || apiUserData?.username || apiUserData?.user?.userName || signInEmail.split("@")[0],
-                title: apiUserData?.title || apiUserData?.role || matchedRole,
+                title: normalizeRole(apiUserData?.title || apiUserData?.role || matchedRole),
                 phoneNumber: apiUserData?.phoneNumber || apiUserData?.user?.phoneNumber,
                 address: apiUserData?.address || apiUserData?.user?.address,
                 photoUrl: apiUserData?.photoUrl || apiUserData?.photo,
@@ -129,7 +130,7 @@ export default function Login() {
                         userName: u.username || u.userName || userData.userName,
                         phoneNumber: u.phoneNumber || userData.phoneNumber,
                         address: u.address || userData.address,
-                        title: u.title || (r.charAt(0).toUpperCase() + r.slice(1)),
+                        title: normalizeRole(u.title || r),
                         photoUrl: u.filename ? `${API_ENDPOINT}/customer/getimage/${u.filename}` : userData.photoUrl,
                     };
                 } else {
@@ -159,7 +160,7 @@ export default function Login() {
                                 userName: matchedUser.username || matchedUser.userName || userData.userName,
                                 phoneNumber: matchedUser.phoneNumber || userData.phoneNumber,
                                 address: matchedUser.address || userData.address,
-                                title: matchedUser.title || matchedRole,
+                                title: normalizeRole(matchedUser.title || matchedRole),
                                 photoUrl: matchedUser.photoUrl || matchedUser.photo || userData.photoUrl,
                             };
                         }

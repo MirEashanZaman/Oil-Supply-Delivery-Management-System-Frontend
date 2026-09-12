@@ -139,7 +139,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="+880 1700-000000"
+                placeholder="Enter your phone number"
                 className="input input-bordered w-full text-sm bg-white text-[#1E293B] rounded-xl border-[#E2E8F0] focus:border-[#F59E0B]"
               />
             </div>
@@ -150,7 +150,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="Terminal 4, Depot Gate A, Dhaka"
+                placeholder="Enter your address"
                 className="input input-bordered w-full text-sm bg-white text-[#1E293B] rounded-xl border-[#E2E8F0] focus:border-[#F59E0B]"
               />
             </div>

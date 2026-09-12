@@ -262,7 +262,7 @@ export const AdminMonitoringTab: React.FC<AdminMonitoringTabProps> = ({
                     value={newUserForm.name}
                     onChange={(e) => setNewUserForm((prev) => ({ ...prev, name: e.target.value }))}
                     className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#1E293B] placeholder:text-[#64748B] transition focus:border-[#0F2747] focus:bg-white focus:outline-none"
-                    placeholder="Enter username"
+                    placeholder="Enter your username"
                     required={newUserForm.role === "Admin"}
                   />
                 </label>
@@ -288,7 +288,7 @@ export const AdminMonitoringTab: React.FC<AdminMonitoringTabProps> = ({
                     value={newUserForm.email}
                     onChange={(e) => setNewUserForm((prev) => ({ ...prev, email: e.target.value }))}
                     className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#1E293B] placeholder:text-[#64748B] transition focus:border-[#0F2747] focus:bg-white focus:outline-none"
-                    placeholder="Enter email"
+                    placeholder="Enter your email"
                     required
                   />
                 </label>
@@ -300,7 +300,7 @@ export const AdminMonitoringTab: React.FC<AdminMonitoringTabProps> = ({
                     value={newUserForm.password}
                     onChange={(e) => setNewUserForm((prev) => ({ ...prev, password: e.target.value }))}
                     className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#1E293B] placeholder:text-[#64748B] transition focus:border-[#0F2747] focus:bg-white focus:outline-none"
-                    placeholder="Enter password"
+                    placeholder="Enter your password"
                     required
                   />
                 </label>
@@ -323,7 +323,7 @@ export const AdminMonitoringTab: React.FC<AdminMonitoringTabProps> = ({
                     value={newUserForm.phone}
                     onChange={(e) => setNewUserForm((prev) => ({ ...prev, phone: e.target.value }))}
                     className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#1E293B] placeholder:text-[#64748B] transition focus:border-[#0F2747] focus:bg-white focus:outline-none"
-                    placeholder="+880 1700 000000"
+                    placeholder="Enter your phone number"
                     pattern="^\+?[1-9][0-9\s\-().]{6,19}$"
                     title="Enter a valid international phone number"
                     required
@@ -336,7 +336,7 @@ export const AdminMonitoringTab: React.FC<AdminMonitoringTabProps> = ({
                     value={newUserForm.address}
                     onChange={(e) => setNewUserForm((prev) => ({ ...prev, address: e.target.value }))}
                     className="min-h-[88px] w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#1E293B] placeholder:text-[#64748B] transition focus:border-[#0F2747] focus:bg-white focus:outline-none"
-                    placeholder="Enter address"
+                    placeholder="Enter your address"
                     required
                   />
                 </label>

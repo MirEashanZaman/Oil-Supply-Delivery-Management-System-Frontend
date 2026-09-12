@@ -309,7 +309,7 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
                                 <input
                                     type="text"
                                     value={deliveryAddress}
-                                    placeholder="Enter full delivery destination address..."
+                                    placeholder="Enter your delivery address"
                                     onChange={(e) => setDeliveryAddress(e.target.value)}
                                     className="w-full p-2.5 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none"
                                 />
@@ -410,7 +410,7 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
                                     <input
                                         type="text"
                                         value={cardHolder}
-                                        placeholder="Name on card"
+                                        placeholder="Enter your cardholder name"
                                         onChange={(e) => setCardHolder(e.target.value)}
                                         className="w-full p-2 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none"
                                     />
@@ -422,7 +422,7 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
                                 <input
                                     type="text"
                                     value={cardNumber}
-                                    placeholder="4000-XXXX-XXXX-XXXX"
+                                    placeholder="Enter card number"
                                     onChange={(e) => setCardNumber(e.target.value)}
                                     className="w-full p-2 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none font-mono"
                                 />
@@ -434,7 +434,7 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
                                     <input
                                         type="text"
                                         value={cardExpiry}
-                                        placeholder="MM/YY"
+                                        placeholder="Enter your expiry date"
                                         onChange={(e) => setCardExpiry(e.target.value)}
                                         className="w-full p-2 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none text-center"
                                     />
@@ -445,7 +445,7 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
                                         type="password"
                                         maxLength={4}
                                         value={cardCvv}
-                                        placeholder="123"
+                                        placeholder="Enter your CVV"
                                         onChange={(e) => setCardCvv(e.target.value)}
                                         className="w-full p-2 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none text-center font-mono"
                                     />
@@ -499,7 +499,7 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
                                     <input
                                         type="text"
                                         value={mobileWalletNumber}
-                                        placeholder="01700-000000"
+                                        placeholder="Enter your mobile number"
                                         onChange={(e) => setMobileWalletNumber(e.target.value)}
                                         className="w-full p-2 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none font-mono"
                                     />
@@ -528,7 +528,7 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
                                     <input
                                         type="text"
                                         value={bankAccountNumber}
-                                        placeholder="EBL-10029384"
+                                        placeholder="Enter your bank account number"
                                         onChange={(e) => setBankAccountNumber(e.target.value)}
                                         className="w-full p-2 border border-secondary-gray rounded-xl bg-white text-dark-slate text-xs outline-none font-mono"
                                     />

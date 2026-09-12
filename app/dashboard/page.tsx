@@ -23,6 +23,8 @@ import {
     normalizeRole,
     getAllUsersUrl,
     getRoleBadgeColor,
+    getProductSourcingConfig,
+    isProductOwner,
 } from "@/components/dashboard/utils";
 
 import { CartDrawerModal } from "@/components/dashboard/modals/cart-drawer-modal";
@@ -233,7 +235,7 @@ export default function Dashboard() {
                     .sort((a: any, b: any) => (a.id || 0) - (b.id || 0))
                     .map((p: any) => {
                         const mappedSupplier = p.suppliers?.[0] || p.supplier || (p.supplierId ? { id: p.supplierId } : undefined);
-                        const mappedDealer = p.dealers?.[0] || p.dealer || (p.dealerId ? { id: p.dealerId } : undefined);
+                        const mappedDealer = !mappedSupplier ? (p.dealers?.[0] || p.dealer || (p.dealerId ? { id: p.dealerId } : undefined)) : undefined;
 
                         return {
                             id: p.id,
@@ -246,7 +248,7 @@ export default function Dashboard() {
                             stock: typeof p.quantity === "number" ? p.quantity : typeof p.stock === "number" ? p.stock : 1000,
                             inStock: typeof p.quantity === "number" ? p.quantity > 0 : true,
                             stockLevel: (p.quantity || 1000) <= 0 ? "Out of Stock" : (p.quantity || 1000) < 1000 ? "Low Stock" : "In Stock",
-                            image: getProductImage(p.name, p.image, p.id),
+                            image: getProductImage(p.name, p.image || p.photo || p.photoUrl || p.imageUrl, p.id),
                             supplier: mappedSupplier,
                             dealer: mappedDealer,
                         };
@@ -280,27 +282,81 @@ export default function Dashboard() {
             return;
         }
 
+        if (!newProductForm.photo) {
+            alert("Product photo is required! Please select a photo before publishing.");
+            return;
+        }
+
         setIsSubmittingNewProduct(true);
         const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
         const role = getRolePath(user.title || user.role);
 
         try {
-            const createRes = await axios.post(
-                `${API_ENDPOINT}/product/create`,
-                {
-                    name: newProductForm.name.trim(),
-                    price: Number(newProductForm.price),
-                    quantity: Number(newProductForm.stock),
-                },
-                { withCredentials: true }
-            );
+            const photoBase64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = (error) => reject(error);
+                reader.readAsDataURL(newProductForm.photo!);
+            });
+
+            const formData = new FormData();
+            formData.append("name", newProductForm.name.trim());
+            formData.append("description", newProductForm.description.trim());
+            formData.append("price", String(Number(newProductForm.price)));
+            formData.append("quantity", String(Number(newProductForm.stock)));
+            formData.append("category", newProductForm.category);
+            formData.append("photo", newProductForm.photo);
+            formData.append("image", photoBase64);
+
+            let createRes;
+            try {
+                createRes = await axios.post(
+                    `${API_ENDPOINT}/product/create`,
+                    formData,
+                    {
+                        withCredentials: true,
+                        headers: { "Content-Type": "multipart/form-data" },
+                        validateStatus: (status) => status < 500,
+                    }
+                );
+            } catch {
+                createRes = await axios.post(
+                    `${API_ENDPOINT}/product/create`,
+                    {
+                        name: newProductForm.name.trim(),
+                        description: newProductForm.description.trim(),
+                        price: Number(newProductForm.price),
+                        quantity: Number(newProductForm.stock),
+                        category: newProductForm.category,
+                        image: photoBase64,
+                    },
+                    { withCredentials: true, validateStatus: (status) => status < 500 }
+                );
+            }
 
             const createdProduct = createRes.data;
-            if ((role === "supplier" || role === "dealer") && user.id && createdProduct?.id) {
+            const targetId = createdProduct?.id;
+
+            try {
+                if (targetId) {
+                    localStorage.setItem(`product_creator_${targetId}`, JSON.stringify({
+                        id: user.id,
+                        userName: user.userName || user.name,
+                        email: user.email,
+                        role: role,
+                    }));
+                    localStorage.setItem(`product_img_${targetId}`, photoBase64);
+                }
+                localStorage.setItem(`product_img_${newProductForm.name.trim()}`, photoBase64);
+            } catch (storageErr) {
+                console.warn("Could not save photo to localStorage:", storageErr);
+            }
+
+            if ((role === "supplier" || role === "dealer") && user.id && targetId) {
                 try {
                     const portfolioRes = await axios.post(
                         `${API_ENDPOINT}/${role}/${user.id}/products`,
-                        { productIds: [createdProduct.id] },
+                        { productIds: [targetId] },
                         { withCredentials: true, validateStatus: (status) => status < 500 }
                     );
                     if (portfolioRes.status >= 400) {
@@ -324,7 +380,7 @@ export default function Dashboard() {
             setIsPostProductModalOpen(false);
             await fetchCatalogProducts();
         } catch (err: any) {
-            alert(err.response?.data?.message || "Failed to publish product.");
+            alert(err.response?.data?.message || err.message || "Failed to publish product.");
         } finally {
             setIsSubmittingNewProduct(false);
         }
@@ -397,6 +453,39 @@ export default function Dashboard() {
         return identifiers.some((identifier) => Number(identifier) === Number(userId));
     };
 
+    const resolveOrderTotal = (order: any) => {
+        const candidateValues = [
+            order?.totalAmount,
+            order?.amount,
+            order?.payment?.amount,
+            order?.payment?.totalAmount,
+            order?.product?.price,
+            order?.price,
+            order?.unitPrice,
+            order?.orderDetails?.unitPrice,
+            order?.orderDetails?.payment?.amount,
+            order?.orderDetails?.payment?.totalAmount,
+        ];
+
+        const validAmount = candidateValues.find((value) => {
+            if (value === null || value === undefined || value === "") return false;
+            const parsed = Number(String(value).replace(/[$,\s]/g, ""));
+            return Number.isFinite(parsed) && parsed > 0;
+        });
+
+        const directAmount = validAmount === undefined
+            ? 0
+            : Number(String(validAmount).replace(/[$,\s]/g, ""));
+
+        const quantity = Number(order?.quantity ?? order?.orderDetails?.quantity ?? 1) || 1;
+        const productPriceValue = order?.product?.price ?? order?.price ?? order?.unitPrice ?? order?.orderDetails?.unitPrice ?? 0;
+        const productPrice = Number(String(productPriceValue).replace(/[$,\s]/g, ""));
+
+        if (Number.isFinite(directAmount) && directAmount > 0) return directAmount;
+        if (Number.isFinite(productPrice) && productPrice > 0) return productPrice * quantity;
+        return 0;
+    };
+
     const fetchOrders = async (id?: number, title?: string) => {
         const r = getRolePath(title);
         if (r === "customer") {
@@ -404,7 +493,15 @@ export default function Dashboard() {
             try {
                 const res = await axios.get(`http://localhost:8000/customer/${id}/orders`, { withCredentials: true, validateStatus: (status) => status < 500 });
                 if (res.status === 200 && Array.isArray(res.data)) {
-                    setOrders(res.data.map((o: any) => ({ ...o, totalAmount: o.payment?.amount || (o.quantity * 2.5).toFixed(2), deliveryAddress: o.address })));
+                    setOrders(res.data.map((o: any) => {
+                        const computedTotal = resolveOrderTotal(o);
+
+                        return {
+                            ...o,
+                            totalAmount: computedTotal,
+                            deliveryAddress: o.address || o.deliveryAddress,
+                        };
+                    }));
                 }
             } catch (err) {
                 console.warn("Failed to fetch customer orders:", err);
@@ -424,9 +521,11 @@ export default function Dashboard() {
                                     return;
                                 }
 
+                                const computedTotal = resolveOrderTotal(o);
+
                                 allOrders.push({
                                     id: o.id,
-                                    quantity: o.quantity || 1,
+                                    quantity: Number(o.quantity ?? 1) || 1,
                                     status: o.status || "Pending",
                                     address: o.address || cust.address,
                                     deliveryAddress: o.address || cust.address,
@@ -437,7 +536,7 @@ export default function Dashboard() {
                                     supplier: o.supplier || (o.supplierId || o.supplier_id ? { id: o.supplierId || o.supplier_id } : undefined),
                                     dealer: o.dealer || (o.dealerId || o.dealer_id ? { id: o.dealerId || o.dealer_id } : undefined),
                                     payment: o.payment,
-                                    totalAmount: o.payment?.amount || (o.quantity * 2.5).toFixed(2),
+                                    totalAmount: computedTotal,
                                 });
                             });
                         }
@@ -485,20 +584,13 @@ export default function Dashboard() {
             return;
         }
 
-        const hasSupplierSource = Boolean(product.supplier?.id);
-        const hasDealerSource = Boolean(product.dealer?.id);
-        const fixedSource = hasSupplierSource !== hasDealerSource
-            ? hasDealerSource ? "dealer" : "supplier"
-            : sourcingChoice;
-        const fixedPartyId = fixedSource === "dealer" ? product.dealer?.id : product.supplier?.id;
+        const config = getProductSourcingConfig(product, availableSuppliers, availableDealers);
 
         setCheckoutProduct(product);
-        setSourcingChoice(fixedSource);
+        setSourcingChoice(config.defaultSourcingChoice);
+        setSelectedPartyId(Number(config.defaultPartyId) || "");
         setOrderQuantity(1);
         if (user?.address) setDeliveryAddress(user.address);
-        if (fixedPartyId) setSelectedPartyId(fixedPartyId);
-        else if (fixedSource === "supplier" && availableSuppliers.length > 0) setSelectedPartyId(availableSuppliers[0].id);
-        else if (fixedSource === "dealer" && availableDealers.length > 0) setSelectedPartyId(availableDealers[0].id);
         applySandboxCardPreset("Visa");
         setIsSandboxModalOpen(false);
         setSandboxStep("gateway");
@@ -549,24 +641,248 @@ export default function Dashboard() {
     };
 
     const handleAddProductToPortfolio = async (product: Product) => {
-        if (!user?.id) return;
+        if (!user) {
+            alert("Please sign in to add products to your profile.");
+            return;
+        }
+
+        const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
         const role = getRolePath(user.title || user.role);
-        if (role !== "dealer") return;
+
+        if (role !== "dealer" && role !== "supplier") {
+            alert("Only dealers and suppliers can link products to their profile.");
+            return;
+        }
+
+        if (isProductOwner(product, user)) {
+            alert("This product was posted by you and is already permanently fixed in your profile inventory.");
+            return;
+        }
+
+        let effectiveUserId = user.id;
+        if (!effectiveUserId && user.email) {
+            try {
+                const searchRes = await axios.get(
+                    `${API_ENDPOINT}/users/search?email=${encodeURIComponent(user.email)}`,
+                    { validateStatus: (status) => status < 500 }
+                );
+                if (searchRes.status === 200 && searchRes.data?.user?.id) {
+                    effectiveUserId = searchRes.data.user.id;
+                    const updatedUser = { ...user, id: effectiveUserId };
+                    setUser(updatedUser);
+                    localStorage.setItem("user", JSON.stringify(updatedUser));
+                }
+            } catch {
+            }
+        }
 
         try {
-            const res = await axios.post(
-                `http://localhost:8000/dealer/${user.id}/products`,
-                { productIds: [product.id] },
-                { withCredentials: true, validateStatus: (status) => status < 500 }
-            );
-            if (res.status === 200 || res.status === 201 || res.status === 204) {
-                alert(`${product.name} was added to your profile.`);
-                await fetchCatalogProducts();
-            } else {
-                alert(res.data?.message || "The product could not be added to your profile.");
+            if (effectiveUserId) {
+                try {
+                    await axios.post(
+                        `${API_ENDPOINT}/${role}/${effectiveUserId}/products`,
+                        { productIds: [product.id] },
+                        { withCredentials: true, validateStatus: (status) => status < 500 }
+                    );
+                } catch {
+                    try {
+                        await axios.post(
+                            `${API_ENDPOINT}/${role}/${effectiveUserId}/products`,
+                            { productId: product.id },
+                            { withCredentials: true, validateStatus: (status) => status < 500 }
+                        );
+                    } catch {
+                    }
+                }
             }
+
+            const portfolioKey = `user_portfolio_${effectiveUserId || user.email}`;
+            try {
+                const stored: number[] = JSON.parse(localStorage.getItem(portfolioKey) || "[]");
+                if (!stored.includes(product.id)) {
+                    stored.push(product.id);
+                    localStorage.setItem(portfolioKey, JSON.stringify(stored));
+                }
+
+                const realOwner = product.supplier || product.user || product.dealer || null;
+                const realOwnerId = realOwner && typeof realOwner === "object" ? realOwner.id : effectiveUserId || user.id;
+                const isCurrentUserOwner = String(realOwnerId ?? "") === String(effectiveUserId ?? user.id ?? "");
+
+                if (realOwner && !isCurrentUserOwner) {
+                    const creatorName = (realOwner as any).userName || (realOwner as any).username || (realOwner as any).name || "";
+                    const creatorEmail = (realOwner as any).email || "";
+                    const creatorRole = (realOwner as any).role || (realOwner as any).title || "Supplier";
+                    localStorage.setItem(`product_creator_${product.id}`, JSON.stringify({
+                        id: realOwner.id,
+                        userName: creatorName,
+                        email: creatorEmail,
+                        role: creatorRole,
+                    }));
+                }
+
+                if (role === "dealer") {
+                    const productDealersKey = `product_dealers_${product.id}`;
+                    const existingDealers: any[] = JSON.parse(localStorage.getItem(productDealersKey) || "[]");
+                    const dealerInfo = {
+                        id: effectiveUserId || user.id || Date.now(),
+                        userName: user.userName || user.name || "Authorized Dealer",
+                        email: user.email || "Verified Dealer",
+                        role: "Dealer",
+                    };
+                    if (!existingDealers.some((d: any) => String(d.id) === String(dealerInfo.id))) {
+                        existingDealers.push(dealerInfo);
+                        localStorage.setItem(productDealersKey, JSON.stringify(existingDealers));
+                    }
+                }
+            } catch {
+            }
+
+            alert(`"${product.name}" was successfully added to your profile! Customers can now choose to buy this product from you or the original owner.`);
+            await fetchCatalogProducts();
         } catch (err: any) {
-            alert(err.response?.data?.message || "Failed to add product to your profile.");
+            alert(err.response?.data?.message || err.message || "Failed to add product to your profile.");
+        }
+    };
+
+    const handleRemoveProductFromPortfolio = async (productId: number) => {
+        if (!user) return;
+        const role = getRolePath(user.title || user.role);
+        const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
+        const effectiveUserId = user.id;
+
+        try {
+            if (effectiveUserId) {
+                try {
+                    await axios.delete(`${API_ENDPOINT}/${role}/${effectiveUserId}/products/${productId}`, {
+                        withCredentials: true,
+                        validateStatus: (status) => status < 500,
+                    });
+                } catch {
+                }
+            }
+
+            const portfolioKey = `user_portfolio_${effectiveUserId || user.email}`;
+            try {
+                const stored: number[] = JSON.parse(localStorage.getItem(portfolioKey) || "[]");
+                const updated = stored.filter((id) => id !== productId);
+                localStorage.setItem(portfolioKey, JSON.stringify(updated));
+
+                if (role === "dealer") {
+                    const productDealersKey = `product_dealers_${productId}`;
+                    const existingDealers: any[] = JSON.parse(localStorage.getItem(productDealersKey) || "[]");
+                    const updatedDealers = existingDealers.filter(
+                        (d: any) => String(d.id) !== String(effectiveUserId) && d.email !== user.email
+                    );
+                    localStorage.setItem(productDealersKey, JSON.stringify(updatedDealers));
+                }
+            } catch {
+            }
+
+            alert("Product was removed from your profile. Customers will now order from the original poster.");
+            await fetchCatalogProducts();
+        } catch (err: any) {
+            alert(err.response?.data?.message || "Failed to remove product.");
+        }
+    };
+
+    const handleAdminUpdateProduct = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingProduct) return;
+
+        const price = Number(editProductForm.price);
+        const stock = Number(editProductForm.stock);
+        if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(stock) || stock < 0) {
+            alert("Enter a valid price and stock quantity.");
+            return;
+        }
+
+        setIsSubmittingEditProduct(true);
+        try {
+            const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
+            const responses = await Promise.all([
+                axios.put(
+                    `${API_ENDPOINT}/product/update-price/${editingProduct.id}`,
+                    { price },
+                    { withCredentials: true, validateStatus: (status) => status < 500 }
+                ),
+                axios.put(
+                    `${API_ENDPOINT}/product/update-stock/${editingProduct.id}`,
+                    { stock },
+                    { withCredentials: true, validateStatus: (status) => status < 500 }
+                ),
+            ]);
+
+            const failedResponse = responses.find((response) => response.status >= 400);
+            if (failedResponse) {
+                const message = Array.isArray(failedResponse.data?.message)
+                    ? failedResponse.data.message.join(", ")
+                    : failedResponse.data?.message || "Product could not be updated.";
+                alert(message);
+                return;
+            }
+
+            alert(`${editingProduct.name} updated successfully.`);
+            setEditingProduct(null);
+            await fetchCatalogProducts();
+        } catch (err: any) {
+            alert(err.response?.data?.message || "Failed to update product.");
+        } finally {
+            setIsSubmittingEditProduct(false);
+        }
+    };
+
+    const handleAdminDeleteProduct = async (productId: number, productName: string) => {
+        if (!window.confirm(`Are you sure you want to delete ${productName}?`)) return;
+
+        try {
+            const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
+            const role = getRolePath(user?.title || user?.role);
+            const candidateUrls = [
+                `${API_ENDPOINT}/product/${productId}`,
+                `${API_ENDPOINT}/admin/product/${productId}`,
+                `${API_ENDPOINT}/${role}/product/${productId}`,
+            ];
+
+            let res;
+            let lastError: any = null;
+
+            for (const url of candidateUrls) {
+                try {
+                    res = await axios.delete(url, {
+                        withCredentials: true,
+                        validateStatus: (status) => status < 500,
+                    });
+                    if (res.status === 200 || res.status === 204) {
+                        break;
+                    }
+                    lastError = res;
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+
+            if (!res || !(res.status === 200 || res.status === 204)) {
+                const message = lastError?.response?.data?.message || lastError?.message || "Product could not be deleted.";
+                alert(message);
+                return;
+            }
+
+            try {
+                localStorage.removeItem(`product_creator_${productId}`);
+                localStorage.removeItem(`product_dealers_${productId}`);
+                localStorage.removeItem(`product_img_${productId}`);
+                localStorage.removeItem(`product_img_${productName}`);
+                if (user?.id || user?.email) {
+                    const portfolioKey = `user_portfolio_${user.id || user.email}`;
+                    const currentPort: number[] = JSON.parse(localStorage.getItem(portfolioKey) || "[]");
+                    localStorage.setItem(portfolioKey, JSON.stringify(currentPort.filter((id) => id !== productId)));
+                }
+            } catch { }
+
+            alert(`${productName} deleted successfully.`);
+            await fetchCatalogProducts();
+        } catch (err: any) {
+            alert(err.response?.data?.message || err.message || "Failed to delete product.");
         }
     };
 
@@ -828,7 +1144,13 @@ export default function Dashboard() {
         e.preventDefault();
         if (!editingOrder || !user) return;
 
-        if (editOrderForm.status.toLowerCase() === "delivered" && getRolePath(user.title || user.role) !== "customer") {
+        const role = getRolePath(user.title || user.role);
+        if (role === "admin") {
+            alert("Admins can only delete orders. They cannot update any order.");
+            return;
+        }
+
+        if (editOrderForm.status.toLowerCase() === "delivered" && role !== "customer") {
             alert("Only customers can mark an order as delivered.");
             return;
         }
@@ -840,24 +1162,58 @@ export default function Dashboard() {
         }
 
         try {
-            const res = await axios.patch(
-                `http://localhost:8000/customer/${customerId}/orders/${editingOrder.id}`,
-                {
-                    quantity: Number(editOrderForm.quantity) || 1,
-                    status: editOrderForm.status,
-                    address: editOrderForm.deliveryAddress,
-                    payment: {
-                        amount: Number(editOrderForm.totalAmount) || 0,
-                        status: "completed",
+            const res = role === "admin"
+                ? await axios.patch(
+                    `http://localhost:8000/admin/order/${editingOrder.id}`,
+                    {
+                        quantity: Number(editOrderForm.quantity) || 1,
+                        status: editOrderForm.status.toLowerCase(),
                     },
-                },
-                { withCredentials: true, validateStatus: (status) => status < 500 }
-            );
+                    { withCredentials: true, validateStatus: (status) => status < 500 }
+                )
+                : await axios.patch(
+                    `http://localhost:8000/customer/${customerId}/orders/${editingOrder.id}`,
+                    {
+                        quantity: Number(editOrderForm.quantity) || 1,
+                        status: editOrderForm.status,
+                        address: editOrderForm.deliveryAddress,
+                        payment: {
+                            amount: Number(editOrderForm.totalAmount) || 0,
+                            status: "completed",
+                        },
+                    },
+                    { withCredentials: true, validateStatus: (status) => status < 500 }
+                );
 
             if (res.status === 200 || res.status === 204) {
+                if (role === "admin" && editOrderForm.deliveryAddress && customerId) {
+                    const addressRes = await axios.patch(
+                        `http://localhost:8000/admin/customer/${customerId}`,
+                        { address: editOrderForm.deliveryAddress },
+                        { withCredentials: true, validateStatus: (status) => status < 500 }
+                    );
+                    if (addressRes.status >= 400) {
+                        throw new Error(addressRes.data?.message || "Delivery address could not be updated.");
+                    }
+                }
+                const updatedStatus = role === "admin"
+                    ? editOrderForm.status.toLowerCase()
+                    : editOrderForm.status;
+                setOrders((currentOrders) => currentOrders.map((order) => (
+                    order.id === editingOrder.id
+                        ? {
+                            ...order,
+                            status: updatedStatus,
+                            quantity: Number(editOrderForm.quantity) || 1,
+                            address: editOrderForm.deliveryAddress,
+                            deliveryAddress: editOrderForm.deliveryAddress,
+                            totalAmount: Number(editOrderForm.totalAmount) || 0,
+                        }
+                        : order
+                )));
                 alert("Order updated successfully!");
                 setEditingOrder(null);
-                fetchOrders(customerId, user.title || user.role);
+                await fetchOrders(customerId, user.title || user.role);
             } else {
                 alert("Failed to update order.");
             }
@@ -928,6 +1284,50 @@ export default function Dashboard() {
             fetchAllMergedUsers();
         } catch (err) {
             alert("Failed to delete user.");
+        }
+    };
+
+    const handleAdminUpdateUser = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingUser) return;
+
+        const phone = editUserForm.phone.trim();
+        const mobileNumberRegex = /^\+?[1-9][0-9\s\-().]{6,19}$/;
+        if (phone && !mobileNumberRegex.test(phone)) {
+            alert("Enter a valid international phone number.");
+            return;
+        }
+
+        setIsEditingUserSubmitting(true);
+        try {
+            const role = getRolePath(editingUser.title || editingUser.role);
+            const res = await axios.patch(
+                `http://localhost:8000/admin/${role}/${editingUser.id}`,
+                {
+                    userName: editUserForm.name.trim(),
+                    phoneNumber: phone,
+                    address: editUserForm.address.trim(),
+                },
+                { withCredentials: true, validateStatus: (status) => status < 500 }
+            );
+
+            if (res.status === 200 || res.status === 204) {
+                alert(`${editUserForm.name} updated successfully.`);
+                setEditingUser(null);
+                await fetchAllMergedUsers();
+            } else {
+                const message = Array.isArray(res.data?.message)
+                    ? res.data.message.join(", ")
+                    : res.data?.message || "User could not be updated.";
+                alert(message);
+            }
+        } catch (err: any) {
+            const message = Array.isArray(err.response?.data?.message)
+                ? err.response.data.message.join(", ")
+                : err.response?.data?.message || "Failed to update user.";
+            alert(message);
+        } finally {
+            setIsEditingUserSubmitting(false);
         }
     };
 
@@ -1180,6 +1580,15 @@ export default function Dashboard() {
                                 setWholesaleQuantity("50");
                             }}
                             onAddToPortfolio={handleAddProductToPortfolio}
+                            onRemoveFromPortfolio={handleRemoveProductFromPortfolio}
+                            onEditProduct={(product) => {
+                                setEditingProduct(product);
+                                setEditProductForm({
+                                    price: String(product.numericPrice || ""),
+                                    stock: String(product.quantity ?? product.stock ?? ""),
+                                });
+                            }}
+                            onDeleteProduct={handleAdminDeleteProduct}
                             onOpenPostProductModal={() => setIsPostProductModalOpen(true)}
                         />
                     )}
@@ -1223,6 +1632,15 @@ export default function Dashboard() {
                                 setWholesaleQuantity("50");
                             }}
                             onOpenPostProductModal={() => setIsPostProductModalOpen(true)}
+                            onRemoveFromPortfolio={handleRemoveProductFromPortfolio}
+                            onEditProduct={(product) => {
+                                setEditingProduct(product);
+                                setEditProductForm({
+                                    price: String(product.numericPrice || ""),
+                                    stock: String(product.quantity ?? product.stock ?? ""),
+                                });
+                            }}
+                            onDeleteProduct={handleAdminDeleteProduct}
                         />
                     )}
 
@@ -1232,7 +1650,13 @@ export default function Dashboard() {
                             loadingUsers={false}
                             onEditUser={(u) => {
                                 setEditingUser(u);
-                                setEditUserForm({ name: u.name || u.userName || "", email: u.email, role: u.role || "Customer", phone: u.phone || "", address: u.address || "" });
+                                setEditUserForm({
+                                    name: u.name || u.userName || u.username || "",
+                                    email: u.email || "",
+                                    role: u.title || u.role || "Customer",
+                                    phone: u.phone || u.phoneNumber || "",
+                                    address: u.address || "",
+                                });
                             }}
                             onDeleteUser={handleAdminDeleteUser}
                             onCreateUser={handleAdminCreateUser}
@@ -1390,11 +1814,7 @@ export default function Dashboard() {
                 product={editingProduct}
                 editProductForm={editProductForm}
                 setEditProductForm={setEditProductForm}
-                onSubmit={(e) => {
-                    e.preventDefault();
-                    alert("Product updated!");
-                    setEditingProduct(null);
-                }}
+                onSubmit={handleAdminUpdateProduct}
                 submitting={isSubmittingEditProduct}
             />
 
@@ -1404,11 +1824,7 @@ export default function Dashboard() {
                 user={editingUser}
                 editUserForm={editUserForm}
                 setEditUserForm={setEditUserForm}
-                onSubmit={(e) => {
-                    e.preventDefault();
-                    alert("User updated!");
-                    setEditingUser(null);
-                }}
+                onSubmit={handleAdminUpdateUser}
                 submitting={isEditingUserSubmitting}
             />
 

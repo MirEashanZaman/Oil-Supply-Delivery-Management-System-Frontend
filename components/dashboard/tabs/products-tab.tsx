@@ -1,8 +1,6 @@
-"use client";
-
 import React, { useState } from "react";
 import { Product, UserData } from "../types";
-import { getProductImage } from "../utils";
+import { getProductImage, getRolePath, getProductSourcingConfig, isProductOwner, isProductLinkedToUser } from "../utils";
 
 interface ProductsTabProps {
   products: Product[];
@@ -12,6 +10,7 @@ interface ProductsTabProps {
   onInstantOrder?: (product: Product) => void;
   onWholesaleOrder?: (product: Product) => void;
   onAddToPortfolio?: (product: Product) => void;
+  onRemoveFromPortfolio?: (productId: number) => void;
   onEditProduct?: (product: Product) => void;
   onDeleteProduct?: (id: number, name: string) => void;
   onOpenPostProductModal?: () => void;
@@ -25,6 +24,7 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
   onInstantOrder,
   onWholesaleOrder,
   onAddToPortfolio,
+  onRemoveFromPortfolio,
   onEditProduct,
   onDeleteProduct,
   onOpenPostProductModal,
@@ -32,11 +32,23 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
   const [productSearchQuery, setProductSearchQuery] = useState("");
   const [selectedProductCategory, setSelectedProductCategory] = useState("All");
 
-  const isCustomer = userData?.role === "Customer" || userData?.title === "Customer";
-  const isAdmin = userData?.role === "Admin" || userData?.title === "Admin";
-  const isSupplier = userData?.role === "Supplier" || userData?.title === "Supplier";
-  const isDealer = userData?.role === "Dealer" || userData?.title === "Dealer";
+  const userRole = getRolePath(userData?.title || userData?.role);
+  const isCustomer = userRole === "customer";
+  const isAdmin = userRole === "admin";
+  const isSupplier = userRole === "supplier";
+  const isDealer = userRole === "dealer";
   const canPlaceOrder = isCustomer || isDealer;
+
+  const portfolioKey = `user_portfolio_${userData?.id || userData?.email}`;
+  const localPortfolio: number[] = typeof window !== "undefined"
+    ? (() => {
+      try {
+        return JSON.parse(localStorage.getItem(portfolioKey) || "[]");
+      } catch {
+        return [];
+      }
+    })()
+    : [];
 
   const productCategories = [
     "All",
@@ -206,6 +218,26 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                       {product.stockLevel}
                     </span>
                   </div>
+                  {(() => {
+                    const cfg = getProductSourcingConfig(product, [], []);
+                    return (
+                      <div className="mb-2">
+                        {cfg.canChooseBetweenSupplierAndDealer ? (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                            Buy from Supplier or Dealer
+                          </span>
+                        ) : cfg.posterRole === "supplier" ? (
+                          <span className="text-[10px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                            Refinery Direct Supplier
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                            Dealer Exclusive
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                   <h2 className="card-title text-lg font-bold text-dark-slate mb-1">{product.name}</h2>
                   <p className="text-sm text-secondary-gray">{product.description}</p>
                 </div>
@@ -213,68 +245,165 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                 <div className="pt-4 mt-2 border-t border-[#F1F5F9] flex items-center justify-between gap-2">
                   <span className="text-base font-extrabold text-[#0F2747]">{product.price}</span>
                   <div className="card-actions justify-end">
-                    {isAdmin ? (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => onEditProduct && onEditProduct(product)}
-                          className="btn btn-sm bg-[#0F2747] hover:bg-[#0F2747]/90 text-white font-bold border-none rounded-xl cursor-pointer"
-                        >
-                          Update (PUT)
-                        </button>
-                        <button
-                          onClick={() => onDeleteProduct && onDeleteProduct(product.id, product.name)}
-                          className="btn btn-sm bg-[#DC2626] hover:bg-[#DC2626]/90 text-white font-bold border-none rounded-xl cursor-pointer"
-                        >
-                          Delete (DELETE)
-                        </button>
-                      </div>
-                    ) : isSupplier ? (
-                      <span className="text-xs bg-slate-100 text-secondary-gray font-medium px-3 py-1.5 rounded">
-                        Refinery Listed
-                      </span>
-                    ) : isDealer ? (
-                      <div className="flex flex-wrap justify-end gap-2">
-                        {onAddToPortfolio && (
-                          <button
-                            onClick={() => onAddToPortfolio(product)}
-                            className="btn bg-slate-100 hover:bg-slate-200 text-dark-slate btn-sm font-bold border border-slate-200 rounded-xl"
-                          >
-                            Add to Profile
-                          </button>
-                        )}
-                        <button
-                          onClick={() => onWholesaleOrder && onWholesaleOrder(product)}
-                          className="btn bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] btn-sm font-bold border-none rounded-xl"
-                        >
-                          Bulk Source
-                        </button>
-                      </div>
-                    ) : canPlaceOrder ? (
-                      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => onAddToCart && onAddToCart(product)}
-                          className="btn btn-sm bg-[#0F2747] hover:bg-[#163860] text-white font-bold border-none rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
-                          title="Add product to multi-delivery cart"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-[#F59E0B]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
-                          </svg>
-                          <span>Add to Cart</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onInstantOrder && onInstantOrder(product)}
-                          className="btn btn-sm bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold border-none rounded-xl text-xs cursor-pointer shadow-xs"
-                        >
-                          Buy Now
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-xs bg-slate-100 text-secondary-gray font-medium px-3 py-1.5 rounded">
-                        View only
-                      </span>
-                    )}
+                    {(() => {
+                      const isOwner = isProductOwner(product, userData);
+                      const isLinkedToUser = !isOwner && isProductLinkedToUser(product, userData);
+
+                      if (isAdmin) {
+                        return (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => onEditProduct && onEditProduct(product)}
+                              className="btn btn-sm bg-[#0F2747] hover:bg-[#0F2747]/90 text-white font-bold border-none rounded-xl cursor-pointer"
+                            >
+                              Update (PUT)
+                            </button>
+                            <button
+                              onClick={() => onDeleteProduct && onDeleteProduct(product.id, product.name)}
+                              className="btn btn-sm bg-[#DC2626] hover:bg-[#DC2626]/90 text-white font-bold border-none rounded-xl cursor-pointer"
+                            >
+                              Delete (DELETE)
+                            </button>
+                          </div>
+                        );
+                      }
+
+                      if (isDealer) {
+                        if (isOwner) {
+                          return (
+                            <div className="flex flex-col items-end gap-1.5">
+                              <span className="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 font-bold px-2 py-0.5 rounded-md">
+                                My Posted Lot (Fixed in Profile)
+                              </span>
+                              <div className="flex gap-1.5">
+                                {onEditProduct && (
+                                  <button
+                                    onClick={() => onEditProduct(product)}
+                                    className="btn btn-xs bg-[#0F2747] hover:bg-[#0F2747]/90 text-white font-bold border-none rounded-lg cursor-pointer"
+                                  >
+                                    Edit
+                                  </button>
+                                )}
+                                {onDeleteProduct && (
+                                  <button
+                                    onClick={() => onDeleteProduct(product.id, product.name)}
+                                    className="btn btn-xs bg-[#DC2626] hover:bg-[#DC2626]/90 text-white font-bold border-none rounded-lg cursor-pointer"
+                                  >
+                                    Delete
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        if (isLinkedToUser || localPortfolio.includes(product.id)) {
+                          return (
+                            <div className="flex flex-wrap justify-end gap-2">
+                              <button
+                                onClick={() => onRemoveFromPortfolio && onRemoveFromPortfolio(product.id)}
+                                className="btn btn-sm font-bold rounded-xl transition cursor-pointer bg-emerald-50 hover:bg-rose-50 text-emerald-700 hover:text-rose-600 border border-emerald-300 hover:border-rose-300"
+                                title="Remove from your profile. You cannot edit or delete profile-linked products."
+                              >
+                                ✓ In Profile • Remove
+                              </button>
+                              <button
+                                onClick={() => onWholesaleOrder && onWholesaleOrder(product)}
+                                className="btn bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] btn-sm font-bold border-none rounded-xl cursor-pointer"
+                              >
+                                Bulk Source
+                              </button>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="flex flex-wrap justify-end gap-2">
+                            {onAddToPortfolio && (
+                              <button
+                                onClick={() => onAddToPortfolio(product)}
+                                className="btn bg-slate-100 hover:bg-slate-200 text-dark-slate btn-sm font-bold border border-slate-200 rounded-xl cursor-pointer"
+                              >
+                                + Add to Profile
+                              </button>
+                            )}
+                            <button
+                              onClick={() => onWholesaleOrder && onWholesaleOrder(product)}
+                              className="btn bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] btn-sm font-bold border-none rounded-xl cursor-pointer"
+                            >
+                              Bulk Source
+                            </button>
+                          </div>
+                        );
+                      }
+
+                      if (isSupplier) {
+                        if (isOwner) {
+                          return (
+                            <div className="flex flex-col items-end gap-1.5">
+                              <span className="text-[10px] bg-blue-50 text-blue-800 border border-blue-200 font-bold px-2 py-0.5 rounded-md">
+                                My Supply Lot
+                              </span>
+                              <div className="flex gap-1.5">
+                                {onEditProduct && (
+                                  <button
+                                    onClick={() => onEditProduct(product)}
+                                    className="btn btn-xs bg-[#0F2747] hover:bg-[#0F2747]/90 text-white font-bold border-none rounded-lg cursor-pointer"
+                                  >
+                                    Edit
+                                  </button>
+                                )}
+                                {onDeleteProduct && (
+                                  <button
+                                    onClick={() => onDeleteProduct(product.id, product.name)}
+                                    className="btn btn-xs bg-[#DC2626] hover:bg-[#DC2626]/90 text-white font-bold border-none rounded-lg cursor-pointer"
+                                  >
+                                    Delete
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <span className="text-xs bg-slate-100 text-secondary-gray font-medium px-3 py-1.5 rounded">
+                              Refinery Lot
+                            </span>
+                          );
+                        }
+                      }
+
+                      if (canPlaceOrder) {
+                        return (
+                          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => onAddToCart && onAddToCart(product)}
+                              className="btn btn-sm bg-[#0F2747] hover:bg-[#163860] text-white font-bold border-none rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                              title="Add product to multi-delivery cart"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-[#F59E0B]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+                              </svg>
+                              <span>Add to Cart</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onInstantOrder && onInstantOrder(product)}
+                              className="btn btn-sm bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] font-bold border-none rounded-xl text-xs cursor-pointer shadow-xs"
+                            >
+                              Buy Now
+                            </button>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <span className="text-xs bg-slate-100 text-secondary-gray font-medium px-3 py-1.5 rounded">
+                          View only
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

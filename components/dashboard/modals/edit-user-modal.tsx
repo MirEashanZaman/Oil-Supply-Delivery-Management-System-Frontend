@@ -79,14 +79,12 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Role
+              Role (managed by the backend)
             </label>
             <select
               value={editUserForm.role}
-              onChange={(e) =>
-                setEditUserForm((prev) => ({ ...prev, role: e.target.value }))
-              }
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500"
+              disabled
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-400 text-sm cursor-not-allowed"
             >
               <option value="Customer">Customer</option>
               <option value="Dealer">Dealer</option>

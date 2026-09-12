@@ -67,7 +67,7 @@ export const PostProductModal: React.FC<PostProductModalProps> = ({
                 setNewProduct((prev) => ({ ...prev, name: e.target.value }))
               }
               className="w-full bg-white border border-[#CBD5E1] rounded-[18px] px-4 py-3 text-base text-[#1E293B] placeholder:text-[#64748B] focus:outline-none focus:border-[#0F2747] shadow-sm"
-              placeholder="e.g. Premium Unleaded Octane-95"
+              placeholder="Enter product name"
               required
             />
           </div>
@@ -107,7 +107,7 @@ export const PostProductModal: React.FC<PostProductModalProps> = ({
                   setNewProduct((prev) => ({ ...prev, price: e.target.value }))
                 }
                 className="w-full bg-white border border-[#CBD5E1] rounded-[18px] px-4 py-3 text-base text-[#1E293B] placeholder:text-[#64748B] focus:outline-none focus:border-[#0F2747] shadow-sm"
-                placeholder="1.25"
+                placeholder="Enter product price"
                 required
               />
             </div>
@@ -124,7 +124,7 @@ export const PostProductModal: React.FC<PostProductModalProps> = ({
                   setNewProduct((prev) => ({ ...prev, stock: e.target.value }))
                 }
                 className="w-full bg-white border border-[#CBD5E1] rounded-[18px] px-4 py-3 text-base text-[#1E293B] placeholder:text-[#64748B] focus:outline-none focus:border-[#0F2747] shadow-sm"
-                placeholder="50000"
+                placeholder="Enter stock quantity"
                 required
               />
             </div>
@@ -143,40 +143,96 @@ export const PostProductModal: React.FC<PostProductModalProps> = ({
                 }))
               }
               className="w-full bg-white border border-[#CBD5E1] rounded-xl px-3 py-2.5 text-sm text-[#1E293B] placeholder:text-[#64748B] focus:outline-none focus:border-[#0F2747] resize-none h-22 shadow-sm"
-              placeholder="High-grade refined fuel standard suitable for all modern commercial engines."
+              placeholder="Enter product description"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="block text-[0.85rem] font-semibold text-[#0F2747] text-left">
-              Product Photo
-            </label>
-
-            <div className="flex overflow-hidden rounded-xl border border-[#CBD5E1] bg-white shadow-sm">
-              <label
-                htmlFor="product-photo-upload"
-                className="cursor-pointer border-r border-[#CBD5E1] bg-white px-3 py-2 text-xs font-bold text-[#0F2747] transition hover:bg-slate-100"
-              >
-                Choose File
+            <div className="flex items-center justify-between">
+              <label className="block text-[0.85rem] font-bold text-[#0F2747] text-left">
+                Product Photo <span className="text-red-600 font-extrabold text-xs bg-red-100/80 border border-red-200 px-2 py-0.5 rounded-md ml-1">Required *</span>
               </label>
-
-              <span className="flex-1 truncate px-3 py-2 text-xs text-[#64748B]">
-                {newProduct.photo ? newProduct.photo.name : "No file chosen"}
-              </span>
-
-              <input
-                id="product-photo-upload"
-                type="file"
-                accept="image/*"
-                onChange={(e) =>
-                  setNewProduct((prev) => ({
-                    ...prev,
-                    photo: e.target.files?.[0] || null,
-                  }))
-                }
-                className="hidden"
-              />
             </div>
+            <p className="text-[0.72rem] text-[#64748B] -mt-1 text-left">
+              Upload a clear photo for this product. A photo is required to publish this product.
+            </p>
+
+            {newProduct.photo ? (
+              <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-300 rounded-xl shadow-sm">
+                <div className="w-16 h-16 rounded-lg overflow-hidden bg-slate-200 border border-slate-300 flex-shrink-0 relative">
+                  <img
+                    src={URL.createObjectURL(newProduct.photo)}
+                    alt="Product preview"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-slate-800 truncate">
+                    {newProduct.photo.name}
+                  </p>
+                  <p className="text-[0.7rem] text-slate-500">
+                    {(newProduct.photo.size / 1024).toFixed(1)} KB
+                  </p>
+                  <label
+                    htmlFor="product-photo-upload"
+                    className="inline-block mt-1 text-[0.75rem] font-semibold text-[#0F2747] hover:underline cursor-pointer"
+                  >
+                    Change photo
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setNewProduct((prev) => ({ ...prev, photo: null }))
+                  }
+                  className="px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-[#0F2747] rounded-xl p-4 bg-white transition cursor-pointer relative group">
+                <label
+                  htmlFor="product-photo-upload"
+                  className="w-full h-full flex flex-col items-center justify-center cursor-pointer"
+                >
+                  <svg
+                    className="w-8 h-8 text-slate-400 group-hover:text-[#0F2747] transition mb-1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <span className="text-xs font-bold text-[#0F2747]">
+                    Click to select photo <span className="text-red-500">*</span>
+                  </span>
+                  <span className="text-[0.7rem] text-slate-500 mt-0.5">
+                    PNG, JPG, JPEG, WEBP
+                  </span>
+                </label>
+              </div>
+            )}
+
+            <input
+              id="product-photo-upload"
+              type="file"
+              accept="image/*"
+              required={!newProduct.photo}
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
+                setNewProduct((prev) => ({
+                  ...prev,
+                  photo: file,
+                }));
+              }}
+              className="hidden"
+            />
           </div>
 
           <div className="flex justify-end gap-3 pt-2">

@@ -196,7 +196,7 @@ export default function ContactInfo() {
                                                 type="text"
                                                 required
                                                 value={name}
-                                                placeholder="e.g. Mohammad Ali"
+                                                placeholder="Enter your name"
                                                 onChange={(e) => setName(e.target.value)}
                                                 className="input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none rounded-xl"
                                             />
@@ -210,7 +210,7 @@ export default function ContactInfo() {
                                                 type="email"
                                                 required
                                                 value={email}
-                                                placeholder="user@example.com"
+                                                placeholder="Enter your email"
                                                 onChange={(e) => setEmail(e.target.value)}
                                                 className="input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none rounded-xl"
                                             />
@@ -242,7 +242,7 @@ export default function ContactInfo() {
                                             required
                                             rows={4}
                                             value={message}
-                                            placeholder="Write your questions or order requirements here..."
+                                            placeholder="Enter your message"
                                             onChange={(e) => setMessage(e.target.value)}
                                             className="textarea textarea-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none text-sm rounded-xl"
                                         />

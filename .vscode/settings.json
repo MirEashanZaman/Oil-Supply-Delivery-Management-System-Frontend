@@ -4,6 +4,16 @@
         "git commit": true,
         "git push": true,
         "npx tsc": true,
-        "git remote": true
+        "git remote": true,
+        "/^node -e \"const axios=require\\('axios'\\); axios\\.get\\('http://localhost:8000/product/list',\\{withCredentials:true,validateStatus:s=>s<500\\}\\)\\.then\\(r=>\\{console\\.log\\(JSON\\.stringify\\(r\\.data,null,2\\)\\);\\}\\)\\.catch\\(err=>\\{console\\.error\\(err\\.response\\?\\.data\\|\\|err\\.message\\); process\\.exit\\(1\\);\\}\\)\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^node -e \"fetch\\('http://localhost:8000/product/list',\\{credentials:'include'\\}\\)\\.then\\(async r=>\\{const text=await r\\.text\\(\\); console\\.log\\('STATUS',r\\.status\\); console\\.log\\(text\\.slice\\(0,2000\\)\\);\\}\\)\\.catch\\(e=>\\{console\\.error\\(e\\); process\\.exit\\(1\\);\\}\\)\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "npm start": true,
+        "npm run start:dev": true
     }
 }

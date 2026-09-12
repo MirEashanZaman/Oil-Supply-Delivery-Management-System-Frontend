@@ -27,16 +27,37 @@ const PRODUCT_IMAGE_MAP: Record<number, string> = {
 };
 
 const getProductImage = (name?: string, img?: string, id?: number | string) => {
-    if (typeof window !== "undefined" && id) {
+    if (typeof window !== "undefined") {
         try {
-            const customStored = localStorage.getItem(`product_img_${id}`);
-            if (customStored) return customStored;
+            if (id) {
+                const customStoredId = localStorage.getItem(`product_img_${id}`);
+                if (customStoredId && (customStoredId.startsWith("data:") || customStoredId.startsWith("blob:") || customStoredId.startsWith("http") || customStoredId.startsWith("/"))) {
+                    return customStoredId;
+                }
+            }
+            if (name) {
+                const customStoredName = localStorage.getItem(`product_img_${name.trim()}`);
+                if (customStoredName && (customStoredName.startsWith("data:") || customStoredName.startsWith("blob:") || customStoredName.startsWith("http") || customStoredName.startsWith("/"))) {
+                    return customStoredName;
+                }
+            }
         } catch {
         }
     }
-    if (img && (img.startsWith("/") || img.startsWith("http")) && img !== "/Brent Crude Oil.jpg") {
-        return img;
+
+    if (img && typeof img === "string" && img.trim() !== "") {
+        const trimmed = img.trim();
+        if (
+            trimmed.startsWith("data:") ||
+            trimmed.startsWith("blob:") ||
+            trimmed.startsWith("http://") ||
+            trimmed.startsWith("https://") ||
+            (trimmed.startsWith("/") && trimmed !== "/Brent Crude Oil.jpg")
+        ) {
+            return trimmed;
+        }
     }
+
     const lower = (name || "").toLowerCase();
     if (lower.includes("lpg") || lower.includes("liquefied") || lower.includes("cylinder") || lower.includes("propane") || lower.includes("butane")) {
         return "/images.jpg";
@@ -56,6 +77,7 @@ const getProductImage = (name?: string, img?: string, id?: number | string) => {
     if (lower.includes("crude") || lower.includes("brent") || lower.includes("wti") || lower.includes("raw")) {
         return "/Brent Crude Oil.jpg";
     }
+
     if (id !== undefined && id !== null) {
         const numId = Number(id);
         if (!isNaN(numId) && PRODUCT_IMAGE_MAP[numId]) {
@@ -73,9 +95,11 @@ const getProductImage = (name?: string, img?: string, id?: number | string) => {
             return fallbackImages[(numId - 1) % fallbackImages.length];
         }
     }
-    if (img && (img.startsWith("/") || img.startsWith("http"))) {
+
+    if (img && (img.startsWith("/") || img.startsWith("http") || img.startsWith("data:") || img.startsWith("blob:"))) {
         return img;
     }
+
     return "/Brent Crude Oil.jpg";
 };
 
@@ -315,7 +339,7 @@ export default function ProductDetails({
                                         type="text"
                                         required
                                         value={inquiryName}
-                                        placeholder="e.g. Mohammad Ali"
+                                        placeholder="Enter your name"
                                         onChange={(e) => setInquiryName(e.target.value)}
                                         className="input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] text-xs rounded-xl"
                                     />
@@ -327,7 +351,7 @@ export default function ProductDetails({
                                         type="email"
                                         required
                                         value={inquiryEmail}
-                                        placeholder="user@example.com"
+                                        placeholder="Enter your email"
                                         onChange={(e) => setInquiryEmail(e.target.value)}
                                         className="input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] text-xs rounded-xl"
                                     />
@@ -339,7 +363,7 @@ export default function ProductDetails({
                                         required
                                         rows={3}
                                         value={inquiryMessage}
-                                        placeholder="Ask about batch volume, pipeline dispatch schedule, or testing reports..."
+                                        placeholder="Enter your message"
                                         onChange={(e) => setInquiryMessage(e.target.value)}
                                         className="textarea textarea-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] text-xs rounded-xl"
                                     />

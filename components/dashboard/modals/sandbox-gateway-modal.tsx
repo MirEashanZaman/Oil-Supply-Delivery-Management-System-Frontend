@@ -172,7 +172,7 @@ export const SandboxGatewayModal: React.FC<SandboxGatewayModalProps> = ({
                                     type="text"
                                     value={sandboxOtp}
                                     onChange={(e) => setSandboxOtp(e.target.value)}
-                                    placeholder="Enter 123456"
+                                    placeholder="Enter your OTP"
                                     className="w-full p-2.5 border border-secondary-gray rounded-xl bg-white text-dark-slate text-sm font-mono text-center tracking-widest outline-none focus:border-primary"
                                 />
                                 <span className="text-[11px] text-secondary-gray mt-1 block">

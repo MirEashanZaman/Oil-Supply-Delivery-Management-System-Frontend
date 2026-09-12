@@ -35,14 +35,14 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         {isCustomer
           ? "My Order History & Live Tracking"
           : isAdmin
-            ? "Global Order Control & Modification"
+            ? "Global Order Control & Deletion"
             : "Fulfill Customer & Dealer Orders"}
       </h1>
       <p className="text-sm text-secondary-gray mb-6">
         {isCustomer
           ? "View past orders, delivery channel selections, payment invoices, and real-time status updates."
           : isAdmin
-            ? "Global authority to edit order details or delete orders (with automatic cascade clean-up of OrderDetails, Payments, and Deliveries)."
+            ? "Admins can delete orders, but cannot update any order details or status."
             : "Confirm or reject retail/wholesale orders, schedule deliveries, and dispatch email updates to buyers."}
       </p>
 
@@ -121,14 +121,6 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                 <div className="flex items-center gap-2 self-end md:self-center">
                   {isAdmin ? (
                     <div className="flex gap-2">
-                      {onEditOrder && (
-                        <button
-                          onClick={() => onEditOrder(item)}
-                          className="bg-[#0F2747] text-white text-xs font-semibold px-3 py-2 rounded-lg hover:bg-[#0F2747]/90 transition-colors cursor-pointer"
-                        >
-                          Edit Order (PATCH)
-                        </button>
-                      )}
                       {onDeleteOrder && (
                         <button
                           onClick={() => onDeleteOrder(item.id)}

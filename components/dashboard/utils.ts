@@ -8,16 +8,37 @@ export const PRODUCT_IMAGE_MAP: Record<number, string> = {
 };
 
 export const getProductImage = (name?: string, img?: string, id?: number | string): string => {
-    if (typeof window !== "undefined" && id) {
+    if (typeof window !== "undefined") {
         try {
-            const customStored = localStorage.getItem(`product_img_${id}`);
-            if (customStored) return customStored;
+            if (id) {
+                const customStoredId = localStorage.getItem(`product_img_${id}`);
+                if (customStoredId && (customStoredId.startsWith("data:") || customStoredId.startsWith("blob:") || customStoredId.startsWith("http") || customStoredId.startsWith("/"))) {
+                    return customStoredId;
+                }
+            }
+            if (name) {
+                const customStoredName = localStorage.getItem(`product_img_${name.trim()}`);
+                if (customStoredName && (customStoredName.startsWith("data:") || customStoredName.startsWith("blob:") || customStoredName.startsWith("http") || customStoredName.startsWith("/"))) {
+                    return customStoredName;
+                }
+            }
         } catch {
         }
     }
-    if (img && (img.startsWith("/") || img.startsWith("http")) && img !== "/Brent Crude Oil.jpg") {
-        return img;
+
+    if (img && typeof img === "string" && img.trim() !== "") {
+        const trimmed = img.trim();
+        if (
+            trimmed.startsWith("data:") ||
+            trimmed.startsWith("blob:") ||
+            trimmed.startsWith("http://") ||
+            trimmed.startsWith("https://") ||
+            (trimmed.startsWith("/") && trimmed !== "/Brent Crude Oil.jpg")
+        ) {
+            return trimmed;
+        }
     }
+
     const lower = (name || "").toLowerCase();
     if (lower.includes("lpg") || lower.includes("liquefied") || lower.includes("cylinder") || lower.includes("propane") || lower.includes("butane")) {
         return "/images.jpg";
@@ -37,6 +58,7 @@ export const getProductImage = (name?: string, img?: string, id?: number | strin
     if (lower.includes("crude") || lower.includes("brent") || lower.includes("wti") || lower.includes("raw")) {
         return "/Brent Crude Oil.jpg";
     }
+
     if (id !== undefined && id !== null) {
         const numId = Number(id);
         if (!isNaN(numId) && PRODUCT_IMAGE_MAP[numId]) {
@@ -54,9 +76,11 @@ export const getProductImage = (name?: string, img?: string, id?: number | strin
             return fallbackImages[(numId - 1) % fallbackImages.length];
         }
     }
-    if (img && (img.startsWith("/") || img.startsWith("http"))) {
+
+    if (img && (img.startsWith("/") || img.startsWith("http") || img.startsWith("data:") || img.startsWith("blob:"))) {
         return img;
     }
+
     return "/Brent Crude Oil.jpg";
 };
 
@@ -101,4 +125,216 @@ export const getStatusBadgeClass = (status?: string): string => {
         return "bg-red-50 text-red-700 border-red-200";
     }
     return "bg-amber-50 text-amber-700 border-amber-200";
+};
+
+export interface SourcingPartyOption {
+    id: number | string;
+    userName?: string;
+    username?: string;
+    name?: string;
+    email?: string;
+    role?: string;
+}
+
+export interface ProductSourcingConfig {
+    posterRole: "supplier" | "dealer";
+    posterParty: SourcingPartyOption;
+    linkedDealers: SourcingPartyOption[];
+    allowedSuppliers: SourcingPartyOption[];
+    allowedDealers: SourcingPartyOption[];
+    canChooseBetweenSupplierAndDealer: boolean;
+    defaultSourcingChoice: "supplier" | "dealer";
+    defaultPartyId: number | string;
+    sourcingNotice: string;
+}
+
+export const getProductSourcingConfig = (
+    product: any,
+    availableSuppliers: any[] = [],
+    availableDealers: any[] = []
+): ProductSourcingConfig => {
+    if (!product) {
+        return {
+            posterRole: "supplier",
+            posterParty: availableSuppliers[0] || { id: 1, userName: "Refinery Supplier" },
+            linkedDealers: [],
+            allowedSuppliers: availableSuppliers,
+            allowedDealers: availableDealers,
+            canChooseBetweenSupplierAndDealer: availableSuppliers.length > 0 && availableDealers.length > 0,
+            defaultSourcingChoice: "supplier",
+            defaultPartyId: availableSuppliers[0]?.id || 1,
+            sourcingNotice: "Standard sourcing channel available.",
+        };
+    }
+
+    const rawSupplier = product.supplier?.id ? product.supplier : null;
+    const rawDealer = product.dealer?.id && !product.supplier ? product.dealer : null;
+    const isDealerPosted = !rawSupplier && Boolean(rawDealer);
+    const posterRole: "supplier" | "dealer" = isDealerPosted ? "dealer" : "supplier";
+
+    const posterParty: SourcingPartyOption = isDealerPosted
+        ? {
+            id: rawDealer.id,
+            userName: rawDealer.userName || rawDealer.username || rawDealer.name || `Dealer #${rawDealer.id}`,
+            email: rawDealer.email || "Verified Dealer",
+            role: "Dealer",
+        }
+        : rawSupplier
+            ? {
+                id: rawSupplier.id,
+                userName: rawSupplier.userName || rawSupplier.username || rawSupplier.name || `Supplier #${rawSupplier.id}`,
+                email: rawSupplier.email || "Verified Supplier",
+                role: "Supplier",
+            }
+            : availableSuppliers[0] || { id: 1, userName: "Refinery Supplier Direct", email: "depot@refinery.com", role: "Supplier" };
+
+    const linkedDealersMap = new Map<string, SourcingPartyOption>();
+
+    if (Array.isArray(product.dealers)) {
+        for (const d of product.dealers) {
+            if (d?.id && (!rawDealer || String(d.id) !== String(rawDealer.id))) {
+                linkedDealersMap.set(String(d.id), {
+                    id: d.id,
+                    userName: d.userName || d.username || d.name || `Dealer #${d.id}`,
+                    email: d.email || "Verified Dealer",
+                    role: "Dealer",
+                });
+            }
+        }
+    }
+
+    if (typeof window !== "undefined" && product.id) {
+        try {
+            const stored = localStorage.getItem(`product_dealers_${product.id}`);
+            if (stored) {
+                const parsed: SourcingPartyOption[] = JSON.parse(stored);
+                if (Array.isArray(parsed)) {
+                    for (const d of parsed) {
+                        if (d?.id) {
+                            linkedDealersMap.set(String(d.id), {
+                                id: d.id,
+                                userName: d.userName || d.username || d.name || `Dealer #${d.id}`,
+                                email: d.email || "Verified Dealer",
+                                role: "Dealer",
+                            });
+                        }
+                    }
+                }
+            }
+        } catch {
+        }
+    }
+
+    const linkedDealers = Array.from(linkedDealersMap.values());
+
+    let allowedSuppliers: SourcingPartyOption[] = [];
+    let allowedDealers: SourcingPartyOption[] = [];
+    let canChooseBetweenSupplierAndDealer = false;
+    let defaultSourcingChoice: "supplier" | "dealer" = "supplier";
+    let defaultPartyId: number | string = posterParty.id;
+    let sourcingNotice = "";
+
+    if (posterRole === "supplier") {
+        allowedSuppliers = [posterParty];
+        if (linkedDealers.length > 0) {
+            allowedDealers = linkedDealers;
+            canChooseBetweenSupplierAndDealer = true;
+            defaultSourcingChoice = "supplier";
+            defaultPartyId = posterParty.id;
+            sourcingNotice = `Available directly from Refinery Supplier (${posterParty.userName}) or from ${linkedDealers.length} authorized dealer(s) who added this product to their profile.`;
+        } else {
+            allowedDealers = [];
+            canChooseBetweenSupplierAndDealer = false;
+            defaultSourcingChoice = "supplier";
+            defaultPartyId = posterParty.id;
+            sourcingNotice = `Direct Refinery Sourcing: Posted by ${posterParty.userName}. No other dealer has added this product to their profile, so order is fulfilled directly by the posting supplier.`;
+        }
+    } else {
+        allowedSuppliers = [];
+        allowedDealers = [posterParty, ...linkedDealers.filter((d) => String(d.id) !== String(posterParty.id))];
+        canChooseBetweenSupplierAndDealer = false;
+        defaultSourcingChoice = "dealer";
+        defaultPartyId = posterParty.id;
+        sourcingNotice = `Authorized Dealer Lot: Posted by ${posterParty.userName}. Fulfill order directly through this dealer.`;
+    }
+
+    return {
+        posterRole,
+        posterParty,
+        linkedDealers,
+        allowedSuppliers,
+        allowedDealers,
+        canChooseBetweenSupplierAndDealer,
+        defaultSourcingChoice,
+        defaultPartyId,
+        sourcingNotice,
+    };
+};
+
+export const isProductLinkedToUser = (product: any, user: any): boolean => {
+    if (!product || !user) return false;
+    const userId = user.id ? Number(user.id) : null;
+    const userEmail = (user.email || "").toLowerCase().trim();
+    const userName = (user.userName || user.name || user.username || "").toLowerCase().trim();
+
+    const matchesUser = (candidate: any) => {
+        if (!candidate) return false;
+        if (userId && candidate.id !== undefined && candidate.id !== null && Number(candidate.id) === userId) return true;
+        if (userEmail && (candidate.email || "").toLowerCase().trim() === userEmail) return true;
+        const candidateName = (candidate.userName || candidate.username || candidate.name || "").toLowerCase().trim();
+        return Boolean(userName && candidateName && (candidateName === userName || candidateName.includes(userName) || userName.includes(candidateName)));
+    };
+
+    if (typeof window !== "undefined" && product.id) {
+        try {
+            const linkedDealers = JSON.parse(localStorage.getItem(`product_dealers_${product.id}`) || "[]");
+            if (Array.isArray(linkedDealers) && linkedDealers.some((dealer: any) => matchesUser(dealer))) {
+                return true;
+            }
+        } catch {
+        }
+    }
+
+    if (Array.isArray(product.dealers) && product.dealers.some((dealer: any) => matchesUser(dealer))) {
+        return true;
+    }
+
+    return false;
+};
+
+export const isProductOwner = (product: any, user: any): boolean => {
+    if (!product || !user) return false;
+    const userId = user.id ? Number(user.id) : null;
+    const userEmail = (user.email || "").toLowerCase().trim();
+    const userName = (user.userName || user.name || user.username || "").toLowerCase().trim();
+
+    const matchesUser = (candidate: any) => {
+        if (!candidate) return false;
+        if (userId && candidate.id !== undefined && candidate.id !== null && Number(candidate.id) === userId) return true;
+        if (userEmail && (candidate.email || "").toLowerCase().trim() === userEmail) return true;
+        const candidateName = (candidate.userName || candidate.username || candidate.name || "").toLowerCase().trim();
+        return Boolean(userName && candidateName && (candidateName === userName || candidateName.includes(userName) || userName.includes(candidateName)));
+    };
+
+    if (typeof window !== "undefined" && product.id) {
+        try {
+            const creatorStr = localStorage.getItem(`product_creator_${product.id}`);
+            if (creatorStr) {
+                const creator = JSON.parse(creatorStr);
+                return matchesUser(creator);
+            }
+
+            const linkedDealers = JSON.parse(localStorage.getItem(`product_dealers_${product.id}`) || "[]");
+            if (Array.isArray(linkedDealers) && linkedDealers.some((dealer: any) => matchesUser(dealer))) {
+                return false;
+            }
+        } catch {
+        }
+    }
+
+    if (product.supplier && matchesUser(product.supplier)) return true;
+    if (product.user && matchesUser(product.user)) return true;
+    if (!product.supplier && !product.user && product.dealer && matchesUser(product.dealer)) return true;
+
+    return false;
 };

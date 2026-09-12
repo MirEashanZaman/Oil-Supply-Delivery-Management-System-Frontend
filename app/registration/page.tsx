@@ -286,7 +286,7 @@ export default function Registration() {
                                         id="username"
                                         type="text"
                                         value={username}
-                                        placeholder="johndoe"
+                                        placeholder="Enter your username"
                                         onChange={(e) => setUsername(e.target.value)}
                                         className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none rounded-xl ${errors.username ? "border-[#DC2626]" : ""}`}
                                     />
@@ -305,7 +305,7 @@ export default function Registration() {
                                         id="email"
                                         type="email"
                                         value={email}
-                                        placeholder="user@example.com"
+                                        placeholder="Enter your email"
                                         onChange={(e) => {
                                             setEmail(e.target.value);
                                             if (emailStatus.isUnique !== null) {
@@ -347,7 +347,7 @@ export default function Registration() {
                                         id="phoneNumber"
                                         type="tel"
                                         value={phoneNumber}
-                                        placeholder="+1 234 567 890"
+                                        placeholder="Enter your phone number"
                                         onChange={(e) => setPhoneNumber(e.target.value)}
                                         className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none rounded-xl ${errors.phoneNumber ? "border-[#DC2626]" : ""}`}
                                     />
@@ -365,7 +365,7 @@ export default function Registration() {
                                     id="address"
                                     type="text"
                                     value={address}
-                                    placeholder="123 Industrial Boulevard, Sector 4"
+                                    placeholder="Enter your address"
                                     onChange={(e) => setAddress(e.target.value)}
                                     className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none rounded-xl ${errors.address ? "border-[#DC2626]" : ""}`}
                                 />
@@ -399,7 +399,7 @@ export default function Registration() {
                                         id="password"
                                         type="password"
                                         value={password}
-                                        placeholder="Min. 8 characters"
+                                        placeholder="Enter your password"
                                         onChange={(e) => setPassword(e.target.value)}
                                         className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none rounded-xl ${errors.password ? "border-[#DC2626]" : ""}`}
                                     />
@@ -416,7 +416,7 @@ export default function Registration() {
                                         id="confirmPassword"
                                         type="password"
                                         value={confirmPassword}
-                                        placeholder="Re-enter password"
+                                        placeholder="Enter your password again"
                                         onChange={(e) => setConfirmPassword(e.target.value)}
                                         className={`input input-bordered w-full bg-[#FFFFFF] text-[#1E293B] border-[#CBD5E1] focus:border-[#0F2747] focus:outline-none rounded-xl ${errors.confirmPassword ? "border-[#DC2626]" : ""}`}
                                     />

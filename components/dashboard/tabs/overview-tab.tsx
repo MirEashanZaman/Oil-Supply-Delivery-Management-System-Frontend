@@ -33,8 +33,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const isDealer = userData?.role === "Dealer";
 
   const totalSpentOrRevenue = orders.reduce((sum, order) => {
-    const amt = parseFloat(String(order.totalAmount || 0));
-    return isNaN(amt) ? sum : sum + amt;
+    const directValue = Number(String(order.totalAmount ?? 0).replace(/[$,\s]/g, ""));
+    const quantity = Number(order.quantity ?? 1) || 1;
+    const productPrice = Number(String((order as any).product?.price ?? 0).replace(/[$,\s]/g, ""));
+    const amt = Number.isFinite(directValue) && directValue > 0
+      ? directValue
+      : (Number.isFinite(productPrice) && productPrice > 0 ? productPrice * quantity : 0);
+    return sum + amt;
   }, 0);
 
   const pendingOrdersCount = orders.filter(

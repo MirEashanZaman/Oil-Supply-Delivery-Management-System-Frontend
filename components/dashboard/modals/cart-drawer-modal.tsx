@@ -245,7 +245,7 @@ export const CartDrawerModal: React.FC<CartDrawerModalProps> = ({
                                                         type="text"
                                                         value={item.deliveryAddress || deliveryAddress || ""}
                                                         onChange={(e) => onUpdateAddress(item.product.id, e.target.value)}
-                                                        placeholder="Enter site delivery address..."
+                                                        placeholder="Enter your delivery address"
                                                         className="w-full p-1.5 sm:p-2 border border-secondary-gray rounded-lg bg-white text-dark-slate text-xs font-medium outline-none focus:border-primary"
                                                     />
                                                 </div>

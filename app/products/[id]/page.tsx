@@ -27,16 +27,37 @@ const PRODUCT_IMAGE_MAP: Record<number, string> = {
 };
 
 const getProductImage = (name?: string, img?: string, id?: number | string) => {
-    if (typeof window !== "undefined" && id) {
+    if (typeof window !== "undefined") {
         try {
-            const customStored = localStorage.getItem(`product_img_${id}`);
-            if (customStored) return customStored;
+            if (id) {
+                const customStoredId = localStorage.getItem(`product_img_${id}`);
+                if (customStoredId && (customStoredId.startsWith("data:") || customStoredId.startsWith("blob:") || customStoredId.startsWith("http") || customStoredId.startsWith("/"))) {
+                    return customStoredId;
+                }
+            }
+            if (name) {
+                const customStoredName = localStorage.getItem(`product_img_${name.trim()}`);
+                if (customStoredName && (customStoredName.startsWith("data:") || customStoredName.startsWith("blob:") || customStoredName.startsWith("http") || customStoredName.startsWith("/"))) {
+                    return customStoredName;
+                }
+            }
         } catch {
         }
     }
-    if (img && (img.startsWith("/") || img.startsWith("http")) && img !== "/Brent Crude Oil.jpg") {
-        return img;
+
+    if (img && typeof img === "string" && img.trim() !== "") {
+        const trimmed = img.trim();
+        if (
+            trimmed.startsWith("data:") ||
+            trimmed.startsWith("blob:") ||
+            trimmed.startsWith("http://") ||
+            trimmed.startsWith("https://") ||
+            (trimmed.startsWith("/") && trimmed !== "/Brent Crude Oil.jpg")
+        ) {
+            return trimmed;
+        }
     }
+
     const lower = (name || "").toLowerCase();
     if (lower.includes("lpg") || lower.includes("liquefied") || lower.includes("cylinder") || lower.includes("propane") || lower.includes("butane")) {
         return "/images.jpg";
@@ -56,6 +77,7 @@ const getProductImage = (name?: string, img?: string, id?: number | string) => {
     if (lower.includes("crude") || lower.includes("brent") || lower.includes("wti") || lower.includes("raw")) {
         return "/Brent Crude Oil.jpg";
     }
+
     if (id !== undefined && id !== null) {
         const numId = Number(id);
         if (!isNaN(numId) && PRODUCT_IMAGE_MAP[numId]) {
@@ -73,9 +95,11 @@ const getProductImage = (name?: string, img?: string, id?: number | string) => {
             return fallbackImages[(numId - 1) % fallbackImages.length];
         }
     }
-    if (img && (img.startsWith("/") || img.startsWith("http"))) {
+
+    if (img && (img.startsWith("/") || img.startsWith("http") || img.startsWith("data:") || img.startsWith("blob:"))) {
         return img;
     }
+
     return "/Brent Crude Oil.jpg";
 };
 

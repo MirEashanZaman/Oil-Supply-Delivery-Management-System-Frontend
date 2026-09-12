@@ -175,6 +175,7 @@ export const PostProductModal: React.FC<PostProductModalProps> = ({
                   }))
                 }
                 className="hidden"
+                required
               />
             </div>
           </div>

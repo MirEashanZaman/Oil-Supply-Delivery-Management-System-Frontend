@@ -17,7 +17,7 @@ interface AdminMonitoringTabProps {
     phone: string;
     address: string;
     photo: File | null;
-  }) => void;
+  }) => Promise<boolean>;
   creatingUser: boolean;
 }
 
@@ -45,23 +45,25 @@ export const AdminMonitoringTab: React.FC<AdminMonitoringTabProps> = ({
     photo: null as File | null,
   });
 
-  const handleCreateSubmit = (e: React.FormEvent) => {
+  const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newUserForm.role === "Admin" && !newUserForm.photo) {
       alert("Please select a profile photo.");
       return;
     }
-    onCreateUser(newUserForm);
-    setNewUserForm({
-      name: "",
-      email: "",
-      password: "",
-      role: "Customer",
-      phone: "",
-      address: "",
-      photo: null,
-    });
-    setIsCreateUserModalOpen(false);
+    const created = await onCreateUser(newUserForm);
+    if (created) {
+      setNewUserForm({
+        name: "",
+        email: "",
+        password: "",
+        role: "Customer",
+        phone: "",
+        address: "",
+        photo: null,
+      });
+      setIsCreateUserModalOpen(false);
+    }
   };
 
   const handleSearchJoiningDate = () => {
@@ -317,11 +319,14 @@ export const AdminMonitoringTab: React.FC<AdminMonitoringTabProps> = ({
                 <label className="block text-sm sm:col-span-2">
                   <span className="mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-[#475569]">Phone Number</span>
                   <input
-                    type="text"
+                    type="tel"
                     value={newUserForm.phone}
                     onChange={(e) => setNewUserForm((prev) => ({ ...prev, phone: e.target.value }))}
                     className="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-sm text-[#1E293B] placeholder:text-[#64748B] transition focus:border-[#0F2747] focus:bg-white focus:outline-none"
-                    placeholder="Enter phone number"
+                    placeholder="+880 1700 000000"
+                    pattern="^\+?[1-9][0-9\s\-().]{6,19}$"
+                    title="Enter a valid international phone number"
+                    required
                   />
                 </label>
 

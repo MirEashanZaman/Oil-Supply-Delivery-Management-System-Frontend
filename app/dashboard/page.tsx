@@ -20,6 +20,7 @@ import {
 import {
     getProductImage,
     getRolePath,
+    normalizeRole,
     getAllUsersUrl,
     getRoleBadgeColor,
 } from "@/components/dashboard/utils";
@@ -267,7 +268,6 @@ export default function Dashboard() {
             alert("Please enter a valid product name.");
             return;
         }
-
         const parsedPrice = Number(newProductForm.price);
         if (!newProductForm.price.trim() || !Number.isFinite(parsedPrice) || parsedPrice <= 0) {
             alert("Please enter a valid price greater than $0.");
@@ -285,38 +285,30 @@ export default function Dashboard() {
         const role = getRolePath(user.title || user.role);
 
         try {
-            const formData = new FormData();
-            formData.append("name", newProductForm.name.trim());
-            formData.append("description", newProductForm.description.trim());
-            formData.append("price", String(Number(newProductForm.price)));
-            formData.append("quantity", String(Number(newProductForm.stock)));
-            formData.append("category", newProductForm.category);
-
-            if (newProductForm.photo) {
-                formData.append("photo", newProductForm.photo);
-            }
-
             const createRes = await axios.post(
                 `${API_ENDPOINT}/product/create`,
-                formData,
                 {
-                    withCredentials: true,
-                    headers: {
-                        "Content-Type": "multipart/form-data",
-                    },
-                }
+                    name: newProductForm.name.trim(),
+                    price: Number(newProductForm.price),
+                    quantity: Number(newProductForm.stock),
+                },
+                { withCredentials: true }
             );
 
             const createdProduct = createRes.data;
             if ((role === "supplier" || role === "dealer") && user.id && createdProduct?.id) {
                 try {
-                    await axios.post(
+                    const portfolioRes = await axios.post(
                         `${API_ENDPOINT}/${role}/${user.id}/products`,
                         { productIds: [createdProduct.id] },
-                        { withCredentials: true }
+                        { withCredentials: true, validateStatus: (status) => status < 500 }
                     );
-                } catch {
-                    console.warn("Product was created but could not be added to the user's portfolio.");
+                    if (portfolioRes.status >= 400) {
+                        throw new Error(portfolioRes.data?.message || "Could not add the product to your portfolio.");
+                    }
+                } catch (portfolioError: any) {
+                    const message = portfolioError.response?.data?.message || portfolioError.message || "Could not add the product to your portfolio.";
+                    throw new Error(`Product was created, but portfolio linking failed: ${message}`);
                 }
             }
 
@@ -372,15 +364,15 @@ export default function Dashboard() {
                     phoneNumber: match.phoneNumber,
                     phone: match.phoneNumber,
                     address: match.address,
-                    title: match.title || r.charAt(0).toUpperCase() + r.slice(1),
-                    role: match.title || r.charAt(0).toUpperCase() + r.slice(1),
+                    title: normalizeRole(match.title || r),
+                    role: normalizeRole(match.title || r),
                     status: match.status || "active",
                     photoUrl: match.filename ? `http://localhost:8000/customer/getimage/${match.filename}` : undefined,
                 };
                 setUser(fullUser);
                 localStorage.setItem("user", JSON.stringify(fullUser));
                 fetchOrders(match.id, fullUser.title);
-                if (fullUser.title === "Admin") fetchAllMergedUsers();
+                if (normalizeRole(fullUser.title) === "Admin") fetchAllMergedUsers();
                 return;
             }
         } catch (searchErr) {
@@ -875,6 +867,11 @@ export default function Dashboard() {
     };
 
     const handleAdminCreateUser = async (newUser: any) => {
+        const mobileNumberRegex = /^\+?[1-9][0-9\s\-().]{6,19}$/;
+        if (!mobileNumberRegex.test(newUser.phone.trim())) {
+            alert("Enter a valid international phone number.");
+            return false;
+        }
         setIsCreatingUser(true);
         try {
             const role = newUser.role.toLowerCase();
@@ -905,17 +902,20 @@ export default function Dashboard() {
             if (res.status === 200 || res.status === 201) {
                 alert(`User ${newUser.name} created!`);
                 fetchAllMergedUsers();
+                return true;
             } else {
                 const message = Array.isArray(res.data?.message)
                     ? res.data.message.join(", ")
                     : res.data?.message || `Failed to create ${newUser.role.toLowerCase()} account (${res.status}).`;
                 alert(message);
+                return false;
             }
         } catch (err: any) {
             const message = Array.isArray(err.response?.data?.message)
                 ? err.response.data.message.join(", ")
                 : err.response?.data?.message || "Failed to create user.";
             alert(message);
+            return false;
         } finally {
             setIsCreatingUser(false);
         }

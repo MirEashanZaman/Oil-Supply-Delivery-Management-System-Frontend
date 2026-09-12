@@ -78,7 +78,7 @@ export const WholesaleOrderModal: React.FC<WholesaleOrderModalProps> = ({
               value={wholesaleQuantity}
               onChange={(e) => setWholesaleQuantity(e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500"
-              placeholder="e.g. 5000"
+              placeholder="Enter quantity"
               required
             />
             <span className="text-[10px] text-slate-500">
@@ -94,7 +94,7 @@ export const WholesaleOrderModal: React.FC<WholesaleOrderModalProps> = ({
               value={wholesaleAddress}
               onChange={(e) => setWholesaleAddress(e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500"
-              placeholder="e.g. Terminal Depot Gate 4, Sector 7"
+              placeholder="Enter delivery depot address"
               required
             />
           </div>
@@ -106,7 +106,7 @@ export const WholesaleOrderModal: React.FC<WholesaleOrderModalProps> = ({
               value={wholesaleNotes}
               onChange={(e) => setWholesaleNotes(e.target.value)}
               className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-amber-500 resize-none h-20"
-              placeholder="Specify tanker specifications, temperature requirements, etc."
+              placeholder="Enter special handling notes"
             />
           </div>
           {wholesaleQuantity && Number(wholesaleQuantity) > 0 && (

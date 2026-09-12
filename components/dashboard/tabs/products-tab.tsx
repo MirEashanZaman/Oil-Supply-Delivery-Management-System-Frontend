@@ -224,15 +224,15 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                       <div className="mb-2">
                         {cfg.canChooseBetweenSupplierAndDealer ? (
                           <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
-                            <span>🏢</span> Buy from Supplier or Dealer
+                            Buy from Supplier or Dealer
                           </span>
                         ) : cfg.posterRole === "supplier" ? (
                           <span className="text-[10px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
-                            <span>🏭</span> Refinery Direct Supplier
+                            Refinery Direct Supplier
                           </span>
                         ) : (
                           <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
-                            <span>🏬</span> Dealer Exclusive
+                            Dealer Exclusive
                           </span>
                         )}
                       </div>
@@ -273,7 +273,7 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                           return (
                             <div className="flex flex-col items-end gap-1.5">
                               <span className="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 font-bold px-2 py-0.5 rounded-md">
-                                ⭐ My Posted Lot (Fixed in Profile)
+                                My Posted Lot (Fixed in Profile)
                               </span>
                               <div className="flex gap-1.5">
                                 {onEditProduct && (
@@ -342,7 +342,7 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                           return (
                             <div className="flex flex-col items-end gap-1.5">
                               <span className="text-[10px] bg-blue-50 text-blue-800 border border-blue-200 font-bold px-2 py-0.5 rounded-md">
-                                ⭐ My Supply Lot
+                                My Supply Lot
                               </span>
                               <div className="flex gap-1.5">
                                 {onEditProduct && (

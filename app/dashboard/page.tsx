@@ -1278,8 +1278,54 @@ export default function Dashboard() {
     };
 
     const handleAdminDeleteUser = async (id: number) => {
-        const targetUser = allMergedUsers.find((user) => user.id === id);
-        const role = getRolePath(targetUser?.title || targetUser?.role);
+        const resolveRoleForDelete = async (userId: number): Promise<string> => {
+            const pickRole = (value: any): string => {
+                const source = value as Record<string, any> | undefined;
+                if (!source) return "";
+                const candidates = [source.title, source.role, source.userType, source.accountType, source.type];
+                const resolved = candidates.find((candidate) => typeof candidate === "string" && candidate.trim() !== "");
+                return resolved ? getRolePath(String(resolved)) : "";
+            };
+
+            const directMatch = allMergedUsers.find((user) => {
+                const source = user as Record<string, any>;
+                const ids = [source.id, source.userId, source.customerId, source.dealerId, source.supplierId];
+                return ids.some((value) => Number(value) === Number(userId));
+            });
+
+            const directRole = directMatch ? pickRole(directMatch) : "";
+            if (directRole) return directRole;
+
+            const roleEndpoints = [
+                { role: "customer", url: "http://localhost:8000/customer/getallcustomer" },
+                { role: "dealer", url: "http://localhost:8000/dealer/all" },
+                { role: "supplier", url: "http://localhost:8000/supplier/getallsupplier" },
+            ];
+
+            for (const endpoint of roleEndpoints) {
+                try {
+                    const res = await axios.get(endpoint.url, {
+                        withCredentials: true,
+                        validateStatus: (status) => status < 500,
+                    });
+
+                    const list = Array.isArray(res.data) ? res.data : [];
+                    const matchedUser = list.find((user: any) => {
+                        const source = user as Record<string, any>;
+                        const ids = [source.id, source.userId, source.customerId, source.dealerId, source.supplierId];
+                        return ids.some((value) => Number(value) === Number(userId));
+                    });
+
+                    const resolved = matchedUser ? pickRole(matchedUser) : "";
+                    if (resolved) return resolved;
+                } catch {
+                }
+            }
+
+            return "customer";
+        };
+
+        const role = await resolveRoleForDelete(id);
 
         if (role === "admin") {
             alert("Admin accounts cannot be deleted from this panel.");

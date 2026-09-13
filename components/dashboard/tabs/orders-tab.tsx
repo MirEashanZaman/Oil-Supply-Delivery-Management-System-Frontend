@@ -24,13 +24,14 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   onEditOrder,
   onDeleteOrder,
 }) => {
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const isCustomer = userData?.role === "Customer" || userData?.title === "Customer";
   const isAdmin = userData?.role === "Admin" || userData?.title === "Admin";
   const isSupplier = userData?.role === "Supplier" || userData?.title === "Supplier";
   const isDealer = userData?.role === "Dealer" || userData?.title === "Dealer";
 
   return (
-    <div className="w-full text-left animate-fadeIn">
+    <div className="w-full text-left">
       <h1 className="text-2xl font-extrabold text-dark-slate mb-2">
         {isCustomer
           ? "My Order History & Live Tracking"
@@ -120,6 +121,13 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2 self-end md:self-center">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOrder(item)}
+                    className="bg-slate-100 text-dark-slate border border-slate-200 text-xs font-semibold px-3 py-2 rounded-lg hover:bg-slate-200 transition-colors cursor-pointer"
+                  >
+                    Order Details
+                  </button>
                   {isAdmin ? (
                     <div className="flex gap-2">
                       {!isDelivered && onDeleteOrder && (
@@ -224,6 +232,84 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#F5F7FA] p-3 pt-8 sm:p-5 sm:pt-10" role="dialog" aria-modal="true" aria-labelledby="order-details-title">
+          <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="overflow-y-auto p-5 sm:p-6">
+              <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-secondary-gray">Order Details</p>
+                  <h2 id="order-details-title" className="text-xl font-black text-dark-slate">Order #{selectedOrder.id}</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrder(null)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-lg font-bold text-slate-600 hover:bg-slate-200"
+                  aria-label="Close order details"
+                >
+                  x
+                </button>
+              </div>
+
+              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 sm:col-span-2">
+                  <p className="text-[11px] font-bold uppercase text-secondary-gray">Product</p>
+                  <p className="mt-1 font-bold text-dark-slate">{selectedOrder.product?.name || "Petroleum Fuel"}</p>
+                  <p className="text-xs text-secondary-gray">Product ID: {selectedOrder.product?.id || "Not available"}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-3">
+                  <p className="text-[11px] font-bold uppercase text-secondary-gray">Quantity</p>
+                  <p className="mt-1 font-bold text-dark-slate">{selectedOrder.quantity} units</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-3">
+                  <p className="text-[11px] font-bold uppercase text-secondary-gray">Total Amount</p>
+                  <p className="mt-1 font-bold text-dark-slate">{selectedOrder.totalAmount !== undefined ? `$${Number(selectedOrder.totalAmount).toFixed(2)}` : "Not available"}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-3">
+                  <p className="text-[11px] font-bold uppercase text-secondary-gray">Status</p>
+                  <p className="mt-1 font-bold capitalize text-dark-slate">{selectedOrder.status || "Pending"}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-3">
+                  <p className="text-[11px] font-bold uppercase text-secondary-gray">Delivery Date</p>
+                  <p className="mt-1 break-words font-bold text-dark-slate">{selectedOrder.deliveryDate ? new Date(selectedOrder.deliveryDate).toLocaleString() : "Not scheduled"}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-3 sm:col-span-2">
+                  <p className="text-[11px] font-bold uppercase text-secondary-gray">Delivery Address</p>
+                  <p className="mt-1 break-words font-bold text-dark-slate">{selectedOrder.deliveryAddress || selectedOrder.address || "Not provided"}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-3">
+                  <p className="text-[11px] font-bold uppercase text-secondary-gray">Source</p>
+                  <p className="mt-1 font-bold text-dark-slate">
+                    {selectedOrder.dealer ? `Dealer: ${selectedOrder.dealer.userName || selectedOrder.dealer.name || selectedOrder.dealer.username || selectedOrder.dealer.id}` : selectedOrder.supplier ? `Supplier: ${selectedOrder.supplier.userName || selectedOrder.supplier.name || selectedOrder.supplier.username || selectedOrder.supplier.id}` : "Not available"}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-3">
+                  <p className="text-[11px] font-bold uppercase text-secondary-gray">Order Date</p>
+                  <p className="mt-1 break-words font-bold text-dark-slate">{selectedOrder.createdAt ? new Date(selectedOrder.createdAt).toLocaleString() : "Not available"}</p>
+                </div>
+                {selectedOrder.payment && (
+                  <div className="rounded-xl border border-slate-200 p-3 sm:col-span-2">
+                    <p className="text-[11px] font-bold uppercase text-secondary-gray">Payment</p>
+                    <p className="mt-1 font-bold text-dark-slate">{selectedOrder.payment.cardType || "Payment method unavailable"} · {selectedOrder.payment.status || "Status unavailable"}</p>
+                    {selectedOrder.payment.cardNumber && <p className="text-xs text-secondary-gray">Reference: **** {String(selectedOrder.payment.cardNumber).slice(-4)}</p>}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-5 flex justify-end border-t border-slate-200 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrder(null)}
+                  className="rounded-lg bg-[#0F2747] px-4 py-2 text-xs font-bold text-white hover:bg-[#163860]"
+                >
+                  Close Details
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

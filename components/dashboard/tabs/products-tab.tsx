@@ -239,7 +239,7 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                     );
                   })()}
                   <h2 className="card-title text-lg font-bold text-dark-slate mb-1">{product.name}</h2>
-                  <p className="text-sm text-secondary-gray">{product.description}</p>
+                  <p className="text-sm text-secondary-gray">{product.description || "No description provided."}</p>
                 </div>
 
                 <div className="pt-4 mt-2 border-t border-[#F1F5F9] flex items-center justify-between gap-2">

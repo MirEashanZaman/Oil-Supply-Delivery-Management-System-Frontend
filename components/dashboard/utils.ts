@@ -84,6 +84,26 @@ export const getProductImage = (name?: string, img?: string, id?: number | strin
     return "/Brent Crude Oil.jpg";
 };
 
+export const getProductDescription = (product: any): string => {
+    const description = [
+        product?.description,
+        product?.productDescription,
+        product?.product_description,
+        product?.details,
+    ].find((value) => typeof value === "string" && value.trim());
+
+    if (description) return description.trim();
+
+    if (typeof window !== "undefined" && product?.id) {
+        try {
+            return localStorage.getItem(`product_description_${product.id}`)?.trim() || "";
+        } catch {
+        }
+    }
+
+    return "";
+};
+
 export const getRolePath = (title?: string): string => {
     const t = (title || "").toLowerCase();
     if (t.includes("admin")) return "admin";

@@ -167,7 +167,7 @@ export default function Home() {
                             name: p.name || `Product #${p.id}`,
                             category: p.category || (p.categories?.[0]?.name) || "Petroleum Grade",
                             price: typeof p.price === "number" ? `$${p.price.toFixed(2)}` : p.price || "$0.00",
-                            description: p.description || "Petroleum product sourced via certified refinery pipelines.",
+                            description: (p.description || p.productDescription || p.product_description || p.details || "").trim(),
                             stockLevel: typeof p.quantity === "number"
                                 ? (p.quantity <= 0 ? "Out of Stock" : p.quantity < 1000 ? "Low Stock" : "In Stock")
                                 : p.stockLevel || "In Stock",
@@ -282,10 +282,10 @@ export default function Home() {
                         <div
                             key={slide.id}
                             className={`carousel-item absolute inset-0 w-full h-full transition-all duration-700 ease-in-out ${idx === currentHeroSlide
-                                    ? "opacity-100 translate-x-0 z-10"
-                                    : idx < currentHeroSlide
-                                        ? "opacity-0 -translate-x-full z-0"
-                                        : "opacity-0 translate-x-full z-0"
+                                ? "opacity-100 translate-x-0 z-10"
+                                : idx < currentHeroSlide
+                                    ? "opacity-0 -translate-x-full z-0"
+                                    : "opacity-0 translate-x-full z-0"
                                 }`}
                         >
                             <img

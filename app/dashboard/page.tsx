@@ -235,8 +235,14 @@ export default function Dashboard() {
                 withCredentials: true,
                 validateStatus: (status) => status < 500,
             });
-            if (Array.isArray(res.data)) {
-                const mapped: Product[] = res.data
+            if (res.status >= 400) {
+                throw new Error(res.data?.message || "Products could not be loaded.");
+            }
+            const catalog = Array.isArray(res.data)
+                ? res.data
+                : res.data?.products || res.data?.data || res.data?.items || [];
+            if (Array.isArray(catalog)) {
+                const mapped: Product[] = catalog
                     .sort((a: any, b: any) => (a.id || 0) - (b.id || 0))
                     .map((p: any) => {
                         const mappedSupplier = p.suppliers?.[0] || p.supplier || (p.supplierId ? { id: p.supplierId } : undefined);
@@ -341,7 +347,14 @@ export default function Dashboard() {
                 );
             }
 
-            const createdProduct = createRes.data;
+            if (createRes.status < 200 || createRes.status >= 300) {
+                const serverMessage = Array.isArray(createRes.data?.message)
+                    ? createRes.data.message.join(", ")
+                    : createRes.data?.message || `Product could not be created (${createRes.status}).`;
+                throw new Error(serverMessage);
+            }
+
+            const createdProduct = createRes.data?.product || createRes.data?.data || createRes.data;
             const targetId = createdProduct?.id;
 
             try {

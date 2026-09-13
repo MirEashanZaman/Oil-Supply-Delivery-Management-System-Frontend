@@ -19,6 +19,7 @@ import {
 } from "@/components/dashboard/types";
 import {
     getProductImage,
+    getProductDescription,
     getRolePath,
     normalizeRole,
     getAllUsersUrl,
@@ -201,6 +202,10 @@ export default function Dashboard() {
         }
         setIsMultiCheckout(true);
         setCheckoutProduct(cartItems[0].product);
+        const firstDeliveryAddress = cartItems[0].deliveryAddress?.trim();
+        if (firstDeliveryAddress) {
+            setDeliveryAddress(firstDeliveryAddress);
+        }
         setIsCartModalOpen(false);
     };
 
@@ -254,7 +259,7 @@ export default function Dashboard() {
                             category: p.category || (p.categories?.[0]?.name) || "Petroleum Grade",
                             price: typeof p.price === "number" ? `$${p.price.toFixed(2)}` : p.price || "$0.00",
                             numericPrice: typeof p.price === "number" ? p.price : parseFloat(String(p.price).replace(/[^0-9.]/g, "")) || 0,
-                            description: p.description || "High-grade petroleum fuel product.",
+                            description: getProductDescription(p),
                             quantity: typeof p.quantity === "number" ? p.quantity : 1000,
                             stock: typeof p.quantity === "number" ? p.quantity : typeof p.stock === "number" ? p.stock : 1000,
                             inStock: typeof p.quantity === "number" ? p.quantity > 0 : true,
@@ -272,6 +277,13 @@ export default function Dashboard() {
             console.warn("Failed to fetch products:", err);
         } finally {
             setProductsLoading(false);
+        }
+    };
+
+    const saveLocalOrderDetails = (orderId: number | string, details: { deliveryAddress: string; createdAt: string }) => {
+        try {
+            localStorage.setItem(`order_details_${orderId}`, JSON.stringify(details));
+        } catch {
         }
     };
 
@@ -359,6 +371,7 @@ export default function Dashboard() {
 
             try {
                 if (targetId) {
+                    localStorage.setItem(`product_description_${targetId}`, newProductForm.description.trim());
                     localStorage.setItem(`product_creator_${targetId}`, JSON.stringify({
                         id: user.id,
                         userName: user.userName || user.name,
@@ -531,18 +544,37 @@ export default function Dashboard() {
 
     const fetchOrders = async (id?: number, title?: string) => {
         const r = getRolePath(title);
+        const normalizeOrderFields = (order: any, fallbackAddress?: string) => {
+            const details = order?.orderDetails || order?.order_details || {};
+            let localDetails: any = {};
+            if (typeof window !== "undefined" && order?.id) {
+                try {
+                    localDetails = JSON.parse(localStorage.getItem(`order_details_${order.id}`) || "{}");
+                    localDetails.deliveryDate = localStorage.getItem(`order_delivery_date_${order.id}`) || localDetails.deliveryDate;
+                } catch {
+                }
+            }
+            const address = order?.address || order?.deliveryAddress || order?.delivery_address || order?.shippingAddress || order?.shipping_address || order?.destination || order?.location || order?.delivery?.address || order?.shipping?.address || order?.deliveryInfo?.address || details.address || details.deliveryAddress || details.delivery_address || details.shippingAddress || localDetails.deliveryAddress || fallbackAddress || "Local Hub";
+            return {
+                ...order,
+                address,
+                deliveryAddress: address,
+                deliveryDate: order?.deliveryDate || order?.delivery_date || order?.scheduledDate || order?.scheduled_date || order?.expectedDeliveryDate || order?.expected_delivery_date || details.deliveryDate || details.delivery_date || details.scheduledDate || details.scheduled_date || localDetails.deliveryDate,
+                createdAt: order?.createdAt || order?.created_at || order?.orderDate || order?.order_date || order?.placedAt || order?.placed_at || order?.orderTime || order?.order_time || order?.timestamp || details.createdAt || details.created_at || details.orderDate || details.order_date || localDetails.createdAt,
+            };
+        };
         if (r === "customer") {
             if (!id) return;
             try {
                 const res = await axios.get(`http://localhost:8000/customer/${id}/orders`, { withCredentials: true, validateStatus: (status) => status < 500 });
                 if (res.status === 200 && Array.isArray(res.data)) {
                     setOrders(res.data.map((o: any) => {
-                        const computedTotal = resolveOrderTotal(o);
+                        const normalizedOrder = normalizeOrderFields(o);
+                        const computedTotal = resolveOrderTotal(normalizedOrder);
 
                         return {
-                            ...o,
+                            ...normalizedOrder,
                             totalAmount: computedTotal,
-                            deliveryAddress: o.address || o.deliveryAddress,
                         };
                     }));
                 }
@@ -564,14 +596,14 @@ export default function Dashboard() {
                                     return;
                                 }
 
-                                const computedTotal = resolveOrderTotal(o);
+                                const normalizedOrder = normalizeOrderFields(o, cust.address);
+                                const computedTotal = resolveOrderTotal(normalizedOrder);
 
                                 allOrders.push({
+                                    ...normalizedOrder,
                                     id: o.id,
                                     quantity: Number(o.quantity ?? 1) || 1,
                                     status: o.status || "Pending",
-                                    address: o.address || cust.address,
-                                    deliveryAddress: o.address || cust.address,
                                     customerId: cust.id,
                                     customerName: cust.username || cust.userName || cust.email,
                                     customerEmail: cust.email,
@@ -982,7 +1014,7 @@ export default function Dashboard() {
                 const defaultDealerId = availableDealers[0]?.id ? Number(availableDealers[0].id) : 1;
 
                 for (const item of cartItems) {
-                    const itemDest = item.deliveryAddress?.trim() || destination;
+                    const itemDest = deliveryAddress.trim() || item.deliveryAddress?.trim() || destination;
                     const itemQty = Math.max(1, parseInt(String(item.quantity)) || 1);
                     const itemAmount = Number((item.product.numericPrice * itemQty).toFixed(2));
                     const partyIdNum = Number(item.selectedPartyId);
@@ -990,6 +1022,8 @@ export default function Dashboard() {
                     const itemPayload: any = {
                         quantity: itemQty,
                         address: itemDest,
+                        deliveryAddress: itemDest,
+                        delivery_address: itemDest,
                         status: "pending",
                         product: { id: Number(item.product.id) || 1 },
                         payment: { cardNumber: cleanCard, cardType: cleanType, amount: itemAmount, status: "completed" },
@@ -1007,7 +1041,9 @@ export default function Dashboard() {
                     try {
                         const itemRes = await axios.post(`http://localhost:8000/customer/${user.id}/orders`, itemPayload, { withCredentials: true, validateStatus: (status) => status < 500 });
                         if (itemRes.status === 200 || itemRes.status === 201) {
-                            createdIds.push(itemRes.data?.id || `ORD-${Date.now()}`);
+                            const createdId = itemRes.data?.id || itemRes.data?.order?.id || `ORD-${Date.now()}`;
+                            createdIds.push(createdId);
+                            saveLocalOrderDetails(createdId, { deliveryAddress: itemDest, createdAt: new Date().toISOString() });
                         }
                     } catch (err) {
                         console.warn("Sub-order create error:", err);
@@ -1029,6 +1065,8 @@ export default function Dashboard() {
             const orderPayload: any = {
                 quantity: orderQuantity,
                 address: destination,
+                deliveryAddress: destination,
+                delivery_address: destination,
                 status: "pending",
                 product: { id: checkoutProduct.id },
                 payment: { cardNumber: cleanCard, cardType: cleanType, amount: totalAmount, status: "completed" },
@@ -1044,7 +1082,11 @@ export default function Dashboard() {
 
             const orderRes = await axios.post(`http://localhost:8000/customer/${user.id}/orders`, orderPayload, { withCredentials: true, validateStatus: (status) => status < 500 });
             if (orderRes.status === 200 || orderRes.status === 201) {
-                setCreatedOrderId(orderRes.data?.id || null);
+                const createdId = orderRes.data?.id || orderRes.data?.order?.id || null;
+                setCreatedOrderId(createdId);
+                if (createdId) {
+                    saveLocalOrderDetails(createdId, { deliveryAddress: destination, createdAt: new Date().toISOString() });
+                }
                 setTimeout(() => {
                     setSandboxStep("success");
                     fetchOrders(user.id, user.title);
@@ -1122,21 +1164,35 @@ export default function Dashboard() {
         }
 
         try {
+            const deliveredAt = normalizedStatus === "delivered" ? new Date().toISOString() : undefined;
             const res = await axios.put(
                 `http://localhost:8000/${role}/confirmorder/${orderId}`,
-                { status: normalizedStatus },
+                {
+                    status: normalizedStatus,
+                    ...(deliveredAt ? { deliveryDate: deliveredAt, delivery_date: deliveredAt } : {}),
+                },
                 { withCredentials: true, validateStatus: (status) => status < 500 }
             );
             if (res.status === 200 || res.status === 204) {
                 const nextStatus = normalizedStatus === "delivered" ? "Delivered" : status;
                 setOrders((currentOrders) => currentOrders.map((order) => (
-                    order.id === orderId ? { ...order, status: nextStatus } : order
+                    order.id === orderId ? { ...order, status: nextStatus, ...(deliveredAt ? { deliveryDate: deliveredAt } : {}) } : order
                 )));
                 setUberTrackingOrder((currentOrder) => (
                     currentOrder?.id === orderId
-                        ? { ...currentOrder, status: nextStatus }
+                        ? { ...currentOrder, status: nextStatus, ...(deliveredAt ? { deliveryDate: deliveredAt } : {}) }
                         : currentOrder
                 ));
+                if (deliveredAt) {
+                    saveLocalOrderDetails(orderId, {
+                        deliveryAddress: orders.find((order) => order.id === orderId)?.deliveryAddress || "Local Hub",
+                        createdAt: orders.find((order) => order.id === orderId)?.createdAt || deliveredAt,
+                    });
+                    try {
+                        localStorage.setItem(`order_delivery_date_${orderId}`, deliveredAt);
+                    } catch {
+                    }
+                }
                 alert(`Order marked as ${nextStatus} successfully!`);
             } else {
                 const serverMessage = res.data?.message || `Order update failed (${res.status}) at /${role}/confirmorder/${orderId}.`;

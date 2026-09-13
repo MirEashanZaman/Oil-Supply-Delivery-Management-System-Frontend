@@ -1336,14 +1336,104 @@ export default function Dashboard() {
         if (!window.confirm("Are you sure you want to delete this user?")) return;
 
         const detectedRole = getRolePath(targetUser?.title || targetUser?.role || "") || "customer";
+        const apiBase = "http://localhost:8000";
+
+        const matchesTarget = (candidate: any) => {
+            if (!candidate) return false;
+            if (candidate.id !== undefined && Number(candidate.id) === Number(id)) return true;
+            if (candidate.userId !== undefined && Number(candidate.userId) === Number(id)) return true;
+            if (candidate.email && targetUser?.email && candidate.email.toLowerCase() === targetUser.email.toLowerCase()) return true;
+            return false;
+        };
+
+        const deleteResource = async (urls: string[], resourceName: string) => {
+            let lastStatus = 0;
+            for (const url of urls) {
+                const response = await axios.delete(url, {
+                    withCredentials: true,
+                    validateStatus: (status) => status < 500,
+                });
+                lastStatus = response.status;
+                if (response.status === 200 || response.status === 204) return;
+            }
+            if (lastStatus === 404) return;
+            throw new Error(`${resourceName} could not be deleted (${lastStatus || "request failed"}).`);
+        };
+
         const deleteUrls = [
-            `http://localhost:8000/admin/${detectedRole}/${id}`,
-            `http://localhost:8000/${detectedRole}/${id}`,
+            `${apiBase}/admin/${detectedRole}/${id}`,
+            `${apiBase}/${detectedRole}/${id}`,
         ];
 
         let lastError: any = null;
 
         try {
+            const customersRes = await axios.get(`${apiBase}/customer/getallcustomer`, {
+                withCredentials: true,
+                validateStatus: (status) => status < 500,
+            });
+            if (customersRes.status !== 200 || !Array.isArray(customersRes.data)) {
+                throw new Error("Could not load customer orders for deletion.");
+            }
+            const customers = Array.isArray(customersRes.data) ? customersRes.data : [];
+            const targetCustomer = customers.find((customer: any) => Number(customer.id) === Number(id));
+            if (detectedRole === "customer" && !targetCustomer) {
+                throw new Error("Could not find the customer's orders for deletion.");
+            }
+            const targetOrders = customers.flatMap((customer: any) => {
+                const customerOrders = Array.isArray(customer.orders) ? customer.orders : [];
+                if (detectedRole === "customer") {
+                    return Number(customer.id) === Number(id) ? customerOrders : [];
+                }
+
+                return customerOrders.filter((order: any) => {
+                    const assignedParty = detectedRole === "supplier"
+                        ? (order.supplier || order.supplierId || order.supplier_id || order.supplierUser || order.supplier_user)
+                        : (order.dealer || order.dealerId || order.dealer_id || order.dealerUser || order.dealer_user);
+                    return matchesTarget(assignedParty);
+                });
+            });
+
+            for (const order of targetOrders) {
+                if (order?.id === undefined || order?.id === null) continue;
+                await deleteResource(
+                    [`${apiBase}/customer/${id}/orders/${order.id}`],
+                    `Order ${order.id}`
+                );
+            }
+
+            const productsRes = await axios.get(`${apiBase}/product/list`, {
+                withCredentials: true,
+                validateStatus: (status) => status < 500,
+            });
+            if (productsRes.status !== 200 || !Array.isArray(productsRes.data)) {
+                throw new Error("Could not load products for deletion.");
+            }
+            const ownedProducts = Array.isArray(productsRes.data)
+                ? productsRes.data.filter((product: any) => {
+                    const owners = [
+                        product.supplier,
+                        product.user,
+                        product.owner,
+                        product.creator,
+                        product.dealer,
+                        ...(Array.isArray(product.suppliers) ? product.suppliers : []),
+                    ];
+                    return owners.some(matchesTarget);
+                })
+                : [];
+
+            for (const product of ownedProducts) {
+                if (product?.id === undefined || product?.id === null) continue;
+                await deleteResource(
+                    [
+                        `${apiBase}/product/${product.id}`,
+                        `${apiBase}/admin/product/${product.id}`,
+                    ],
+                    `Product ${product.id}`
+                );
+            }
+
             for (const url of deleteUrls) {
                 try {
                     const res = await axios.delete(url, {

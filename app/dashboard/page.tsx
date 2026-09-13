@@ -148,7 +148,11 @@ export default function Dashboard() {
             return;
         }
 
-        const defaultParty = sourcing === "supplier" ? (availableSuppliers[0]?.id || 1) : (availableDealers[0]?.id || 1);
+        const config = getProductSourcingConfig(product, availableSuppliers, availableDealers);
+        const normalizedSourcing = config.canChooseBetweenSupplierAndDealer ? (sourcing === "supplier" || sourcing === "dealer" ? sourcing : config.defaultSourcingChoice) : "supplier";
+        const defaultParty = normalizedSourcing === "supplier"
+            ? (config.allowedSuppliers[0]?.id ?? availableSuppliers[0]?.id ?? 1)
+            : (config.allowedDealers[0]?.id ?? availableDealers[0]?.id ?? 1);
         const defaultDest = deliveryAddress.trim() || user?.address || "Main Operational Hub";
 
         const existingIndex = cartItems.findIndex((ci) => ci.product.id === product.id);
@@ -156,10 +160,10 @@ export default function Dashboard() {
 
         if (existingIndex >= 0) {
             updated = cartItems.map((ci, idx) =>
-                idx === existingIndex ? { ...ci, quantity: ci.quantity + quantity } : ci
+                idx === existingIndex ? { ...ci, quantity: ci.quantity + quantity, sourcingChoice: normalizedSourcing, selectedPartyId: defaultParty } : ci
             );
         } else {
-            updated = [...cartItems, { product, quantity, sourcingChoice: sourcing, selectedPartyId: defaultParty, deliveryAddress: defaultDest }];
+            updated = [...cartItems, { product, quantity, sourcingChoice: normalizedSourcing, selectedPartyId: defaultParty, deliveryAddress: defaultDest }];
         }
 
         updateCartState(updated);
@@ -251,6 +255,8 @@ export default function Dashboard() {
                             image: getProductImage(p.name, p.image || p.photo || p.photoUrl || p.imageUrl, p.id),
                             supplier: mappedSupplier,
                             dealer: mappedDealer,
+                            user: p.user || p.owner || p.creator,
+                            dealers: Array.isArray(p.dealers) ? p.dealers : [],
                         };
                     });
                 setProducts(mapped);
@@ -811,6 +817,11 @@ export default function Dashboard() {
     const handleAdminUpdateProduct = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingProduct) return;
+        if (getRolePath(user?.title || user?.role) !== "admin" && !isProductOwner(editingProduct, user)) {
+            alert("Only the product owner or an admin can edit this product.");
+            setEditingProduct(null);
+            return;
+        }
 
         const price = Number(editProductForm.price);
         const stock = Number(editProductForm.stock);
@@ -855,6 +866,11 @@ export default function Dashboard() {
     };
 
     const handleAdminDeleteProduct = async (productId: number, productName: string) => {
+        const product = products.find((item) => item.id === productId);
+        if (getRolePath(user?.title || user?.role) !== "admin" && !isProductOwner(product, user)) {
+            alert("Only the product owner or an admin can delete this product.");
+            return;
+        }
         if (!window.confirm(`Are you sure you want to delete ${productName}?`)) return;
 
         try {

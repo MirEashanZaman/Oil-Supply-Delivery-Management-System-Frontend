@@ -168,8 +168,10 @@ export const getProductSourcingConfig = (
     }
 
     const rawSupplier = product.supplier?.id ? product.supplier : null;
-    const rawDealer = product.dealer?.id && !product.supplier ? product.dealer : null;
-    const isDealerPosted = !rawSupplier && Boolean(rawDealer);
+    const rawUserOwner = product.user?.id ? product.user : null;
+    const rawDealer = product.dealer?.id ? product.dealer : null;
+    const originalOwner = rawSupplier || rawUserOwner;
+    const isDealerPosted = !rawSupplier && !rawUserOwner && Boolean(rawDealer);
     const posterRole: "supplier" | "dealer" = isDealerPosted ? "dealer" : "supplier";
 
     const posterParty: SourcingPartyOption = isDealerPosted
@@ -186,7 +188,14 @@ export const getProductSourcingConfig = (
                 email: rawSupplier.email || "Verified Supplier",
                 role: "Supplier",
             }
-            : availableSuppliers[0] || { id: 1, userName: "Refinery Supplier Direct", email: "depot@refinery.com", role: "Supplier" };
+            : rawUserOwner
+                ? {
+                    id: rawUserOwner.id,
+                    userName: rawUserOwner.userName || rawUserOwner.username || rawUserOwner.name || `Owner #${rawUserOwner.id}`,
+                    email: rawUserOwner.email || "Verified Owner",
+                    role: "Supplier",
+                }
+                : availableSuppliers[0] || { id: 1, userName: "Refinery Supplier Direct", email: "depot@refinery.com", role: "Supplier" };
 
     const linkedDealersMap = new Map<string, SourcingPartyOption>();
 
@@ -227,6 +236,15 @@ export const getProductSourcingConfig = (
 
     const linkedDealers = Array.from(linkedDealersMap.values());
 
+    const ownerOption = originalOwner && String(originalOwner.id) !== String(posterParty.id)
+        ? {
+            id: originalOwner.id,
+            userName: originalOwner.userName || originalOwner.username || originalOwner.name || "Original Owner",
+            email: originalOwner.email || "Verified Owner",
+            role: originalOwner.role || "Supplier",
+        }
+        : null;
+
     let allowedSuppliers: SourcingPartyOption[] = [];
     let allowedDealers: SourcingPartyOption[] = [];
     let canChooseBetweenSupplierAndDealer = false;
@@ -236,26 +254,53 @@ export const getProductSourcingConfig = (
 
     if (posterRole === "supplier") {
         allowedSuppliers = [posterParty];
-        if (linkedDealers.length > 0) {
-            allowedDealers = linkedDealers;
+        if (linkedDealers.length > 0 || rawDealer) {
+            allowedDealers = linkedDealers.length > 0 ? linkedDealers : [
+                {
+                    id: rawDealer.id,
+                    userName: rawDealer.userName || rawDealer.username || rawDealer.name || `Dealer #${rawDealer.id}`,
+                    email: rawDealer.email || "Verified Dealer",
+                    role: "Dealer",
+                }
+            ];
             canChooseBetweenSupplierAndDealer = true;
             defaultSourcingChoice = "supplier";
             defaultPartyId = posterParty.id;
-            sourcingNotice = `Available directly from Refinery Supplier (${posterParty.userName}) or from ${linkedDealers.length} authorized dealer(s) who added this product to their profile.`;
+            sourcingNotice = `Available directly from the original owner (${posterParty.userName}) or from ${allowedDealers.length} authorized dealer(s) who added this product to their profile.`;
         } else {
             allowedDealers = [];
             canChooseBetweenSupplierAndDealer = false;
             defaultSourcingChoice = "supplier";
             defaultPartyId = posterParty.id;
-            sourcingNotice = `Direct Refinery Sourcing: Posted by ${posterParty.userName}. No other dealer has added this product to their profile, so order is fulfilled directly by the posting supplier.`;
+            sourcingNotice = `Direct Sourcing: Posted by ${posterParty.userName}. No other dealer has added this product to their profile, so order is fulfilled directly by the posting supplier.`;
         }
     } else {
-        allowedSuppliers = [];
-        allowedDealers = [posterParty, ...linkedDealers.filter((d) => String(d.id) !== String(posterParty.id))];
-        canChooseBetweenSupplierAndDealer = false;
+        const dedupedDealers = new Map<string, SourcingPartyOption>();
+        [ownerOption, posterParty, ...linkedDealers.filter((d) => String(d.id) !== String(posterParty.id))]
+            .filter(Boolean)
+            .forEach((party) => {
+                if (party && party.id) {
+                    dedupedDealers.set(String(party.id), party);
+                }
+            });
+
+        allowedSuppliers = ownerOption && (ownerOption.role || "").toLowerCase().includes("supplier") ? [ownerOption] : [];
+        allowedDealers = Array.from(dedupedDealers.values()).filter((party) => {
+            const isOwnerSupplier = (party.role || "").toLowerCase().includes("supplier");
+            return !isOwnerSupplier;
+        });
+
+        const hasOriginalOwner = Boolean(ownerOption);
+        canChooseBetweenSupplierAndDealer = hasOriginalOwner && (allowedSuppliers.length > 0 || allowedDealers.length > 1);
+        if (!hasOriginalOwner && rawDealer) {
+            allowedDealers = [posterParty, ...linkedDealers.filter((d) => String(d.id) !== String(posterParty.id))];
+            canChooseBetweenSupplierAndDealer = allowedDealers.length > 1;
+        }
         defaultSourcingChoice = "dealer";
         defaultPartyId = posterParty.id;
-        sourcingNotice = `Authorized Dealer Lot: Posted by ${posterParty.userName}. Fulfill order directly through this dealer.`;
+        sourcingNotice = hasOriginalOwner
+            ? `Available from the original owner (${ownerOption?.userName}) or from ${posterParty.userName}, who added this product to their profile.`
+            : `Authorized Dealer Lot: Posted by ${posterParty.userName}. Fulfill order directly through this dealer.`;
     }
 
     return {
@@ -307,13 +352,16 @@ export const isProductOwner = (product: any, user: any): boolean => {
     const userId = user.id ? Number(user.id) : null;
     const userEmail = (user.email || "").toLowerCase().trim();
     const userName = (user.userName || user.name || user.username || "").toLowerCase().trim();
+    const userRole = getRolePath(user.title || user.role);
 
-    const matchesUser = (candidate: any) => {
+    const matchesUser = (candidate: any, expectedRole?: string) => {
         if (!candidate) return false;
+        const candidateRole = getRolePath(candidate.role || candidate.title);
+        if (expectedRole && candidateRole !== expectedRole) return false;
         if (userId && candidate.id !== undefined && candidate.id !== null && Number(candidate.id) === userId) return true;
         if (userEmail && (candidate.email || "").toLowerCase().trim() === userEmail) return true;
         const candidateName = (candidate.userName || candidate.username || candidate.name || "").toLowerCase().trim();
-        return Boolean(userName && candidateName && (candidateName === userName || candidateName.includes(userName) || userName.includes(candidateName)));
+        return Boolean(userName && candidateName && candidateName === userName);
     };
 
     if (typeof window !== "undefined" && product.id) {
@@ -321,20 +369,20 @@ export const isProductOwner = (product: any, user: any): boolean => {
             const creatorStr = localStorage.getItem(`product_creator_${product.id}`);
             if (creatorStr) {
                 const creator = JSON.parse(creatorStr);
-                return matchesUser(creator);
+                return matchesUser(creator, userRole);
             }
 
             const linkedDealers = JSON.parse(localStorage.getItem(`product_dealers_${product.id}`) || "[]");
-            if (Array.isArray(linkedDealers) && linkedDealers.some((dealer: any) => matchesUser(dealer))) {
+            if (Array.isArray(linkedDealers) && linkedDealers.some((dealer: any) => matchesUser(dealer, "dealer"))) {
                 return false;
             }
         } catch {
         }
     }
 
-    if (product.supplier && matchesUser(product.supplier)) return true;
-    if (product.user && matchesUser(product.user)) return true;
-    if (!product.supplier && !product.user && product.dealer && matchesUser(product.dealer)) return true;
+    if (userRole === "supplier" && product.supplier && matchesUser(product.supplier, "supplier")) return true;
+    if (userRole === "supplier" && product.user && matchesUser(product.user, "supplier")) return true;
+    if (userRole === "dealer" && !product.supplier && !product.user && product.dealer && matchesUser(product.dealer, "dealer")) return true;
 
     return false;
 };

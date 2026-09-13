@@ -159,7 +159,7 @@ export const CheckoutPaymentModal: React.FC<CheckoutPaymentModalProps> = ({
                                         <div className="min-w-0">
                                             <h5 className="font-bold text-dark-slate truncate">{ci.product.name}</h5>
                                             <p className="text-[11px] text-secondary-gray truncate">
-                                                From: <strong className="text-dark-slate">{ci.sourcingChoice === "supplier" ? "Refinery Supplier" : "Local Dealer"}</strong> • Site: <strong className="text-dark-slate">{ci.deliveryAddress || deliveryAddress || user?.address || "Main Depot"}</strong>
+                                                From: <strong className="text-dark-slate">{ci.sourcingChoice === "supplier" ? "Refinery Supplier" : "Local Dealer"}</strong> • Site: <strong className="text-dark-slate">{deliveryAddress || ci.deliveryAddress || user?.address || "Main Depot"}</strong>
                                             </p>
                                         </div>
                                     </div>

@@ -173,7 +173,7 @@ export default function ProductDetails({
                             name: match.name || `Product #${match.id}`,
                             category: match.category || (match.categories?.[0]?.name) || "Petroleum Grade",
                             price: typeof match.price === "number" ? `$${match.price.toFixed(2)}` : match.price || "$0.00",
-                            description: match.description || "Petroleum fuel product sourced via certified refinery pipelines.",
+                            description: (match.description || match.productDescription || match.product_description || match.details || "").trim(),
                             stockLevel: typeof match.quantity === "number"
                                 ? (match.quantity <= 0 ? "Out of Stock" : match.quantity < 1000 ? "Low Stock" : "In Stock")
                                 : match.stockLevel || "In Stock",
@@ -239,7 +239,7 @@ export default function ProductDetails({
                                 </h1>
 
                                 <p className="text-[#64748B] text-xs sm:text-sm leading-relaxed mt-3">
-                                    {product.description || "High quality fuel supply delivered safely to authorized commercial and retail dealers."}
+                                    {product.description || "No description provided."}
                                 </p>
 
                                 <div className="mt-5 pt-4 border-t border-[#E2E8F0] space-y-2 text-xs">

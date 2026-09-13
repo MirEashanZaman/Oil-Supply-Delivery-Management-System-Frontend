@@ -97,6 +97,12 @@ export const normalizeRole = (role?: string): string => {
     return path.charAt(0).toUpperCase() + path.slice(1);
 };
 
+export const isValidPhoneNumber = (value?: string): boolean => {
+    if (!value?.trim()) return true;
+    const compact = value.trim().replace(/[()\s-]/g, "");
+    return /^\+[1-9]\d{7,14}$/.test(compact);
+};
+
 export const getAllUsersUrl = (title?: string): string => {
     const r = getRolePath(title);
     if (r === "admin") return "http://localhost:8000/admin/getalladmin";

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { UserData } from "../types";
-import { getRoleBadgeColor } from "../utils";
+import { getRoleBadgeColor, isValidPhoneNumber } from "../utils";
 
 interface ProfileTabProps {
   userData: UserData | null;
@@ -34,6 +34,10 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValidPhoneNumber(phone)) {
+      alert("Enter an international mobile number, such as +8801712345678.");
+      return;
+    }
     setIsUploading(true);
     try {
       if (onUpdateProfile) {
@@ -139,7 +143,8 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="Enter your phone number"
+                placeholder="Enter your mobile number"
+                inputMode="tel"
                 className="input input-bordered w-full text-sm bg-white text-[#1E293B] rounded-xl border-[#E2E8F0] focus:border-[#F59E0B]"
               />
             </div>

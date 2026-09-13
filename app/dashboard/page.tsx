@@ -25,6 +25,7 @@ import {
     getRoleBadgeColor,
     getProductSourcingConfig,
     isProductOwner,
+    isValidPhoneNumber,
 } from "@/components/dashboard/utils";
 
 import { CartDrawerModal } from "@/components/dashboard/modals/cart-drawer-modal";
@@ -1482,9 +1483,8 @@ export default function Dashboard() {
         if (!editingUser) return;
 
         const phone = editUserForm.phone.trim();
-        const mobileNumberRegex = /^\+?[1-9][0-9\s\-().]{6,19}$/;
-        if (phone && !mobileNumberRegex.test(phone)) {
-            alert("Enter a valid international phone number.");
+        if (!isValidPhoneNumber(phone)) {
+            alert("Enter an international mobile number, such as +8801712345678.");
             return;
         }
 
@@ -1564,17 +1564,25 @@ export default function Dashboard() {
     const handleUpdateProfile = async (updated: Partial<UserData>) => {
         if (!user) return;
         const r = getRolePath(user.title || user.role);
+        const phone = String(updated.phoneNumber ?? user.phoneNumber ?? user.phone ?? "").trim();
+        if (!isValidPhoneNumber(phone)) {
+            alert("Enter an international mobile number, such as +8801712345678.");
+            return;
+        }
         try {
             if (user.id) {
-                await axios.patch(
+                const response = await axios.patch(
                     `http://localhost:8000/${r}/${user.id}`,
                     {
                         userName: updated.userName || user.userName,
-                        phoneNumber: updated.phoneNumber || user.phoneNumber,
+                        phoneNumber: phone,
                         address: updated.address || user.address,
                     },
                     { withCredentials: true, validateStatus: (status) => status < 500 }
                 );
+                if (response.status >= 400) {
+                    throw new Error(response.data?.message || "Profile update was rejected.");
+                }
             }
             const mergedUser: UserData = { ...user, ...updated };
             setUser(mergedUser);

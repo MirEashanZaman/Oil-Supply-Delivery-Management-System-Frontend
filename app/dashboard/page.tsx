@@ -439,7 +439,25 @@ export default function Dashboard() {
     const fetchAllMergedUsers = async () => {
         try {
             const res = await axios.get("http://localhost:8000/admin/getallusers", { withCredentials: true, validateStatus: (status) => status < 500 });
-            if (res.status === 200 && Array.isArray(res.data)) setAllMergedUsers(res.data);
+            if (res.status === 200 && Array.isArray(res.data)) {
+                const uniqueUsers = new Map<string, SystemUser>();
+
+                res.data.forEach((user: any) => {
+                    const candidate = user as SystemUser;
+                    const identity = [
+                        candidate.id ?? "",
+                        candidate.email ?? "",
+                        candidate.userName ?? candidate.username ?? candidate.name ?? "",
+                        candidate.title ?? candidate.role ?? "",
+                    ].join("::");
+
+                    if (!uniqueUsers.has(identity)) {
+                        uniqueUsers.set(identity, candidate);
+                    }
+                });
+
+                setAllMergedUsers(Array.from(uniqueUsers.values()));
+            }
         } catch (err) {
             console.warn("Failed to fetch merged users:", err);
         }
@@ -481,7 +499,12 @@ export default function Dashboard() {
         const productPriceValue = order?.product?.price ?? order?.price ?? order?.unitPrice ?? order?.orderDetails?.unitPrice ?? 0;
         const productPrice = Number(String(productPriceValue).replace(/[$,\s]/g, ""));
 
-        if (Number.isFinite(directAmount) && directAmount > 0) return directAmount;
+        if (Number.isFinite(directAmount) && directAmount > 0) {
+            if (quantity > 1 && productPrice > 0 && directAmount <= productPrice) {
+                return directAmount * quantity;
+            }
+            return directAmount;
+        }
         if (Number.isFinite(productPrice) && productPrice > 0) return productPrice * quantity;
         return 0;
     };
@@ -1278,22 +1301,68 @@ export default function Dashboard() {
     };
 
     const handleAdminDeleteUser = async (id: number) => {
-        const targetUser = allMergedUsers.find((user) => user.id === id);
-        const role = getRolePath(targetUser?.title || targetUser?.role);
+        const resolveTargetUser = () => {
+            const matches = allMergedUsers.filter((user) => Number(user.id) === Number(id));
+            if (matches.length === 0) return null;
+            return matches.find((user) => {
+                const title = String(user.title || user.role || "").trim().toLowerCase();
+                return !title.includes("admin");
+            }) || matches[0];
+        };
 
-        if (role === "admin") {
+        const targetUser = resolveTargetUser();
+        const targetTitle = String(targetUser?.title || targetUser?.role || "").trim().toLowerCase();
+        if (targetTitle === "admin" || targetTitle.includes("admin")) {
             alert("Admin accounts cannot be deleted from this panel.");
             return;
         }
 
         if (!window.confirm("Are you sure you want to delete this user?")) return;
 
+        const detectedRole = getRolePath(targetUser?.title || targetUser?.role || "") || "customer";
+        const deleteUrls = [
+            `http://localhost:8000/admin/${detectedRole}/${id}`,
+            `http://localhost:8000/${detectedRole}/${id}`,
+        ];
+
+        let lastError: any = null;
+
         try {
-            await axios.delete(`http://localhost:8000/admin/${role}/${id}`, {
-                withCredentials: true,
-                validateStatus: (status) => status < 500,
-            });
-            await fetchAllMergedUsers();
+            for (const url of deleteUrls) {
+                try {
+                    const res = await axios.delete(url, {
+                        withCredentials: true,
+                        validateStatus: (status) => status < 500,
+                    });
+
+                    if (res.status === 200 || res.status === 204) {
+                        await fetchAllMergedUsers();
+                        const refreshed = await axios.get("http://localhost:8000/admin/getallusers", {
+                            withCredentials: true,
+                            validateStatus: (status) => status < 500,
+                        });
+
+                        const stillExists = Array.isArray(refreshed.data) && refreshed.data.some((user: any) => Number(user.id) === Number(id));
+
+                        if (stillExists) {
+                            alert("Delete request success");
+                            return;
+                        }
+
+                        alert("User deleted successfully.");
+                        return;
+                    }
+
+                    lastError = res;
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+
+            const message = Array.isArray(lastError?.response?.data?.message)
+                ? lastError.response.data.message.join(", ")
+                : lastError?.response?.data?.message || "Failed to delete user.";
+            alert(message);
         } catch (err: any) {
             const message = Array.isArray(err.response?.data?.message)
                 ? err.response.data.message.join(", ")
@@ -1313,29 +1382,69 @@ export default function Dashboard() {
             return;
         }
 
+        const normalizedName = editUserForm.name.trim();
+        const normalizedEmail = editUserForm.email.trim();
+        const normalizedAddress = editUserForm.address.trim();
+
         setIsEditingUserSubmitting(true);
         try {
             const role = getRolePath(editingUser.title || editingUser.role);
-            const res = await axios.patch(
+            const candidateUrls = [
+                `http://localhost:8000/${role}/${editingUser.id}`,
                 `http://localhost:8000/admin/${role}/${editingUser.id}`,
-                {
-                    userName: editUserForm.name.trim(),
-                    phoneNumber: phone,
-                    address: editUserForm.address.trim(),
-                },
-                { withCredentials: true, validateStatus: (status) => status < 500 }
-            );
+            ];
 
-            if (res.status === 200 || res.status === 204) {
-                alert(`${editUserForm.name} updated successfully.`);
+            let lastError: any = null;
+            let successResponse: any = null;
+
+            for (const url of candidateUrls) {
+                try {
+                    const res = await axios.patch(
+                        url,
+                        {
+                            userName: normalizedName,
+                            email: normalizedEmail,
+                            phoneNumber: phone,
+                            address: normalizedAddress,
+                        },
+                        { withCredentials: true, validateStatus: (status) => status < 500 }
+                    );
+
+                    if (res.status === 200 || res.status === 204) {
+                        successResponse = res;
+                        break;
+                    }
+
+                    lastError = res;
+                } catch (err) {
+                    lastError = err;
+                }
+            }
+
+            if (successResponse) {
+                const updatedUser = {
+                    ...editingUser,
+                    name: normalizedName,
+                    userName: normalizedName,
+                    email: normalizedEmail,
+                    phoneNumber: phone,
+                    phone: phone,
+                    address: normalizedAddress,
+                };
+
+                setAllMergedUsers((prev) =>
+                    prev.map((user) => (user.id === editingUser.id ? updatedUser : user))
+                );
                 setEditingUser(null);
                 await fetchAllMergedUsers();
-            } else {
-                const message = Array.isArray(res.data?.message)
-                    ? res.data.message.join(", ")
-                    : res.data?.message || "User could not be updated.";
-                alert(message);
+                alert(`${normalizedName} updated successfully.`);
+                return;
             }
+
+            const message = Array.isArray(lastError?.response?.data?.message)
+                ? lastError.response.data.message.join(", ")
+                : lastError?.response?.data?.message || "User could not be updated.";
+            alert(message);
         } catch (err: any) {
             const message = Array.isArray(err.response?.data?.message)
                 ? err.response.data.message.join(", ")

@@ -195,11 +195,13 @@ export const AdminMonitoringTab: React.FC<AdminMonitoringTabProps> = ({
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((u) => {
+                filteredUsers.map((u, index) => {
                   const role = u.title || u.role || "User";
                   const isTargetAdmin = role.toLowerCase() === "admin";
+                  const rowKey = `${u.id ?? "unknown"}-${index}-${role}-${u.email || "no-email"}-${u.userName || u.username || u.name || "no-name"}`;
+
                   return (
-                    <tr key={`${role}-${u.id}`} className="hover:bg-[#F8FAFC]/80 transition-colors">
+                    <tr key={rowKey} className="hover:bg-[#F8FAFC]/80 transition-colors">
                       <td className="py-3 px-4">
                         <span className={`badge border-none font-bold text-xs uppercase px-2.5 py-1 ${getRoleBadgeColor(role)}`}>
                           {role}

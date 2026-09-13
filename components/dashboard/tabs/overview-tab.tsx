@@ -36,23 +36,46 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     const directValue = Number(String(order.totalAmount ?? 0).replace(/[$,\s]/g, ""));
     const quantity = Number(order.quantity ?? 1) || 1;
     const productPrice = Number(String((order as any).product?.price ?? 0).replace(/[$,\s]/g, ""));
-    const amt = Number.isFinite(directValue) && directValue > 0
-      ? directValue
-      : (Number.isFinite(productPrice) && productPrice > 0 ? productPrice * quantity : 0);
+
+    let amt = 0;
+    if (Number.isFinite(directValue) && directValue > 0) {
+      amt = quantity > 1 && productPrice > 0 && directValue <= productPrice ? directValue * quantity : directValue;
+    } else if (Number.isFinite(productPrice) && productPrice > 0) {
+      amt = productPrice * quantity;
+    }
+
     return sum + amt;
   }, 0);
 
-  const pendingOrdersCount = orders.filter(
-    (o) => o.status === "Pending" || o.status === "Processing"
-  ).length;
+  const pendingOrdersCount = orders.filter((o) => {
+    const status = String(o.status ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/[-_]/g, " ")
+      .replace(/\s+/g, " ");
 
-  const deliveredOrdersCount = orders.filter(
-    (o) => o.status === "Delivered"
-  ).length;
+    return status === "pending" || status === "processing";
+  }).length;
 
-  const activeDeliveries = orders.filter(
-    (o) => o.status === "Out for Delivery" || o.status === "Confirmed"
-  );
+  const deliveredOrdersCount = orders.filter((o) => {
+    const status = String(o.status ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/[-_]/g, " ")
+      .replace(/\s+/g, " ");
+
+    return status === "delivered" || status === "completed";
+  }).length;
+
+  const activeDeliveries = orders.filter((o) => {
+    const status = String(o.status ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/[-_]/g, " ")
+      .replace(/\s+/g, " ");
+
+    return status === "out for delivery";
+  });
 
   return (
     <div className="space-y-6 text-left">
@@ -180,7 +203,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             onClick={() => setActiveTab("tracking")}
             className="btn bg-white/10 hover:bg-white/20 text-white border border-white/20 btn-sm text-xs font-bold rounded-xl"
           >
-            Live GPS Tracking ️
+            Live GPS Tracking
           </button>
         </div>
       </div>
@@ -241,7 +264,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                           onClick={() => onOpenLiveTrack(order)}
                           className="px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 rounded-lg font-bold text-[11px] transition"
                         >
-                          ️ Track Live
+                          Track Live
                         </button>
                       ) : (
                         <span className="text-[11px] text-secondary-gray font-medium">Completed</span>

@@ -58,24 +58,25 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       ) : (
         <div className="grid grid-cols-1 gap-4">
           {orders.map((item) => {
-            const isDelivered =
-              item.status?.toLowerCase() === "delivered" ||
-              item.status?.toLowerCase() === "completed";
-            const isCancelled =
-              item.status?.toLowerCase() === "cancelled" ||
-              item.status?.toLowerCase() === "canceled";
-            const isRejected = item.status?.toLowerCase() === "rejected";
-            const isPending = !item.status || item.status.toLowerCase() === "pending";
-            const isConfirmed = item.status?.toLowerCase() === "confirmed";
-            const isProcessing = item.status?.toLowerCase() === "processing";
-            const isScheduled =
-              item.status?.toLowerCase() === "scheduled" ||
-              item.status?.toLowerCase() === "in-transit";
-            const canSelectStatus = isConfirmed || isProcessing || isScheduled;
+            const normalizeStatus = (value?: string) =>
+              String(value ?? "")
+                .trim()
+                .toLowerCase()
+                .replace(/[-_]/g, " ")
+                .replace(/\s+/g, " ");
+
+            const status = normalizeStatus(item.status);
+            const isDelivered = status === "delivered" || status === "completed";
+            const isCancelled = status === "cancelled" || status === "canceled";
+            const isRejected = status === "rejected";
+            const isPending = !item.status || status === "pending";
+            const isConfirmed = status === "confirmed";
+            const isProcessing = status === "processing";
+            const isOutForDelivery = status === "out for delivery";
+            const isScheduled = status === "scheduled" || status === "in transit" || status === "in-transit";
+            const canSelectStatus = isConfirmed || isProcessing || isScheduled || isOutForDelivery;
             const canCustomerMarkDelivered = !isDelivered && !isCancelled && !isRejected &&
-              ["confirmed", "processing", "out for delivery", "scheduled", "in-transit"].includes(
-                item.status?.toLowerCase() || ""
-              );
+              ["confirmed", "processing", "out for delivery", "scheduled", "in transit", "in-transit"].includes(status);
 
             return (
               <div
@@ -121,7 +122,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                 <div className="flex items-center gap-2 self-end md:self-center">
                   {isAdmin ? (
                     <div className="flex gap-2">
-                      {onDeleteOrder && (
+                      {!isDelivered && onDeleteOrder && (
                         <button
                           onClick={() => onDeleteOrder(item.id)}
                           className="bg-error-red text-white text-xs font-semibold px-3 py-2 rounded-lg hover:bg-error-red/90 transition-colors cursor-pointer"
@@ -187,7 +188,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                         </span>
                       ) : canSelectStatus ? (
                         <select
-                          value={(item.status || "confirmed").toLowerCase()}
+                          value={status || "confirmed"}
                           onChange={(event) => onUpdateOrderStatus?.(item.id, event.target.value)}
                           className="select select-bordered select-sm text-xs font-semibold border-slate-300 rounded-lg"
                           aria-label={`Update status for order ${item.id}`}

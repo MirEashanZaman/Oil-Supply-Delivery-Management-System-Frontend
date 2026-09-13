@@ -594,7 +594,6 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
             {gpsError && (
                 <div className="bg-amber-900/60 border-b border-amber-600/50 px-4 py-1.5 text-xs text-amber-200 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <span>️</span>
                         <span>{gpsError}</span>
                     </div>
                     <button

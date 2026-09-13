@@ -203,7 +203,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             onClick={() => setActiveTab("tracking")}
             className="btn bg-white/10 hover:bg-white/20 text-white border border-white/20 btn-sm text-xs font-bold rounded-xl"
           >
-            Live GPS Tracking ️
+            Live GPS Tracking
           </button>
         </div>
       </div>
@@ -264,7 +264,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                           onClick={() => onOpenLiveTrack(order)}
                           className="px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 rounded-lg font-bold text-[11px] transition"
                         >
-                          ️ Track Live
+                          Track Live
                         </button>
                       ) : (
                         <span className="text-[11px] text-secondary-gray font-medium">Completed</span>

@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import MyNavigation from "@/components/navigation";
 import MyHeader from "@/components/header";
 
-export default function AboutUs() {
+export default async function AboutUs() {
+    await connection();
+
     return (
         <div className="w-full flex flex-col items-center">
             <MyHeader name="About Us" message="Learn about the Oil Supply & Delivery Management System" />

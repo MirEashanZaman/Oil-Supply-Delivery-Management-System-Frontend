@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import MyNavigation from "@/components/navigation";
 import MyHeader from "@/components/header";
 
-export default function NotFound() {
+export default async function NotFound() {
+    await connection();
+
     return (
         <>
             <MyHeader name="404" message="page not found!" />

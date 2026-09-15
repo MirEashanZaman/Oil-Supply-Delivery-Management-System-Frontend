@@ -153,10 +153,11 @@ export default function Registration() {
         formData.append("photo", result.data.photo);
 
         const rolePath = result.data.title.toLowerCase();
+        const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
 
         try {
             const res = await axios.post(
-                `http://localhost:8000/${rolePath}/auth/register`,
+                `${API_ENDPOINT}/${rolePath}/auth/register`,
                 formData,
                 {
                     headers: {

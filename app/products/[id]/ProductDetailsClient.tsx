@@ -35,7 +35,6 @@ export default function ProductDetails({
     const [inquiryMessage, setInquiryMessage] = useState("");
     const [isSendingInquiry, setIsSendingInquiry] = useState(false);
     const [inquirySuccess, setInquirySuccess] = useState(false);
-    const [isInquireModalOpen, setIsInquireModalOpen] = useState(false);
 
     useEffect(() => {
         const pusher = getPusherClient();
@@ -47,7 +46,7 @@ export default function ProductDetails({
                 setConnectionStatus("Connected");
             });
 
-            channel.bind("pusher:subscription_error", (error) => {
+            channel.bind("pusher:subscription_error", (error: { message?: string }) => {
                 setConnectionStatus(`Connection failed: ${error.message}`);
                 setConnectionAttempts(prev => prev + 1);
                 if (connectionAttempts < 3) {

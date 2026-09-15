@@ -14,7 +14,15 @@ export default function ContactInfo() {
     const [submitted, setSubmitted] = useState(false);
     const [isSending, setIsSending] = useState(false);
     const [isPusherConnected, setIsPusherConnected] = useState(false);
+    const [connectionStatus, setConnectionStatus] = useState("Connecting...");
+    const [connectionAttempts, setConnectionAttempts] = useState(0);
     const [liveMessages, setLiveMessages] = useState<ChatMessage[]>([]);
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
+    const [topic, setTopic] = useState("Bulk Procurement");
+    const [message, setMessage] = useState("");
+    const [submitted, setSubmitted] = useState(false);
+    const [isSending, setIsSending] = useState(false);
 
     useEffect(() => {
         const loadStoredMessages = async () => {

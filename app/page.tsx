@@ -6,6 +6,7 @@ import axios from "axios";
 import MyHeader from "@/components/header";
 import MyNavigation from "@/components/navigation";
 import { PRODUCT_IMAGE_MAP, getProductImage } from "@/components/dashboard/utils";
+import { getPusherClient, ChatMessage } from "@/lib/pusher";
 
 type CarouselProduct = {
     id: number;
@@ -55,7 +56,6 @@ export default function Home() {
     const [showLiveMessages, setShowLiveMessages] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [user, setUser] = useState<{ userName?: string; email?: string; title?: string } | null>(null);
 
     useEffect(() => {
         const stored = localStorage.getItem("user");
@@ -116,7 +116,7 @@ export default function Home() {
                 setConnectionStatus("Connected");
             });
 
-            channel.bind("pusher:subscription_error", (error) => {
+            channel.bind("pusher:subscription_error", (error: { message?: string }) => {
                 setConnectionStatus(`Connection failed: ${error.message}`);
                 setConnectionAttempts(prev => prev + 1);
                 if (connectionAttempts < 3) {

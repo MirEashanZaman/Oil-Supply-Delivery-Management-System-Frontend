@@ -6,6 +6,7 @@ import axios from "axios";
 import MyHeader from "@/components/header";
 import MyNavigation from "@/components/navigation";
 import { PRODUCT_IMAGE_MAP, getProductImage } from "@/components/dashboard/utils";
+import { getPusherClient, ChatMessage } from "@/lib/pusher";
 
 type CarouselProduct = {
     id: number;
@@ -52,7 +53,9 @@ export default function Home() {
     const [connectionAttempts, setConnectionAttempts] = useState(0);
     const [liveMessages, setLiveMessages] = useState<ChatMessage[]>([]);
     const [user, setUser] = useState<{ userName?: string; email?: string; title?: string } | null>(null);
-    const [user, setUser] = useState<{ userName?: string; email?: string; title?: string } | null>(null);
+    const [showLiveMessages, setShowLiveMessages] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         const stored = localStorage.getItem("user");
@@ -71,6 +74,38 @@ export default function Home() {
         window.location.reload();
     };
 
+    const LiveMessagesDisplay = () => {
+        if (!showLiveMessages || liveMessages.length === 0) return null;
+
+        return (
+            <div className="fixed bottom-4 right-4 w-80 bg-[#FFFFFF] rounded-2xl shadow-xl border border-[#E2E8F0] z-50 overflow-hidden">
+                <div className="p-4 border-b border-[#E2E8F0] flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse"></span>
+                        <h3 className="font-bold text-sm text-[#1E293B]">Real-Time Updates</h3>
+                    </div>
+                    <button
+                        onClick={() => setShowLiveMessages(false)}
+                        className="text-[#64748B] hover:text-[#1E293B] text-xs font-bold cursor-pointer"
+                    >
+                        Close
+                    </button>
+                </div>
+                <div className="max-h-64 overflow-y-auto p-3 space-y-3">
+                    {liveMessages.map((msg) => (
+                        <div key={msg.id} className="p-3 rounded-xl bg-[#F5F7FA] border border-[#E2E8F0] text-xs space-y-1">
+                            <div className="flex items-center justify-between">
+                                <span className="font-bold text-[#1E293B]">{msg.sender} <span className="text-[11px] font-normal text-[#64748B]">({msg.topic})</span></span>
+                                <span className="text-[10px] text-[#64748B] font-mono">{msg.timestamp}</span>
+                            </div>
+                            <p className="text-[#1E293B] leading-relaxed">{msg.message}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
     useEffect(() => {
         const pusher = getPusherClient();
         if (pusher) {
@@ -81,7 +116,7 @@ export default function Home() {
                 setConnectionStatus("Connected");
             });
 
-            channel.bind("pusher:subscription_error", (error) => {
+            channel.bind("pusher:subscription_error", (error: { message?: string }) => {
                 setConnectionStatus(`Connection failed: ${error.message}`);
                 setConnectionAttempts(prev => prev + 1);
                 if (connectionAttempts < 3) {
@@ -95,7 +130,7 @@ export default function Home() {
             });
 
             channel.bind("new-message", (data: ChatMessage) => {
-                setLiveMessages((prev) => [data, ...prev.filter((m) => m.id !== data.id)].slice(0, 6)));
+                setLiveMessages((prev) => [data, ...prev.filter((m) => m.id !== data.id)].slice(0, 6));
             });
         }
 

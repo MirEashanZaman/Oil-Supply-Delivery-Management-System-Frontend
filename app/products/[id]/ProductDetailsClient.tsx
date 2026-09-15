@@ -27,13 +27,40 @@ export default function ProductDetails({
 }) {
 
     const [isInquireModalOpen, setIsInquireModalOpen] = useState(false);
+    const [isPusherConnected, setIsPusherConnected] = useState(false);
+    const [connectionStatus, setConnectionStatus] = useState("Connecting...");
+    const [connectionAttempts, setConnectionAttempts] = useState(0);
     const [inquiryName, setInquiryName] = useState("");
     const [inquiryEmail, setInquiryEmail] = useState("");
     const [inquiryMessage, setInquiryMessage] = useState("");
     const [isSendingInquiry, setIsSendingInquiry] = useState(false);
     const [inquirySuccess, setInquirySuccess] = useState(false);
+    const [isInquireModalOpen, setIsInquireModalOpen] = useState(false);
 
     useEffect(() => {
+        const pusher = getPusherClient();
+        if (pusher) {
+            const channel = pusher.subscribe("oil-supply-chat");
+
+            channel.bind("pusher:subscription_succeeded", () => {
+                setIsPusherConnected(true);
+                setConnectionStatus("Connected");
+            });
+
+            channel.bind("pusher:subscription_error", (error) => {
+                setConnectionStatus(`Connection failed: ${error.message}`);
+                setConnectionAttempts(prev => prev + 1);
+                if (connectionAttempts < 3) {
+                    setTimeout(() => {
+                        const pusher = getPusherClient();
+                        if (pusher) {
+                            pusher.subscribe("oil-supply-chat");
+                        }
+                    }, 3000);
+                }
+            });
+        }
+
         const stored = localStorage.getItem("user");
         if (stored) {
             try {

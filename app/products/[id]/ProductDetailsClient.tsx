@@ -5,6 +5,7 @@ import Link from "next/link";
 import axios from "axios";
 import MyNavigation from "@/components/navigation";
 import MyHeader from "@/components/header";
+import { getProductImage } from "@/components/dashboard/utils";
 import { getPusherClient, ChatMessage } from "@/lib/pusher";
 
 type Product = {
@@ -15,92 +16,6 @@ type Product = {
     description?: string;
     stockLevel?: string;
     image?: string;
-};
-
-const PRODUCT_IMAGE_MAP: Record<number, string> = {
-    1: "/Brent Crude Oil.jpg",
-    2: "/Ultra-Low Sulfur Diesel.jpg",
-    3: "/Premium Unleaded Gasoline.jpg",
-    4: "/Aviation Turbine Fuel (Jet A-1).jpg",
-    5: "/images.jpg",
-    6: "/Heavy Marine Fuel Oil (HFO).jpg",
-};
-
-const getProductImage = (name?: string, img?: string, id?: number | string) => {
-    if (typeof window !== "undefined") {
-        try {
-            if (id) {
-                const customStoredId = localStorage.getItem(`product_img_${id}`);
-                if (customStoredId && (customStoredId.startsWith("data:") || customStoredId.startsWith("blob:") || customStoredId.startsWith("http") || customStoredId.startsWith("/"))) {
-                    return customStoredId;
-                }
-            }
-            if (name) {
-                const customStoredName = localStorage.getItem(`product_img_${name.trim()}`);
-                if (customStoredName && (customStoredName.startsWith("data:") || customStoredName.startsWith("blob:") || customStoredName.startsWith("http") || customStoredName.startsWith("/"))) {
-                    return customStoredName;
-                }
-            }
-        } catch {
-        }
-    }
-
-    if (img && typeof img === "string" && img.trim() !== "") {
-        const trimmed = img.trim();
-        if (
-            trimmed.startsWith("data:") ||
-            trimmed.startsWith("blob:") ||
-            trimmed.startsWith("http://") ||
-            trimmed.startsWith("https://") ||
-            (trimmed.startsWith("/") && trimmed !== "/Brent Crude Oil.jpg")
-        ) {
-            return trimmed;
-        }
-    }
-
-    const lower = (name || "").toLowerCase();
-    if (lower.includes("lpg") || lower.includes("liquefied") || lower.includes("cylinder") || lower.includes("propane") || lower.includes("butane")) {
-        return "/images.jpg";
-    }
-    if (lower.includes("diesel") || lower.includes("sulfur") || lower.includes("ulsd") || lower.includes("gasoil")) {
-        return "/Ultra-Low Sulfur Diesel.jpg";
-    }
-    if (lower.includes("gasoline") || lower.includes("petrol") || lower.includes("octane") || lower.includes("unleaded") || lower.includes("mogas")) {
-        return "/Premium Unleaded Gasoline.jpg";
-    }
-    if (lower.includes("jet") || lower.includes("aviation") || lower.includes("turbine") || lower.includes("a-1") || lower.includes("kerosene")) {
-        return "/Aviation Turbine Fuel (Jet A-1).jpg";
-    }
-    if (lower.includes("marine") || lower.includes("bunker") || lower.includes("hfo") || lower.includes("heavy") || lower.includes("fuel oil")) {
-        return "/Heavy Marine Fuel Oil (HFO).jpg";
-    }
-    if (lower.includes("crude") || lower.includes("brent") || lower.includes("wti") || lower.includes("raw")) {
-        return "/Brent Crude Oil.jpg";
-    }
-
-    if (id !== undefined && id !== null) {
-        const numId = Number(id);
-        if (!isNaN(numId) && PRODUCT_IMAGE_MAP[numId]) {
-            return PRODUCT_IMAGE_MAP[numId];
-        }
-        if (!isNaN(numId) && numId > 0) {
-            const fallbackImages = [
-                "/Brent Crude Oil.jpg",
-                "/Ultra-Low Sulfur Diesel.jpg",
-                "/Premium Unleaded Gasoline.jpg",
-                "/Aviation Turbine Fuel (Jet A-1).jpg",
-                "/images.jpg",
-                "/Heavy Marine Fuel Oil (HFO).jpg",
-            ];
-            return fallbackImages[(numId - 1) % fallbackImages.length];
-        }
-    }
-
-    if (img && (img.startsWith("/") || img.startsWith("http") || img.startsWith("data:") || img.startsWith("blob:"))) {
-        return img;
-    }
-
-    return "/Brent Crude Oil.jpg";
 };
 
 export default function ProductDetails({
@@ -148,9 +63,8 @@ export default function ProductDetails({
             setInquirySuccess(true);
             setInquiryMessage("");
         } catch (err) {
-            console.warn("Local Pusher message transmission fallback:", err);
-            setInquirySuccess(true);
-            setInquiryMessage("");
+            console.warn("Product inquiry transmission failed:", err);
+            setInquirySuccess(false);
         } finally {
             setIsSendingInquiry(false);
         }

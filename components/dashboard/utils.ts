@@ -124,11 +124,12 @@ export const isValidPhoneNumber = (value?: string): boolean => {
 };
 
 export const getAllUsersUrl = (title?: string): string => {
+    const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
     const r = getRolePath(title);
-    if (r === "admin") return "http://localhost:8000/admin/getalladmin";
-    if (r === "supplier") return "http://localhost:8000/supplier/getallsupplier";
-    if (r === "dealer") return "http://localhost:8000/dealer/all";
-    return "http://localhost:8000/customer/getallcustomer";
+    if (r === "admin") return `${API_ENDPOINT}/admin/getalladmin`;
+    if (r === "supplier") return `${API_ENDPOINT}/supplier/getallsupplier`;
+    if (r === "dealer") return `${API_ENDPOINT}/dealer/all`;
+    return `${API_ENDPOINT}/customer/getallcustomer`;
 };
 
 export const getRoleBadgeColor = (role?: string): string => {

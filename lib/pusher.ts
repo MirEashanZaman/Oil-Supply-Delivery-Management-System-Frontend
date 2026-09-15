@@ -3,9 +3,9 @@ import PusherServer from "pusher";
 
 let clientInstance: PusherClient | null = null;
 
-export const getPusherClient = (): PusherClient => {
+export const getPusherClient = (): PusherClient | null => {
     if (typeof window === "undefined") {
-        return null as unknown as PusherClient;
+        return null;
     }
 
     if (!clientInstance) {

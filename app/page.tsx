@@ -47,6 +47,11 @@ export default function Home() {
     const [isMarqueeMode, setIsMarqueeMode] = useState(true);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [products, setProducts] = useState<CarouselProduct[]>([]);
+    const [isPusherConnected, setIsPusherConnected] = useState(false);
+    const [connectionStatus, setConnectionStatus] = useState("Connecting...");
+    const [connectionAttempts, setConnectionAttempts] = useState(0);
+    const [liveMessages, setLiveMessages] = useState<ChatMessage[]>([]);
+    const [user, setUser] = useState<{ userName?: string; email?: string; title?: string } | null>(null);
     const [user, setUser] = useState<{ userName?: string; email?: string; title?: string } | null>(null);
 
     useEffect(() => {
@@ -67,6 +72,33 @@ export default function Home() {
     };
 
     useEffect(() => {
+        const pusher = getPusherClient();
+        if (pusher) {
+            const channel = pusher.subscribe("oil-supply-chat");
+
+            channel.bind("pusher:subscription_succeeded", () => {
+                setIsPusherConnected(true);
+                setConnectionStatus("Connected");
+            });
+
+            channel.bind("pusher:subscription_error", (error) => {
+                setConnectionStatus(`Connection failed: ${error.message}`);
+                setConnectionAttempts(prev => prev + 1);
+                if (connectionAttempts < 3) {
+                    setTimeout(() => {
+                        const pusher = getPusherClient();
+                        if (pusher) {
+                            pusher.subscribe("oil-supply-chat");
+                        }
+                    }, 3000);
+                }
+            });
+
+            channel.bind("new-message", (data: ChatMessage) => {
+                setLiveMessages((prev) => [data, ...prev.filter((m) => m.id !== data.id)].slice(0, 6)));
+            });
+        }
+
         const fetchHomeProducts = async () => {
             const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
             try {

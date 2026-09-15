@@ -45,6 +45,10 @@ type RegistrationErrors = {
 export default function Registration() {
     const router = useRouter();
     const [username, setUsername] = useState("");
+    const [isPusherConnected, setIsPusherConnected] = useState(false);
+    const [connectionStatus, setConnectionStatus] = useState("Connecting...");
+    const [connectionAttempts, setConnectionAttempts] = useState(0);
+    const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [phoneNumber, setPhoneNumber] = useState("");
     const [address, setAddress] = useState("");

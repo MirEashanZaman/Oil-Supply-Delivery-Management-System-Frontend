@@ -43,8 +43,6 @@ export default function ContactInfo() {
             setLiveMessages((prev) => [data, ...prev.filter((m) => m.id !== data.id)].slice(0, 6));
         });
 
-        setIsPusherConnected(true);
-
         return () => {
             channel.unbind_all();
             channel.unsubscribe();
@@ -73,19 +71,9 @@ export default function ContactInfo() {
             setSubmitted(true);
             setMessage("");
         } catch (err) {
-            console.warn("Message sent with local Pusher fallback:", err);
-            const fallbackMsg: ChatMessage = {
-                id: `msg_${Date.now()}`,
-                sender: name,
-                email,
-                topic,
-                message,
-                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                role: "Customer Inquiry",
-            };
-            setLiveMessages((prev) => [fallbackMsg, ...prev].slice(0, 6));
-            setSubmitted(true);
-            setMessage("");
+            console.warn("Message transmission failed:", err);
+            // Don't treat as successful submission on backend failure
+            setSubmitted(false); // Allow user to retry
         } finally {
             setIsSending(false);
         }

@@ -130,17 +130,87 @@ export default function Dashboard() {
     const [isDashboardRefreshing, setIsDashboardRefreshing] = useState<boolean>(false);
     const [dashboardError, setDashboardError] = useState<string | null>(null);
     const [lastSyncedAt, setLastSyncedAt] = useState<string>(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+    const [auditTrail, setAuditTrail] = useState<Array<{ id: number; action: string; detail: string; timestamp: string; type: "info" | "warning" | "success" }>>([]);
 
     const cartTotalItems = useMemo(() => cartItems.reduce((acc, item) => acc + item.quantity, 0), [cartItems]);
     const cartSubtotal = useMemo(() => cartItems.reduce((acc, item) => acc + (item.product.numericPrice * item.quantity), 0), [cartItems]);
     const cartTotalAmount = useMemo(() => Number(cartSubtotal.toFixed(2)), [cartSubtotal]);
 
+    const dashboardMetrics = useMemo(() => {
+        const revenue = orders.reduce((sum, order) => sum + (Number(order.totalAmount) || 0), 0);
+        const pendingOrders = orders.filter((order) => (order.status || "").toLowerCase() === "pending").length;
+        const inTransitOrders = orders.filter((order) => {
+            const status = (order.status || "").toLowerCase();
+            return status.includes("delivery") || status.includes("transit") || status.includes("processing");
+        }).length;
+        const lowStockProducts = products.filter((product) => {
+            const stock = Number(product.quantity ?? product.stock ?? 0);
+            return Number.isFinite(stock) && stock <= 20;
+        }).length;
+        const totalInventory = products.reduce((sum, product) => sum + (Number(product.quantity ?? product.stock ?? 0) || 0), 0);
+        const activeCustomers = allMergedUsers.filter((member) => {
+            const role = (member.title || member.role || "").toLowerCase();
+            return role === "customer";
+        }).length;
+        const partnerCount = availableSuppliers.length + availableDealers.length;
+
+        return [
+            {
+                label: "Total Revenue",
+                value: `$${revenue.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+                detail: `${orders.length} order entries`,
+                tint: "bg-emerald-50 text-emerald-700 border-emerald-200",
+            },
+            {
+                label: "Pending Orders",
+                value: String(pendingOrders),
+                detail: `${inTransitOrders} in transit / processing`,
+                tint: "bg-amber-50 text-amber-700 border-amber-200",
+            },
+            {
+                label: "Low Stock Items",
+                value: String(lowStockProducts),
+                detail: `${totalInventory} units in stock`,
+                tint: "bg-rose-50 text-rose-700 border-rose-200",
+            },
+            {
+                label: "Network Reach",
+                value: String(partnerCount || activeCustomers || 0),
+                detail: `${activeCustomers} customers / ${partnerCount} partners`,
+                tint: "bg-sky-50 text-sky-700 border-sky-200",
+            },
+        ];
+    }, [orders, products, allMergedUsers, availableSuppliers, availableDealers]);
+
     useEffect(() => {
         try {
             const saved = localStorage.getItem("petroleum_cart");
             if (saved) setCartItems(JSON.parse(saved));
+            const savedAudit = localStorage.getItem("audit_trail");
+            if (savedAudit) {
+                const parsedAudit = JSON.parse(savedAudit);
+                if (Array.isArray(parsedAudit)) setAuditTrail(parsedAudit);
+            }
         } catch { }
     }, []);
+
+    const appendAuditEntry = (action: string, detail: string, type: "info" | "warning" | "success" = "info") => {
+        const entry = {
+            id: Date.now() + Math.random(),
+            action,
+            detail,
+            timestamp: new Date().toLocaleString(),
+            type,
+        };
+
+        setAuditTrail((prev) => {
+            const next = [entry, ...prev].slice(0, 8);
+            try {
+                localStorage.setItem("audit_trail", JSON.stringify(next));
+            } catch { }
+            return next;
+        });
+    };
 
     const updateCartState = (newCart: CartItem[]) => {
         setCartItems(newCart);
@@ -408,6 +478,7 @@ export default function Dashboard() {
             }
 
             alert(`Product "${newProductForm.name.trim()}" published successfully!`);
+            appendAuditEntry("Product published", `Published ${newProductForm.name.trim()} for ${newProductForm.category}.`, "success");
             setNewProductForm({
                 name: "",
                 description: "",
@@ -1377,6 +1448,7 @@ export default function Dashboard() {
                 };
             const res = await axios.post(endpoint, payload, { withCredentials: true, validateStatus: (status) => status < 500 });
             if (res.status === 200 || res.status === 201) {
+                appendAuditEntry("User created", `Created ${newUser.role} account for ${newUser.name}.`, "success");
                 alert(`User ${newUser.name} created!`);
                 fetchAllMergedUsers();
                 return true;
@@ -1531,10 +1603,12 @@ export default function Dashboard() {
                         const stillExists = Array.isArray(refreshed.data) && refreshed.data.some((user: any) => Number(user.id) === Number(id));
 
                         if (stillExists) {
+                            appendAuditEntry("User deletion requested", `Removal request submitted for user ID ${id}.`, "warning");
                             alert("Delete request success");
                             return;
                         }
 
+                        appendAuditEntry("User deleted", `Deleted user account ID ${id}.`, "warning");
                         alert("User deleted successfully.");
                         return;
                     }
@@ -1622,6 +1696,7 @@ export default function Dashboard() {
                 );
                 setEditingUser(null);
                 await fetchAllMergedUsers();
+                appendAuditEntry("User updated", `${normalizedName} was updated in the admin registry.`, "success");
                 alert(`${normalizedName} updated successfully.`);
                 return;
             }
@@ -1666,6 +1741,7 @@ export default function Dashboard() {
             const mergedUser: UserData = { ...user, ...updated };
             setUser(mergedUser);
             localStorage.setItem("user", JSON.stringify(mergedUser));
+            appendAuditEntry("Profile updated", `Updated profile information for ${mergedUser.userName || mergedUser.name || user.email}.`, "success");
             if (user.email) fetchFullProfile(user.email, user.title);
         } catch (err) {
             console.warn("Failed to persist profile to backend:", err);
@@ -1825,6 +1901,16 @@ export default function Dashboard() {
                         </div>
                     )}
 
+                    <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        {dashboardMetrics.map((metric) => (
+                            <div key={metric.label} className={`rounded-2xl border p-4 shadow-sm ${metric.tint}`}>
+                                <div className="text-xs font-bold uppercase tracking-[0.12em] opacity-80">{metric.label}</div>
+                                <div className="mt-3 text-2xl font-black leading-none">{metric.value}</div>
+                                <div className="mt-2 text-xs font-medium opacity-80">{metric.detail}</div>
+                            </div>
+                        ))}
+                    </div>
+
                     { }
                     <div className="flex items-center gap-2 overflow-x-auto pt-4 no-scrollbar">
                         <button
@@ -1921,6 +2007,7 @@ export default function Dashboard() {
                             userData={user}
                             orders={orders}
                             products={products}
+                            auditTrail={auditTrail}
                             setActiveTab={setActiveTab}
                             onOpenCart={() => setIsCartModalOpen(true)}
                             onOpenLiveTrack={(ord) => handleTrackOrder(ord.id, ord)}

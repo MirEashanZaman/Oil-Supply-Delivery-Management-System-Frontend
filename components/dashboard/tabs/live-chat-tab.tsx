@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { UserData } from "../types";
-import { ChatMessage, getPusherClient } from "@/lib/pusher";
+import { ChatMessage, getPusherClient, getRoleBasedChannel } from "@/lib/pusher";
 
 interface LiveChatTabProps {
   userData: UserData | null;
@@ -15,7 +15,7 @@ export const LiveChatTab: React.FC<LiveChatTabProps> = ({ userData }) => {
   const [selectedTopic, setSelectedTopic] = useState("General Support");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const channelName = "oil-supply-chat";
+  const channelName = getRoleBasedChannel(userData?.title || userData?.role || "customer");
 
   useEffect(() => {
     const loadStoredMessages = async () => {

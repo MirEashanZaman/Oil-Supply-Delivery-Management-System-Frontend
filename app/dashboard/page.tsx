@@ -127,6 +127,7 @@ export default function Dashboard() {
     const [isCartModalOpen, setIsCartModalOpen] = useState<boolean>(false);
     const [cartToast, setCartToast] = useState<string | null>(null);
     const [isMultiCheckout, setIsMultiCheckout] = useState<boolean>(false);
+    const [isDashboardRefreshing, setIsDashboardRefreshing] = useState<boolean>(false);
 
     const cartTotalItems = useMemo(() => cartItems.reduce((acc, item) => acc + item.quantity, 0), [cartItems]);
     const cartSubtotal = useMemo(() => cartItems.reduce((acc, item) => acc + (item.product.numericPrice * item.quantity), 0), [cartItems]);
@@ -1687,6 +1688,21 @@ export default function Dashboard() {
         }
     };
 
+    const refreshDashboard = async () => {
+        if (!user?.id) return;
+
+        setIsDashboardRefreshing(true);
+        try {
+            await Promise.all([
+                fetchCatalogProducts(),
+                fetchOrders(user.id, user.title || user.role),
+                fetchSourcingParties(),
+            ]);
+        } finally {
+            setIsDashboardRefreshing(false);
+        }
+    };
+
     const handleLogout = () => {
         localStorage.removeItem("user");
         router.push("/login");
@@ -1769,6 +1785,14 @@ export default function Dashboard() {
                             )}
                             <button
                                 type="button"
+                                onClick={refreshDashboard}
+                                className="btn btn-ghost btn-sm text-[#0F2747] hover:bg-slate-100 rounded-xl font-bold"
+                                disabled={isDashboardRefreshing}
+                            >
+                                {isDashboardRefreshing ? "Refreshing..." : "Refresh"}
+                            </button>
+                            <button
+                                type="button"
                                 onClick={handleLogout}
                                 className="btn btn-ghost btn-sm text-[#DC2626] hover:bg-rose-50 rounded-xl font-bold"
                             >
@@ -1776,6 +1800,13 @@ export default function Dashboard() {
                             </button>
                         </div>
                     </div>
+
+                    {isDashboardRefreshing && (
+                        <div className="mt-4 flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800">
+                            <span className="loading loading-spinner loading-xs" />
+                            Refreshing dashboard data and sourcing partners...
+                        </div>
+                    )}
 
                     { }
                     <div className="flex items-center gap-2 overflow-x-auto pt-4 no-scrollbar">

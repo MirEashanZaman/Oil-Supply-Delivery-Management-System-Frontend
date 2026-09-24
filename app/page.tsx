@@ -48,6 +48,8 @@ export default function Home() {
     const [isMarqueeMode, setIsMarqueeMode] = useState(true);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [products, setProducts] = useState<CarouselProduct[]>([]);
+    const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+    const [productsError, setProductsError] = useState<string | null>(null);
     const [user, setUser] = useState<{ userName?: string; email?: string; title?: string } | null>(null);
 
     useEffect(() => {
@@ -70,10 +72,14 @@ export default function Home() {
     useEffect(() => {
         const fetchHomeProducts = async () => {
             try {
+                setIsLoadingProducts(true);
+                setProductsError(null);
+
                 const res = await axios.get(`${API_ENDPOINT}/product/list`, {
                     withCredentials: true,
                     validateStatus: (status) => status < 500,
                 });
+
                 if (Array.isArray(res.data)) {
                     const mapped: CarouselProduct[] = res.data
                         .sort((a: any, b: any) => (a.id || 0) - (b.id || 0))
@@ -89,9 +95,14 @@ export default function Home() {
                             image: getProductImage(p.name, p.image, p.id),
                         }));
                     setProducts(mapped);
+                } else {
+                    setProducts([]);
                 }
-            } catch (err) {
+            } catch (err: any) {
                 console.warn("Could not fetch products for home carousel:", err);
+                setProductsError("Unable to load featured products right now.");
+            } finally {
+                setIsLoadingProducts(false);
             }
         };
         fetchHomeProducts();
@@ -192,43 +203,64 @@ export default function Home() {
                     </div>
                 </div>
 
+                {productsError && (
+                    <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                        {productsError}
+                    </div>
+                )}
+
                 <div className="carousel w-full rounded-2xl shadow-md overflow-hidden relative bg-black h-[360px] md:h-[420px] border border-[#E2E8F0]">
-                    {HERO_SLIDES.map((slide, idx) => (
-                        <div
-                            key={slide.id}
-                            className={`carousel-item absolute inset-0 w-full h-full transition-all duration-700 ease-in-out ${idx === currentHeroSlide
-                                ? "opacity-100 translate-x-0 z-10"
-                                : idx < currentHeroSlide
-                                    ? "opacity-0 -translate-x-full z-0"
-                                    : "opacity-0 translate-x-full z-0"
-                                }`}
-                        >
-                            <img
-                                src={slide.image}
-                                alt={slide.title}
-                                className="w-full h-full object-cover brightness-50"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent flex flex-col justify-end p-6 md:p-12 text-left text-white">
-                                <span className="text-xs font-bold uppercase tracking-wider text-[#F59E0B] mb-2 bg-[#F59E0B]/20 w-fit px-3 py-1 rounded-full border border-[#F59E0B]/30">
-                                    {slide.badge}
-                                </span>
-                                <h3 className="text-2xl md:text-4xl font-extrabold max-w-2xl leading-tight tracking-tight text-white">
-                                    {slide.title}
-                                </h3>
-                                <p className="text-xs md:text-sm text-slate-200 mt-2 max-w-xl leading-relaxed">
-                                    {slide.tagline}
-                                </p>
-                                <div className="mt-5 flex gap-3">
-                                    <Link href="/dashboard" className="btn bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] btn-sm md:btn-md shadow-sm font-bold border-none rounded-xl">
-                                        Explore Products
-                                    </Link>
-                                    <Link href="/about" className="btn btn-outline btn-sm md:btn-md text-white border-white/50 hover:bg-white/20 rounded-xl">
-                                        Learn Logistics
-                                    </Link>
+                    {isLoadingProducts ? (
+                        Array.from({ length: 3 }).map((_, index) => (
+                            <div
+                                key={`home-skeleton-${index}`}
+                                className="absolute inset-0 flex items-end justify-start bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 animate-pulse p-6 md:p-12"
+                            >
+                                <div className="w-full max-w-xl space-y-3">
+                                    <div className="h-4 w-32 rounded-full bg-slate-300" />
+                                    <div className="h-8 w-3/4 rounded-md bg-slate-300" />
+                                    <div className="h-4 w-2/3 rounded-md bg-slate-300" />
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        ))
+                    ) : (
+                        HERO_SLIDES.map((slide, idx) => (
+                            <div
+                                key={slide.id}
+                                className={`carousel-item absolute inset-0 w-full h-full transition-all duration-700 ease-in-out ${idx === currentHeroSlide
+                                    ? "opacity-100 translate-x-0 z-10"
+                                    : idx < currentHeroSlide
+                                        ? "opacity-0 -translate-x-full z-0"
+                                        : "opacity-0 translate-x-full z-0"
+                                    }`}
+                            >
+                                <img
+                                    src={slide.image}
+                                    alt={slide.title}
+                                    className="w-full h-full object-cover brightness-50"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent flex flex-col justify-end p-6 md:p-12 text-left text-white">
+                                    <span className="text-xs font-bold uppercase tracking-wider text-[#F59E0B] mb-2 bg-[#F59E0B]/20 w-fit px-3 py-1 rounded-full border border-[#F59E0B]/30">
+                                        {slide.badge}
+                                    </span>
+                                    <h3 className="text-2xl md:text-4xl font-extrabold max-w-2xl leading-tight tracking-tight text-white">
+                                        {slide.title}
+                                    </h3>
+                                    <p className="text-xs md:text-sm text-slate-200 mt-2 max-w-xl leading-relaxed">
+                                        {slide.tagline}
+                                    </p>
+                                    <div className="mt-5 flex gap-3">
+                                        <Link href="/dashboard" className="btn bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] btn-sm md:btn-md shadow-sm font-bold border-none rounded-xl">
+                                            Explore Products
+                                        </Link>
+                                        <Link href="/about" className="btn btn-outline btn-sm md:btn-md text-white border-white/50 hover:bg-white/20 rounded-xl">
+                                            Learn Logistics
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
 
                     <div className="absolute left-4 right-4 top-1/2 -translate-y-1/2 flex justify-between z-20 pointer-events-none">
                         <button

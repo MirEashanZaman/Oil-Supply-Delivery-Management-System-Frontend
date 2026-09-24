@@ -6,6 +6,7 @@ import axios from "axios";
 import MyHeader from "@/components/header";
 import MyNavigation from "@/components/navigation";
 import { PRODUCT_IMAGE_MAP, getProductImage } from "@/components/dashboard/utils";
+import { API_ENDPOINT } from "@/lib/api";
 
 type CarouselProduct = {
     id: number;
@@ -68,7 +69,6 @@ export default function Home() {
 
     useEffect(() => {
         const fetchHomeProducts = async () => {
-            const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
             try {
                 const res = await axios.get(`${API_ENDPOINT}/product/list`, {
                     withCredentials: true,

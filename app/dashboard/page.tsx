@@ -9,6 +9,7 @@ import MyHeader from "@/components/header";
 import UberMapTracker from "@/components/uber-map-tracker";
 import { getPusherClient, ChatMessage } from "@/lib/pusher";
 import { checkEmailUniqueness } from "@/lib/email-checker";
+import { API_ENDPOINT, API_ENDPOINT as apiBase } from "@/lib/api";
 
 import {
     UserData,
@@ -235,7 +236,6 @@ export default function Dashboard() {
 
     const fetchCatalogProducts = async () => {
         setProductsLoading(true);
-        const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
         try {
             const res = await axios.get(`${API_ENDPOINT}/product/list`, {
                 withCredentials: true,
@@ -314,7 +314,6 @@ export default function Dashboard() {
         }
 
         setIsSubmittingNewProduct(true);
-        const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
         const role = getRolePath(user.title || user.role);
 
         try {
@@ -423,8 +422,8 @@ export default function Dashboard() {
     const fetchSourcingParties = async () => {
         try {
             const [suppliersRes, dealersRes] = await Promise.allSettled([
-                axios.get("http://localhost:8000/supplier/getallsupplier", { withCredentials: true, validateStatus: (status) => status < 500 }),
-                axios.get("http://localhost:8000/dealer/all", { withCredentials: true, validateStatus: (status) => status < 500 }),
+                axios.get(`${apiBase}/supplier/getallsupplier`, { withCredentials: true, validateStatus: (status) => status < 500 }),
+                axios.get(`${apiBase}/dealer/all`, { withCredentials: true, validateStatus: (status) => status < 500 }),
             ]);
 
             if (suppliersRes.status === "fulfilled" && suppliersRes.value.status === 200 && Array.isArray(suppliersRes.value.data)) {
@@ -440,7 +439,7 @@ export default function Dashboard() {
 
     const fetchFullProfile = async (email: string, title?: string) => {
         try {
-            const searchRes = await axios.get(`http://localhost:8000/users/search?email=${encodeURIComponent(email)}`, {
+            const searchRes = await axios.get(`${apiBase}/users/search?email=${encodeURIComponent(email)}`, {
                 validateStatus: (status) => status < 500,
             });
             if (searchRes.status === 200 && searchRes.data?.user) {
@@ -457,7 +456,7 @@ export default function Dashboard() {
                     title: normalizeRole(match.title || r),
                     role: normalizeRole(match.title || r),
                     status: match.status || "active",
-                    photoUrl: match.filename ? `http://localhost:8000/customer/getimage/${match.filename}` : undefined,
+                    photoUrl: match.filename ? `${apiBase}/customer/getimage/${match.filename}` : undefined,
                 };
                 setUser(fullUser);
                 localStorage.setItem("user", JSON.stringify(fullUser));
@@ -472,7 +471,7 @@ export default function Dashboard() {
 
     const fetchAllMergedUsers = async () => {
         try {
-            const res = await axios.get("http://localhost:8000/admin/getallusers", { withCredentials: true, validateStatus: (status) => status < 500 });
+            const res = await axios.get(`${apiBase}/admin/getallusers`, { withCredentials: true, validateStatus: (status) => status < 500 });
             if (res.status === 200 && Array.isArray(res.data)) {
                 const uniqueUsers = new Map<string, SystemUser>();
 
@@ -567,7 +566,7 @@ export default function Dashboard() {
         if (r === "customer") {
             if (!id) return;
             try {
-                const res = await axios.get(`http://localhost:8000/customer/${id}/orders`, { withCredentials: true, validateStatus: (status) => status < 500 });
+                const res = await axios.get(`${apiBase}/customer/${id}/orders`, { withCredentials: true, validateStatus: (status) => status < 500 });
                 if (res.status === 200 && Array.isArray(res.data)) {
                     setOrders(res.data.map((o: any) => {
                         const normalizedOrder = normalizeOrderFields(o);
@@ -584,7 +583,7 @@ export default function Dashboard() {
             }
         } else {
             try {
-                const res = await axios.get("http://localhost:8000/customer/getallcustomer", { withCredentials: true, validateStatus: (status) => status < 500 });
+                const res = await axios.get(`${apiBase}/customer/getallcustomer`, { withCredentials: true, validateStatus: (status) => status < 500 });
                 if (res.status === 200 && Array.isArray(res.data)) {
                     const allOrders: Order[] = [];
                     res.data.forEach((cust: any) => {
@@ -688,7 +687,7 @@ export default function Dashboard() {
         setOrderingWholesale(true);
         try {
             const res = await axios.post(
-                "http://localhost:8000/dealer/placeorder",
+                `${apiBase}/dealer/placeorder`,
                 {
                     productId: wholesaleProduct.id,
                     supplierId: Number(supplierId),
@@ -722,7 +721,6 @@ export default function Dashboard() {
             return;
         }
 
-        const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
         const role = getRolePath(user.title || user.role);
 
         if (role !== "dealer" && role !== "supplier") {
@@ -823,7 +821,6 @@ export default function Dashboard() {
     const handleRemoveProductFromPortfolio = async (productId: number) => {
         if (!user) return;
         const role = getRolePath(user.title || user.role);
-        const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
         const effectiveUserId = user.id;
 
         try {
@@ -879,7 +876,6 @@ export default function Dashboard() {
 
         setIsSubmittingEditProduct(true);
         try {
-            const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
             const responses = await Promise.all([
                 axios.put(
                     `${API_ENDPOINT}/product/update-price/${editingProduct.id}`,
@@ -921,7 +917,6 @@ export default function Dashboard() {
         if (!window.confirm(`Are you sure you want to delete ${productName}?`)) return;
 
         try {
-            const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
             const role = getRolePath(user?.title || user?.role);
             const candidateUrls = [
                 `${API_ENDPOINT}/product/${productId}`,
@@ -1004,7 +999,7 @@ export default function Dashboard() {
         const cleanType = paymentMethod === "card" ? cardType : paymentMethod === "mobile" ? `${mobileOperator} Sandbox` : `${bankName} Wire Sandbox`;
 
         try {
-            const paymentRes = await axios.post("http://localhost:8000/payment/process", { cardNumber: cleanCard, cardType: cleanType, amount: totalAmount, status: "completed" }, { withCredentials: true, validateStatus: (status) => status < 500 });
+            const paymentRes = await axios.post(`${apiBase}/payment/process`, { cardNumber: cleanCard, cardType: cleanType, amount: totalAmount, status: "completed" }, { withCredentials: true, validateStatus: (status) => status < 500 });
             if (paymentRes.status === 200 || paymentRes.status === 201) {
                 setCreatedPaymentRecord(paymentRes.data);
             }
@@ -1040,7 +1035,7 @@ export default function Dashboard() {
                     }
 
                     try {
-                        const itemRes = await axios.post(`http://localhost:8000/customer/${user.id}/orders`, itemPayload, { withCredentials: true, validateStatus: (status) => status < 500 });
+                        const itemRes = await axios.post(`${apiBase}/customer/${user.id}/orders`, itemPayload, { withCredentials: true, validateStatus: (status) => status < 500 });
                         if (itemRes.status === 200 || itemRes.status === 201) {
                             const createdId = itemRes.data?.id || itemRes.data?.order?.id || `ORD-${Date.now()}`;
                             createdIds.push(createdId);
@@ -1081,7 +1076,7 @@ export default function Dashboard() {
                 orderPayload.dealerId = orderPayload.dealer.id;
             }
 
-            const orderRes = await axios.post(`http://localhost:8000/customer/${user.id}/orders`, orderPayload, { withCredentials: true, validateStatus: (status) => status < 500 });
+            const orderRes = await axios.post(`${apiBase}/customer/${user.id}/orders`, orderPayload, { withCredentials: true, validateStatus: (status) => status < 500 });
             if (orderRes.status === 200 || orderRes.status === 201) {
                 const createdId = orderRes.data?.id || orderRes.data?.order?.id || null;
                 setCreatedOrderId(createdId);
@@ -1128,7 +1123,7 @@ export default function Dashboard() {
         if (!user || !user.id) return;
         if (!window.confirm("Are you sure you want to cancel this order?")) return;
         try {
-            const res = await axios.delete(`http://localhost:8000/customer/${user.id}/orders/${orderId}`, { withCredentials: true, validateStatus: (status) => status < 500 });
+            const res = await axios.delete(`${apiBase}/customer/${user.id}/orders/${orderId}`, { withCredentials: true, validateStatus: (status) => status < 500 });
             if (res.status === 200 || res.status === 204) {
                 alert("Order cancelled successfully.");
                 fetchOrders(user.id, user.title);
@@ -1167,7 +1162,7 @@ export default function Dashboard() {
         try {
             const deliveredAt = normalizedStatus === "delivered" ? new Date().toISOString() : undefined;
             const res = await axios.put(
-                `http://localhost:8000/${role}/confirmorder/${orderId}`,
+                `${apiBase}/${role}/confirmorder/${orderId}`,
                 {
                     status: normalizedStatus,
                     ...(deliveredAt ? { deliveryDate: deliveredAt, delivery_date: deliveredAt } : {}),
@@ -1236,7 +1231,7 @@ export default function Dashboard() {
         }
 
         try {
-            const res = await axios.delete(`http://localhost:8000/customer/${customerId}/orders/${orderId}`, {
+            const res = await axios.delete(`${apiBase}/customer/${customerId}/orders/${orderId}`, {
                 withCredentials: true,
                 validateStatus: (status) => status < 500,
             });
@@ -1274,7 +1269,7 @@ export default function Dashboard() {
         try {
             const res = role === "admin"
                 ? await axios.patch(
-                    `http://localhost:8000/admin/order/${editingOrder.id}`,
+                    `${apiBase}/admin/order/${editingOrder.id}`,
                     {
                         quantity: Number(editOrderForm.quantity) || 1,
                         status: editOrderForm.status.toLowerCase(),
@@ -1282,7 +1277,7 @@ export default function Dashboard() {
                     { withCredentials: true, validateStatus: (status) => status < 500 }
                 )
                 : await axios.patch(
-                    `http://localhost:8000/customer/${customerId}/orders/${editingOrder.id}`,
+                    `${apiBase}/customer/${customerId}/orders/${editingOrder.id}`,
                     {
                         quantity: Number(editOrderForm.quantity) || 1,
                         status: editOrderForm.status,
@@ -1298,7 +1293,7 @@ export default function Dashboard() {
             if (res.status === 200 || res.status === 204) {
                 if (role === "admin" && editOrderForm.deliveryAddress && customerId) {
                     const addressRes = await axios.patch(
-                        `http://localhost:8000/admin/customer/${customerId}`,
+                        `${apiBase}/admin/customer/${customerId}`,
                         { address: editOrderForm.deliveryAddress },
                         { withCredentials: true, validateStatus: (status) => status < 500 }
                     );
@@ -1342,8 +1337,8 @@ export default function Dashboard() {
         try {
             const role = newUser.role.toLowerCase();
             const endpoint = role === "admin"
-                ? "http://localhost:8000/admin/auth/register"
-                : `http://localhost:8000/admin/${role}`;
+                ? `${apiBase}/admin/auth/register`
+                : `${apiBase}/admin/${role}`;
             const payload = role === "admin"
                 ? (() => {
                     const formData = new FormData();
@@ -1407,8 +1402,6 @@ export default function Dashboard() {
         if (!window.confirm("Are you sure you want to delete this user?")) return;
 
         const detectedRole = getRolePath(targetUser?.title || targetUser?.role || "") || "customer";
-        const apiBase = "http://localhost:8000";
-
         const matchesTarget = (candidate: any) => {
             if (!candidate) return false;
             if (candidate.id !== undefined && Number(candidate.id) === Number(id)) return true;
@@ -1514,7 +1507,7 @@ export default function Dashboard() {
 
                     if (res.status === 200 || res.status === 204) {
                         await fetchAllMergedUsers();
-                        const refreshed = await axios.get("http://localhost:8000/admin/getallusers", {
+                        const refreshed = await axios.get(`${apiBase}/admin/getallusers`, {
                             withCredentials: true,
                             validateStatus: (status) => status < 500,
                         });
@@ -1566,8 +1559,8 @@ export default function Dashboard() {
         try {
             const role = getRolePath(editingUser.title || editingUser.role);
             const candidateUrls = [
-                `http://localhost:8000/${role}/${editingUser.id}`,
-                `http://localhost:8000/admin/${role}/${editingUser.id}`,
+                `${apiBase}/${role}/${editingUser.id}`,
+                `${apiBase}/admin/${role}/${editingUser.id}`,
             ];
 
             let lastError: any = null;
@@ -1642,7 +1635,7 @@ export default function Dashboard() {
         try {
             if (user.id) {
                 const response = await axios.patch(
-                    `http://localhost:8000/${r}/${user.id}`,
+                    `${apiBase}/${r}/${user.id}`,
                     {
                         userName: updated.userName || user.userName,
                         phoneNumber: phone,
@@ -1671,9 +1664,9 @@ export default function Dashboard() {
         if (!window.confirm(`Are you sure you want to permanently delete your ${user.title || user.role || "user"} account?`)) return;
         const r = getRolePath(user.title || user.role);
         try {
-            let url = `http://localhost:8000/customer/${user.userName}`;
+            let url = `${apiBase}/customer/${user.userName}`;
             if (r === "supplier" || r === "dealer" || r === "admin") {
-                url = `http://localhost:8000/${r}/${user.id || 1}`;
+                url = `${apiBase}/${r}/${user.id || 1}`;
             }
             await axios.delete(url, { withCredentials: true, validateStatus: (status) => status < 500 });
             localStorage.removeItem("user");

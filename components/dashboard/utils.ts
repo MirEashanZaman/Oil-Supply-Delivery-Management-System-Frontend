@@ -1,3 +1,5 @@
+import { API_ENDPOINT } from "@/lib/api";
+
 export const PRODUCT_IMAGE_MAP: Record<number, string> = {
     1: "/Brent Crude Oil.jpg",
     2: "/Ultra-Low Sulfur Diesel.jpg",
@@ -124,7 +126,6 @@ export const isValidPhoneNumber = (value?: string): boolean => {
 };
 
 export const getAllUsersUrl = (title?: string): string => {
-    const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
     const r = getRolePath(title);
     if (r === "admin") return `${API_ENDPOINT}/admin/getalladmin`;
     if (r === "supplier") return `${API_ENDPOINT}/supplier/getallsupplier`;

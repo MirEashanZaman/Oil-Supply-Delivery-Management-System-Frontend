@@ -1,4 +1,5 @@
 import axios from "axios";
+import { API_ENDPOINT } from "@/lib/api";
 
 export interface EmailUniquenessResult {
     isUnique: boolean;
@@ -13,8 +14,6 @@ export async function checkEmailUniqueness(email: string): Promise<EmailUniquene
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
-
     try {
         const resAll = await axios.get(`${API_ENDPOINT}/users/all`, {
             validateStatus: (status) => status < 500,

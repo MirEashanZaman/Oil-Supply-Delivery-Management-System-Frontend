@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import axios from "axios";
 import type * as LeafletType from "leaflet";
+import { API_ENDPOINT } from "@/lib/api";
 
 export type TrackingOrderData = {
     id: number;
@@ -128,7 +129,7 @@ export default function UberMapTracker({ order, userRole = "customer", onClose, 
         setIsRefreshing(true);
         const r = userRole.toLowerCase() === "dealer" ? "dealer" : "customer";
         try {
-            const res = await axios.get(`http://localhost:8000/${r}/trackorder/${order.id}`, {
+            const res = await axios.get(`${API_ENDPOINT}/${r}/trackorder/${order.id}`, {
                 withCredentials: true,
                 validateStatus: (status) => status < 500,
             });

@@ -14,7 +14,7 @@ export type UserData = {
 
 export type PaymentInfo = {
     id?: number;
-    cardNumber?: string;
+    paymentReference?: string;
     cardType?: string;
     amount?: number;
     status?: string;

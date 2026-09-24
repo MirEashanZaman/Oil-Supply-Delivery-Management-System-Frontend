@@ -294,7 +294,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                   <div className="rounded-xl border border-slate-200 p-3 sm:col-span-2">
                     <p className="text-[11px] font-bold uppercase text-secondary-gray">Payment</p>
                     <p className="mt-1 font-bold text-dark-slate">{selectedOrder.payment.cardType || "Payment method unavailable"} · {selectedOrder.payment.status || "Status unavailable"}</p>
-                    {selectedOrder.payment.cardNumber && <p className="text-xs text-secondary-gray">Reference: **** {String(selectedOrder.payment.cardNumber).slice(-4)}</p>}
+                    {selectedOrder.payment.paymentReference && <p className="text-xs text-secondary-gray">Reference: {String(selectedOrder.payment.paymentReference).slice(-12)}</p>}
                   </div>
                 )}
               </div>

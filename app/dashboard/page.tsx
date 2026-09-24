@@ -128,6 +128,8 @@ export default function Dashboard() {
     const [cartToast, setCartToast] = useState<string | null>(null);
     const [isMultiCheckout, setIsMultiCheckout] = useState<boolean>(false);
     const [isDashboardRefreshing, setIsDashboardRefreshing] = useState<boolean>(false);
+    const [dashboardError, setDashboardError] = useState<string | null>(null);
+    const [lastSyncedAt, setLastSyncedAt] = useState<string>(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
 
     const cartTotalItems = useMemo(() => cartItems.reduce((acc, item) => acc + item.quantity, 0), [cartItems]);
     const cartSubtotal = useMemo(() => cartItems.reduce((acc, item) => acc + (item.product.numericPrice * item.quantity), 0), [cartItems]);
@@ -274,9 +276,12 @@ export default function Dashboard() {
                         };
                     });
                 setProducts(mapped);
+                setDashboardError(null);
+                setLastSyncedAt(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
             }
-        } catch (err) {
+        } catch (err: any) {
             console.warn("Failed to fetch products:", err);
+            setDashboardError(err.message || "Unable to load the latest catalog data.");
         } finally {
             setProductsLoading(false);
         }
@@ -1692,12 +1697,16 @@ export default function Dashboard() {
         if (!user?.id) return;
 
         setIsDashboardRefreshing(true);
+        setDashboardError(null);
         try {
             await Promise.all([
                 fetchCatalogProducts(),
                 fetchOrders(user.id, user.title || user.role),
                 fetchSourcingParties(),
             ]);
+            setLastSyncedAt(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+        } catch (err: any) {
+            setDashboardError(err.message || "The dashboard could not refresh. Please try again.");
         } finally {
             setIsDashboardRefreshing(false);
         }
@@ -1801,10 +1810,18 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    {isDashboardRefreshing && (
-                        <div className="mt-4 flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800">
-                            <span className="loading loading-spinner loading-xs" />
-                            Refreshing dashboard data and sourcing partners...
+                    {(dashboardError || isDashboardRefreshing || lastSyncedAt) && (
+                        <div className={`mt-4 flex flex-col gap-2 rounded-xl border px-3 py-2 text-sm ${dashboardError ? "border-amber-200 bg-amber-50 text-amber-800" : "border-sky-200 bg-sky-50 text-sky-800"}`}>
+                            {isDashboardRefreshing && (
+                                <div className="flex items-center gap-2">
+                                    <span className="loading loading-spinner loading-xs" />
+                                    Refreshing dashboard data and sourcing partners...
+                                </div>
+                            )}
+                            {dashboardError && <div>{dashboardError}</div>}
+                            {!dashboardError && !isDashboardRefreshing && (
+                                <div>Last synced at {lastSyncedAt}</div>
+                            )}
                         </div>
                     )}
 

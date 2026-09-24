@@ -673,6 +673,14 @@ export default function Dashboard() {
         setCreatedOrderId(null);
     };
 
+    const clearPaymentDetails = () => {
+        setCardNumber("");
+        setCardExpiry("");
+        setCardCvv("");
+        setMobileWalletNumber("");
+        setBankAccountNumber("");
+    };
+
     const handleWholesaleOrder = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user?.id || !wholesaleProduct) return;
@@ -995,11 +1003,11 @@ export default function Dashboard() {
 
         const totalAmount = isMultiCheckout ? cartTotalAmount : Number((checkoutProduct.numericPrice * orderQuantity).toFixed(2));
         const destination = deliveryAddress.trim() || user.address || "Main Operational Hub";
-        const cleanCard = paymentMethod === "card" ? (cardNumber.trim() || "4000123456789010") : paymentMethod === "mobile" ? (mobileWalletNumber.trim() || "01700000000") : (bankAccountNumber.trim() || "EBL-10029384");
         const cleanType = paymentMethod === "card" ? cardType : paymentMethod === "mobile" ? `${mobileOperator} Sandbox` : `${bankName} Wire Sandbox`;
 
         try {
-            const paymentRes = await axios.post(`${apiBase}/payment/process`, { cardNumber: cleanCard, cardType: cleanType, amount: totalAmount, status: "completed" }, { withCredentials: true, validateStatus: (status) => status < 500 });
+            const paymentReference = `sandbox_${Date.now()}`;
+            const paymentRes = await axios.post(`${apiBase}/payment/process`, { paymentReference, paymentMethod: cleanType, amount: totalAmount, status: "completed" }, { withCredentials: true, validateStatus: (status) => status < 500 });
             if (paymentRes.status === 200 || paymentRes.status === 201) {
                 setCreatedPaymentRecord(paymentRes.data);
             }
@@ -1022,7 +1030,7 @@ export default function Dashboard() {
                         delivery_address: itemDest,
                         status: "pending",
                         product: { id: Number(item.product.id) || 1 },
-                        payment: { cardNumber: cleanCard, cardType: cleanType, amount: itemAmount, status: "completed" },
+                        payment: { paymentReference: `sandbox_${Date.now()}_${item.product.id}`, paymentMethod: cleanType, amount: itemAmount, status: "completed" },
                         sourceType: item.sourcingChoice,
                     };
 
@@ -1048,6 +1056,7 @@ export default function Dashboard() {
 
                 if (createdIds.length > 0) {
                     handleClearCart();
+                    clearPaymentDetails();
                     setTimeout(() => {
                         setSandboxStep("success");
                         fetchOrders(user.id, user.title);
@@ -1065,7 +1074,7 @@ export default function Dashboard() {
                 delivery_address: destination,
                 status: "pending",
                 product: { id: checkoutProduct.id },
-                payment: { cardNumber: cleanCard, cardType: cleanType, amount: totalAmount, status: "completed" },
+                payment: { paymentReference, paymentMethod: cleanType, amount: totalAmount, status: "completed" },
                 sourceType: sourcingChoice,
             };
             if (sourcingChoice === "supplier") {
@@ -1083,6 +1092,7 @@ export default function Dashboard() {
                 if (createdId) {
                     saveLocalOrderDetails(createdId, { deliveryAddress: destination, createdAt: new Date().toISOString() });
                 }
+                clearPaymentDetails();
                 setTimeout(() => {
                     setSandboxStep("success");
                     fetchOrders(user.id, user.title);
@@ -2005,6 +2015,7 @@ export default function Dashboard() {
                 onClose={() => {
                     setCheckoutProduct(null);
                     setIsMultiCheckout(false);
+                    clearPaymentDetails();
                 }}
                 isMultiCheckout={isMultiCheckout}
                 checkoutProduct={checkoutProduct}

@@ -56,3 +56,13 @@ export interface ChatMessage {
     timestamp: string;
     channel?: string;
 }
+
+export function getRoleBasedChannel(role?: string | null): string {
+    const normalizedRole = (role || "customer").trim().toLowerCase();
+
+    if (normalizedRole.includes("admin")) return "oil-supply-chat-admin";
+    if (normalizedRole.includes("supplier")) return "oil-supply-chat-supplier";
+    if (normalizedRole.includes("dealer")) return "oil-supply-chat-dealer";
+
+    return "oil-supply-chat-customer";
+}

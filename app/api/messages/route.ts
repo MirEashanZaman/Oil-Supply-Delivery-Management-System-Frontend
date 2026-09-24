@@ -8,12 +8,12 @@ const MESSAGES_FILE = path.join(process.cwd(), "data", "messages.json");
 function normalizeChannel(channel?: string | null) {
     const trimmed = (channel || "").trim();
 
-    if (!trimmed || trimmed === "oil-supply-chat") {
+    if (!trimmed || trimmed === "oil-supply-chat" || trimmed === "oil-supply-chat-general") {
         return "oil-supply-chat";
     }
 
     if (trimmed.startsWith("oil-supply-chat-")) {
-        return "oil-supply-chat";
+        return trimmed;
     }
 
     return trimmed;

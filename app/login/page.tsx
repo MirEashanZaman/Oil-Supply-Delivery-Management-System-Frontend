@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import MyNavigation from "@/components/navigation";
 import MyHeader from "@/components/header";
 import { normalizeRole } from "@/components/dashboard/utils";
+import { API_ENDPOINT } from "@/lib/api";
 
 const loginSchema = z.object({
     email: z.string().min(1, "Email is required").email("Invalid email address"),
@@ -53,8 +54,6 @@ export default function Login() {
             let matchedRole = "Customer";
             let lastErrorMessage = "";
             let apiUserData: any = null;
-
-            const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
 
             for (const r of roles) {
                 try {

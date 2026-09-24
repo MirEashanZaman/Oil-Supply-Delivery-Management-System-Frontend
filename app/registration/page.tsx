@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import MyNavigation from "@/components/navigation";
 import MyHeader from "@/components/header";
 import { checkEmailUniqueness } from "@/lib/email-checker";
+import { API_ENDPOINT } from "@/lib/api";
 
 const mobileNumberRegex = /^\+?[1-9][0-9\s\-().]{6,19}$/;
 
@@ -153,8 +154,6 @@ export default function Registration() {
         formData.append("photo", result.data.photo);
 
         const rolePath = result.data.title.toLowerCase();
-        const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
-
         try {
             const res = await axios.post(
                 `${API_ENDPOINT}/${rolePath}/auth/register`,

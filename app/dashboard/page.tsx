@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import axios from "axios";
 import MyNavigation from "@/components/navigation";
 import MyHeader from "@/components/header";
@@ -38,14 +39,14 @@ import { EditProductModal } from "@/components/dashboard/modals/edit-product-mod
 import { EditUserModal } from "@/components/dashboard/modals/edit-user-modal";
 import { EditOrderModal } from "@/components/dashboard/modals/edit-order-modal";
 
-import { OverviewTab } from "@/components/dashboard/tabs/overview-tab";
-import { ProductsTab } from "@/components/dashboard/tabs/products-tab";
-import { OrdersTab } from "@/components/dashboard/tabs/orders-tab";
-import { TrackingTab } from "@/components/dashboard/tabs/tracking-tab";
-import { InventoryTab } from "@/components/dashboard/tabs/inventory-tab";
-import { AdminMonitoringTab } from "@/components/dashboard/tabs/admin-monitoring-tab";
-import { LiveChatTab } from "@/components/dashboard/tabs/live-chat-tab";
-import { ProfileTab } from "@/components/dashboard/tabs/profile-tab";
+const OverviewTab = dynamic(() => import("@/components/dashboard/tabs/overview-tab").then((mod) => mod.OverviewTab));
+const ProductsTab = dynamic(() => import("@/components/dashboard/tabs/products-tab").then((mod) => mod.ProductsTab));
+const OrdersTab = dynamic(() => import("@/components/dashboard/tabs/orders-tab").then((mod) => mod.OrdersTab));
+const TrackingTab = dynamic(() => import("@/components/dashboard/tabs/tracking-tab").then((mod) => mod.TrackingTab));
+const InventoryTab = dynamic(() => import("@/components/dashboard/tabs/inventory-tab").then((mod) => mod.InventoryTab));
+const AdminMonitoringTab = dynamic(() => import("@/components/dashboard/tabs/admin-monitoring-tab").then((mod) => mod.AdminMonitoringTab));
+const LiveChatTab = dynamic(() => import("@/components/dashboard/tabs/live-chat-tab").then((mod) => mod.LiveChatTab));
+const ProfileTab = dynamic(() => import("@/components/dashboard/tabs/profile-tab").then((mod) => mod.ProfileTab));
 
 export default function Dashboard() {
     const router = useRouter();

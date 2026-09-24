@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import ProductDetailsClient from "./ProductDetailsClient";
+import { API_ENDPOINT } from "@/lib/api";
 
 type Product = {
     id: number;
@@ -39,7 +40,6 @@ export default async function ProductDetailsPage({
     await connection();
 
     const { id } = await params;
-    const API_ENDPOINT = process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8000";
     let product: Product | null = null;
 
     try {

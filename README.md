@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is a [Next.js](https://nextjs.org) project for the oil supply and delivery management platform.
 
 ## Getting Started
 
-First, run the development server:
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:5000 to view the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Configuration
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Create a local environment file from the example template:
 
-## Learn More
+```bash
+copy .env.example .env.local
+```
 
-To learn more about Next.js, take a look at the following resources:
+Then set the actual values for your backend and app URL:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```env
+NEXT_PUBLIC_API_ENDPOINT=http://localhost:8000
+NEXT_PUBLIC_APP_URL=http://localhost:5000
+NEXT_PUBLIC_PUSHER_KEY=
+NEXT_PUBLIC_PUSHER_CLUSTER=ap1
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+For production deployment, set the same variables in your hosting environment or platform secrets. Do not hardcode live API URLs into the source code.
+
+## Deployment Notes
+
+- Use HTTPS for production.
+- Set `NEXT_PUBLIC_API_ENDPOINT` to the live backend domain.
+- Set `NEXT_PUBLIC_APP_URL` to the live frontend domain.
+- Keep Pusher keys in environment variables, not in the repository.
+- For local network testing, use the LAN IP value and keep the allowed dev origin list aligned in `next.config.ts`.
+
+## Production Build
+
+```bash
+npm run build
+```
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The app can be deployed to Vercel by setting the environment variables in the project dashboard before build.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Check the official Next.js deployment guide for more details: https://nextjs.org/docs/app/building-your-application/deploying

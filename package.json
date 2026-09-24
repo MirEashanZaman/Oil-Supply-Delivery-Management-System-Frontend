@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev --port 5000",
     "build": "next build",
-    "start": "next start --port 5000"
+    "start": "next start --port 5000",
+    "android:sync": "npx cap sync android",
+    "android:open": "npx cap open android"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",

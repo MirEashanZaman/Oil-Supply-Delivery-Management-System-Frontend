@@ -122,7 +122,7 @@ export const normalizeRole = (role?: string): string => {
 export const isValidPhoneNumber = (value?: string): boolean => {
     if (!value?.trim()) return true;
     const compact = value.trim().replace(/[()\s-]/g, "");
-    return /^\+[1-9]\d{7,14}$/.test(compact);
+    return /^\+[1-9]\d{7,14}$/.test(compact) || /^0\d{9,14}$/.test(compact);
 };
 
 export const getAllUsersUrl = (title?: string): string => {

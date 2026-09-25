@@ -69,7 +69,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                 alt="Profile photo"
                 className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-2 border-[#E2E8F0] shadow-md"
                 onError={(e) => {
-                  e.currentTarget.style.display = "none";
+                  setPhotoPreview(undefined);
                 }}
               />
             ) : (

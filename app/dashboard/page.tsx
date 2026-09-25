@@ -522,18 +522,19 @@ export default function Dashboard() {
             if (searchRes.status === 200 && searchRes.data?.user) {
                 const match = searchRes.data.user;
                 const r = searchRes.data.role || "customer";
+                const storedProfile = JSON.parse(localStorage.getItem("user") || "null") as Partial<UserData> | null;
                 const fullUser: UserData = {
                     id: match.id,
                     email: match.email,
-                    userName: match.username || match.userName || email.split("@")[0],
-                    name: match.username || match.userName || email.split("@")[0],
-                    phoneNumber: match.phoneNumber,
-                    phone: match.phoneNumber,
-                    address: match.address,
+                    userName: storedProfile?.userName || match.username || match.userName || email.split("@")[0],
+                    name: storedProfile?.name || match.username || match.userName || email.split("@")[0],
+                    phoneNumber: storedProfile?.phoneNumber || match.phoneNumber,
+                    phone: storedProfile?.phone || match.phoneNumber,
+                    address: storedProfile?.address || match.address,
                     title: normalizeRole(match.title || r),
                     role: normalizeRole(match.title || r),
                     status: match.status || "active",
-                    photoUrl: match.filename ? `${apiBase}/customer/getimage/${match.filename}` : undefined,
+                    photoUrl: storedProfile?.photoUrl || (match.filename ? `${apiBase}/customer/getimage/${match.filename}` : undefined),
                 };
                 setUser(fullUser);
                 localStorage.setItem("user", JSON.stringify(fullUser));
@@ -1742,7 +1743,6 @@ export default function Dashboard() {
             setUser(mergedUser);
             localStorage.setItem("user", JSON.stringify(mergedUser));
             appendAuditEntry("Profile updated", `Updated profile information for ${mergedUser.userName || mergedUser.name || user.email}.`, "success");
-            if (user.email) fetchFullProfile(user.email, user.title);
         } catch (err) {
             console.warn("Failed to persist profile to backend:", err);
             const mergedUser: UserData = { ...user, ...updated };

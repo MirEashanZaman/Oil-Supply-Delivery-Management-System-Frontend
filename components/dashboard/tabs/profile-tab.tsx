@@ -25,17 +25,18 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setPhotoFile(file);
-      const objectUrl = URL.createObjectURL(file);
-      setPhotoPreview(objectUrl);
-    }
+    if (!file) return;
+
+    setPhotoFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setPhotoPreview(String(reader.result));
+    reader.readAsDataURL(file);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValidPhoneNumber(phone)) {
-      alert("Enter an international mobile number, such as +8801712345678.");
+      alert("Enter a valid local or international mobile number.");
       return;
     }
     setIsUploading(true);
@@ -68,7 +69,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                 alt="Profile photo"
                 className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-2 border-[#E2E8F0] shadow-md"
                 onError={(e) => {
-                  e.currentTarget.style.display = "none";
+                  setPhotoPreview(undefined);
                 }}
               />
             ) : (
@@ -76,11 +77,12 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                 {(userData?.userName || userData?.name || userData?.email || "U")[0].toUpperCase()}
               </div>
             )}
-            <label className="absolute -bottom-2 -right-2 bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] p-2 rounded-xl cursor-pointer shadow-lg transition-transform hover:scale-105">
+            <label className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#F59E0B] hover:bg-[#D97706] text-[#1E293B] px-3 py-1.5 rounded-lg cursor-pointer shadow-lg transition-transform hover:scale-105 text-[11px] font-bold whitespace-nowrap">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
+              <span>Change photo</span>
               <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
             </label>
           </div>
@@ -104,7 +106,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
       </div>
 
       <div className="card bg-card-white border border-[#E2E8F0] shadow-sm rounded-2xl p-6">
-        <h3 className="text-lg font-bold text-[#0F2747] mb-4">Edit Profile & Account Details</h3>
+        <h3 className="text-lg font-bold text-[#0F2747] mb-4">Update Profile & Account Details</h3>
 
         {saved && (
           <div className="p-3 mb-4 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold animate-fadeIn">

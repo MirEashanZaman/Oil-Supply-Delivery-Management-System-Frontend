@@ -534,7 +534,9 @@ export default function Dashboard() {
                     title: normalizeRole(match.title || r),
                     role: normalizeRole(match.title || r),
                     status: match.status || "active",
-                    photoUrl: storedProfile?.photoUrl || (match.filename ? `${apiBase}/customer/getimage/${match.filename}` : undefined),
+                    photoUrl: storedProfile?.photoUrl?.startsWith("data:") || storedProfile?.photoUrl?.startsWith("/api/profile-image")
+                        ? storedProfile.photoUrl
+                        : (match.filename ? `/api/profile-image/${encodeURIComponent(match.filename)}` : undefined),
                 };
                 setUser(fullUser);
                 localStorage.setItem("user", JSON.stringify(fullUser));

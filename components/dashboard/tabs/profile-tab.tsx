@@ -36,7 +36,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValidPhoneNumber(phone)) {
-      alert("Enter an international mobile number, such as +8801712345678.");
+      alert("Enter a valid local or international mobile number.");
       return;
     }
     setIsUploading(true);
